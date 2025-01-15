@@ -5,8 +5,8 @@ import "core:fmt"
 import "vendor:glfw"
 import gl "vendor:OpenGL"
 
-WIDTH :: 800 
-HEIGHT :: 600
+WIDTH :: 1600 
+HEIGHT :: 900
 TITLE :: "DummyWindow"
 
 main :: proc () {
@@ -19,7 +19,9 @@ main :: proc () {
     gl.load_up_to(3, 3, glfw.gl_set_proc_address)
     glfw.SetKeyCallback(window_handle, key_callback)
 
-    init_draw_triangle()
+    init_world()
+    init_draw()
+    add_to_world(.InvertedPyramid)
     main_loop(window_handle)   
 }
 
@@ -67,7 +69,7 @@ main_loop :: proc(window_handle: glfw.WindowHandle) {
         gl.ClearColor(0.0, 0, 0, 1.0)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         gl.Clear(gl.COLOR_BUFFER_BIT)
-        draw_triangle(current_time)
+        draw_triangles(current_time)
         glfw.SwapBuffers(window_handle)
     }
 }
