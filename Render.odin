@@ -57,6 +57,7 @@ draw_triangles :: proc(time: f64) {
     proj := glm.mat4Perspective(45, WIDTH / HEIGHT, 0.01, 100)
 
     uniforms := gl.get_uniforms_from_program(program)
+    gl.Uniform1f(uniforms["i_time"].location, f32(time))
     gl.UniformMatrix4fv(uniforms["scale"].location, 1, gl.FALSE, &scale[0, 0])
     gl.UniformMatrix4fv(uniforms["rotate"].location, 1, gl.FALSE, &rot[0, 0])
     gl.UniformMatrix4fv(uniforms["offset"].location, 1, gl.FALSE, &offset[0, 0])
