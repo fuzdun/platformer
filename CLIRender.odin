@@ -65,7 +65,7 @@ main_loop :: proc(window_handle: glfw.WindowHandle) {
             move_player(FIXED_DELTA_TIME)
         }
 
-        // draw_terminal()
+        draw_terminal()
         glfw.PollEvents()
         gl.ClearColor(0.5, 0, 0, 1.0)
         gl.Clear(gl.COLOR_BUFFER_BIT)
