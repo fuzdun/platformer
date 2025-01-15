@@ -8,14 +8,16 @@ out float time;
 
 // uniform vec3 offset;
 uniform float i_time;
-uniform mat4 scale;
-uniform mat4 offset;
-uniform mat4 view;
-uniform mat4 rotate;
+// uniform mat4 scale;
+uniform mat4 transform;
+// uniform mat4 view;
+// uniform mat4 rotate;
 uniform mat4 projection;
 
 void main() {
-    gl_Position = projection * view * offset * rotate * scale * vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    // gl_Position = projection * view * offset * rotate * scale * vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    gl_Position = projection * transform * vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    // gl_Position = projection * view * rotate * scale * vec4(aPos.x, aPos.y, aPos.z, 1.0);
     uv = vertexUV;
     time = i_time;
 }

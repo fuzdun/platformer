@@ -5,8 +5,8 @@ import "core:fmt"
 import "vendor:glfw"
 import gl "vendor:OpenGL"
 
-WIDTH :: 1600 
-HEIGHT :: 900
+WIDTH :: 800
+HEIGHT :: 600
 TITLE :: "DummyWindow"
 
 main :: proc () {
@@ -19,9 +19,10 @@ main :: proc () {
     gl.load_up_to(3, 3, glfw.gl_set_proc_address)
     glfw.SetKeyCallback(window_handle, key_callback)
 
-    init_world()
+    // init_world()
+    // add_to_world(.InvertedPyramid)
+    // init_draw()
     init_draw()
-    add_to_world(.InvertedPyramid)
     main_loop(window_handle)   
 }
 
@@ -59,16 +60,15 @@ main_loop :: proc(window_handle: glfw.WindowHandle) {
         accumulator += delta_time
 
         glfw.PollEvents()
-        process_inputs()
 
         for ; accumulator > FIXED_DELTA_TIME; accumulator -= FIXED_DELTA_TIME {
             frame_count += 1
             move_player(FIXED_DELTA_TIME)
+            rotate_transforms(current_time)
         }
 
         gl.ClearColor(0.0, 0, 0, 1.0)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-        gl.Clear(gl.COLOR_BUFFER_BIT)
         draw_triangles(current_time)
         glfw.SwapBuffers(window_handle)
     }
