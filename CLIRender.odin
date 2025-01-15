@@ -9,8 +9,6 @@ WIDTH :: 800
 HEIGHT :: 600
 TITLE :: "DummyWindow"
 
-P_SPD : f64 : 0.0005
-
 main :: proc () {
     glfw.Init()
     defer glfw.Terminate()
@@ -27,7 +25,7 @@ main :: proc () {
 
 main_loop :: proc(window_handle: glfw.WindowHandle) {
     TIME_60HZ :: 1.0 / 60.0
-    TARGET_FRAME_RATE :: 120.0
+    TARGET_FRAME_RATE :: 240.0
     FIXED_DELTA_TIME :: 1.0 / TARGET_FRAME_RATE
     MAX_DEVIATION :: .0002
 
@@ -58,6 +56,7 @@ main_loop :: proc(window_handle: glfw.WindowHandle) {
 
         accumulator += delta_time
 
+        glfw.PollEvents()
         process_inputs()
 
         for ; accumulator > FIXED_DELTA_TIME; accumulator -= FIXED_DELTA_TIME {
@@ -65,9 +64,8 @@ main_loop :: proc(window_handle: glfw.WindowHandle) {
             move_player(FIXED_DELTA_TIME)
         }
 
-        // draw_terminal()
-        glfw.PollEvents()
-        gl.ClearColor(0.5, 0, 0, 1.0)
+        gl.ClearColor(0.0, 0, 0, 1.0)
+        gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         gl.Clear(gl.COLOR_BUFFER_BIT)
         draw_triangle(current_time)
         glfw.SwapBuffers(window_handle)
