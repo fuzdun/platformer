@@ -1,7 +1,7 @@
 package main
 import glm "core:math/linalg/glsl"
 
-Shape :: enum{ Triangle, InvertedPyramid }
+Shape :: enum{ Triangle, InvertedPyramid, None }
 
 Vertex :: struct{
     pos: glm.vec3,
@@ -9,7 +9,8 @@ Vertex :: struct{
 }
 ShapeData :: struct{
     vertices: []Vertex,
-    indices: []u16
+    indices: []u16,
+    outline_indices: []u16
 }
 
 
@@ -20,6 +21,9 @@ SHAPE_DATA := #partial [Shape]ShapeData{
             {{-0.5, -0.5, 0}, {0, 0}},
             {{0.5, -0.5, 0}, {1, 0}},
             {{0, 0.5, 0}, {0.5, 1}}
+        },
+        {
+           0, 1, 2 
         },
         {
            0, 1, 2 
@@ -40,6 +44,12 @@ SHAPE_DATA := #partial [Shape]ShapeData{
             4, 1, 0,
             0, 2, 4,
             2, 3, 4
+        },
+        {
+            0, 1, 2,
+            2, 1, 3,
+            3, 1, 4,
+            4, 1, 0,
         }
     }
 }
