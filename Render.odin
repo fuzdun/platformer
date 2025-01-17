@@ -7,7 +7,7 @@ import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import "core:os"
 
-vao, vbo, ebo, pattern_program, outline_program: u32
+vao, vbo, ebo : u32
 i_mat :: glm.mat4(1.0)
 
 vertices_queue: [dynamic]Vertex
@@ -17,20 +17,13 @@ indices_counts: [dynamic]int
 outline_indices_queue: [dynamic]u16
 outline_indices_counts: [dynamic]int
 
-rotation_queue : [dynamic]glm.mat4
-
-init_world :: proc() {
-    vertices_queue = make([dynamic]Vertex)
-    indices_queue = make([dynamic]u16)
-    transform_queue = make([dynamic]glm.mat4)
-    indices_counts = make([dynamic]int)
-}
+offset_queue : [dynamic]glm.mat4
 
 current_shape: Shape = .None
 indices_offset: u16 = 0
 outline_indices_offset: u16 = 0
 
-add_object :: proc(shape: Shape, transform: glm.mat4) {
+add_object_to_render_buffers :: proc(shape: Shape, transform: glm.mat4) {
     if current_shape != shape {
         indices_offset = u16(len(vertices_queue))
         append(&vertices_queue, ..SHAPE_DATA[shape].vertices)
@@ -47,38 +40,35 @@ add_object :: proc(shape: Shape, transform: glm.mat4) {
     append(&indices_counts, len(indices))
     append(&outline_indices_counts, len(outline_indices))
     append(&transform_queue, transform)
-    append(&rotation_queue, i_mat)
+    append(&offset_queue, i_mat)
 }
 
 
 rotate_transforms :: proc(time: f64) {
-    for &rotation in rotation_queue {
-        rotation = glm.mat4Rotate({ 0, 1, 0}, f32(time) / 2.0)
+    for &offset in offset_queue {
+        offset = glm.mat4Rotate({ 0, 1, 0}, f32(time) / 2.0)
     }
 }
 
 
 add_test_objects :: proc() {
-    add_object(.InvertedPyramid, glm.mat4Translate({0, 0, 0}))
-    add_object(.InvertedPyramid, glm.mat4Translate({0, 1, -1}) * glm.mat4Rotate({1, 0, 0}, 90))
-    add_object(.Triangle, glm.mat4Translate({1, 0, 0}))
-    add_object(.InvertedPyramid, glm.mat4Translate({-.5, 1, 0}) * glm.mat4Rotate({0, 0, 1}, 180))
+    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({0, 0, 0}))
+    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({0, 1, -1}) * glm.mat4Rotate({1, 0, 0}, 90))
+    add_object_to_render_buffers(.Triangle, glm.mat4Translate({1, 0, 0}))
+    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({-.5, 1, 0}) * glm.mat4Rotate({0, 0, 1}, 180))
 }
 
 
-init_draw :: proc() {
-    program_ok : bool
-    pattern_program, program_ok = shader_program_from_file("bluevertex.glsl", "bluefrag.glsl")
-    if !program_ok {
-        fmt.eprintln("Failed to compile glsl")
-        return
-    }
+// Further design notes:
+// - abstract sorting data into various buffers based on shader type,
+//   then execute one draw sequence per shader
+// - should compute per-object transformations and apply to vertices
+//   before passing to GPU, because I need the coords anyway for 
+//   constructing physics world
 
-    outline_program, program_ok = shader_program_from_file("outlinevertex.glsl", "outlinefrag.glsl")
-    if !program_ok {
-        fmt.eprintln("Failed to compile glsl")
-        return
-    }
+
+init_draw :: proc() {
+    init_shaders()
 
     gl.GenVertexArrays(1, &vao);
     gl.BindVertexArray(vao)
@@ -93,15 +83,12 @@ init_draw :: proc() {
 
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
+
+    gl.Enable(gl.DEPTH_TEST)
 }
 
-draw_triangles :: proc(time: f64, wireframe: bool) {
-    if wireframe {
-        gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
-    }
-    gl.UseProgram(pattern_program)
+draw_triangles :: proc(time: f64) {
     gl.BindVertexArray(vao)
-    gl.Enable(gl.DEPTH_TEST)
 
     view := glm.mat4LookAt({0, 0, 1}, {0, 0, 0}, {0, 1, 0})
     proj := glm.mat4Perspective(45, WIDTH / HEIGHT, 0.01, 100)
@@ -109,35 +96,33 @@ draw_triangles :: proc(time: f64, wireframe: bool) {
 
     proj_mat := view * proj * offset
 
-    uniforms := gl.get_uniforms_from_program(pattern_program)
+    use_shader(.Pattern)
+    gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
 
-    gl.UniformMatrix4fv(uniforms["projection"].location, 1, gl.FALSE, &proj_mat[0, 0])
-    gl.Uniform1f(uniforms["i_time"].location, f32(time))
+    set_matrix_uniform("projection", &proj_mat)
+    set_float_uniform("i_time", f32(time))
 
     gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices_queue[0]) * len(vertices_queue), raw_data(vertices_queue), gl.STATIC_DRAW)
     gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices_queue[0]) * len(indices_queue), raw_data(indices_queue), gl.STATIC_DRAW)
 
-
-    gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
     indices_index := 0
     for count, i in indices_counts {
-        transform := transform_queue[i] * rotation_queue[i]
-        gl.UniformMatrix4fv(uniforms["transform"].location, 1, gl.FALSE, &transform[0][0])
+        transform := transform_queue[i] * offset_queue[i]
+        set_matrix_uniform("transform", &transform)
         gl.DrawElements(gl.TRIANGLES, i32(count), gl.UNSIGNED_SHORT, rawptr(uintptr(size_of(u16) * indices_index)))
         indices_index += count
     }
-    gl.UseProgram(outline_program)
+
+    use_shader(.Outline)
+    set_matrix_uniform("projection", &proj_mat)
     gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
     gl.LineWidth(5)
 
-    uniforms = gl.get_uniforms_from_program(outline_program)
-    gl.UniformMatrix4fv(uniforms["projection"].location, 1, gl.FALSE, &proj_mat[0, 0])
     gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(outline_indices_queue[0]) * len(outline_indices_queue), raw_data(outline_indices_queue), gl.STATIC_DRAW)
-
     indices_index = 0
     for count, i in outline_indices_counts {
-        transform := transform_queue[i] * rotation_queue[i]
-        gl.UniformMatrix4fv(uniforms["transform"].location, 1, gl.FALSE, &transform[0][0])
+        transform := transform_queue[i] * offset_queue[i]
+        set_matrix_uniform("transform", &transform)
         gl.DrawElements(gl.TRIANGLES, i32(count), gl.UNSIGNED_SHORT, rawptr(uintptr(size_of(u16) * indices_index)))
         indices_index += count
     }

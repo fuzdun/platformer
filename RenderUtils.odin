@@ -6,12 +6,13 @@ import gl "vendor:OpenGL"
 
 shader_program_from_file :: proc(vertex_filename, fragment_filename: string) -> (u32, bool) {
     dir := "shaders/"
-    vertex_string, vertex_ok := os.read_entire_file(str.concatenate({dir, vertex_filename}))
+    ext := ".glsl"
+    vertex_string, vertex_ok := os.read_entire_file(str.concatenate({dir, vertex_filename, ext}))
     if !vertex_ok {
         fmt.println("failed to read vertex shader file")
         return 0, false
     }
-    fragment_string, fragment_ok := os.read_entire_file(str.concatenate({dir, fragment_filename}))
+    fragment_string, fragment_ok := os.read_entire_file(str.concatenate({dir, fragment_filename, ext}))
     if !fragment_ok {
         fmt.println("failed to read fragment shader file")
         return 0, false
