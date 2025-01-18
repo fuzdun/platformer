@@ -2,8 +2,10 @@ package main
 
 import "core:fmt"
 import "core:math"
+import rnd "core:math/rand"
 import str "core:strings"
 import gl "vendor:OpenGL"
+import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import "core:os"
 
@@ -66,10 +68,26 @@ init_draw :: proc() {
 }
 
 load_level :: proc() {
-    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({0, 0, 0}))
-    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({0, 2, -1}) * glm.mat4Rotate({1, 0, 0}, 90))
-    add_object_to_render_buffers(.Triangle, glm.mat4Translate({1, 0, 0}))
-    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({-.5, 1, 0}) * glm.mat4Rotate({0, 0, 1}, 180))
+    for _ in 0..<10000 {
+        shapes : []Shape = { .Cube, .InvertedPyramid }
+        s := rnd.choice(shapes)
+        x := rnd.float32_range(-20, 20)
+        y := rnd.float32_range(-20, 20)
+        z := rnd.float32_range(-20, 20)
+        rx := rnd.float32_range(-180, 180)
+        ry := rnd.float32_range(-180, 180)
+        rz := rnd.float32_range(-180, 180)
+        add_object_to_render_buffers(
+            s,
+            glm.mat4Translate({x, y, z}) *
+            glm.mat4Rotate({1, 0, 0}, rx) *
+            glm.mat4Rotate({0, 1, 0}, ry) *
+            glm.mat4Rotate({0, 0, 1}, rz)
+        )
+    }
+    // add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({0, 2, -1}) * glm.mat4Rotate({1, 0, 0}, 90))
+    // add_object_to_render_buffers(.Triangle, glm.mat4Translate({1, 0, 0}))
+    // add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({-.5, 1, 0}) * glm.mat4Rotate({0, 0, 1}, 180))
 
     for name, program in active_programs {
         indices := indices_queues[name]
@@ -84,11 +102,11 @@ draw_triangles :: proc(time: f64) {
     transform_vertices(vertices_queue, transform_queue, transform_counts, &transformed_vertices)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(transformed_vertices[0]) * len(transformed_vertices), raw_data(transformed_vertices), gl.STREAM_DRAW)
 
-    view := glm.mat4LookAt({0, 0, 1}, {0, 0, 0}, {0, 1, 0})
+    rot := glm.mat4Rotate({1, 0, 0}, f32(crx)) * glm.mat4Rotate({ 0, 1, 0 }, f32(cry))
     proj := glm.mat4Perspective(45, WIDTH / HEIGHT, 0.01, 100)
     offset := glm.mat4Translate({f32(cx), f32(cy), f32(cz)})
 
-    proj_mat := view * proj * offset
+    proj_mat := proj * rot * offset
 
     use_shader(.Pattern)
     set_matrix_uniform("projection", &proj_mat)

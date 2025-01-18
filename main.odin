@@ -5,11 +5,12 @@ import "core:fmt"
 import SDL "vendor:sdl2"
 import gl "vendor:OpenGL"
 
-WIDTH :: 800
-HEIGHT :: 600
+WIDTH :: 900 
+HEIGHT :: 900
 TITLE :: "platformer"
 
 main :: proc () {
+    test()
     window := SDL.CreateWindow(TITLE, SDL.WINDOWPOS_UNDEFINED, SDL.WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, {.OPENGL})
     if window == nil {
         fmt.eprintln("Failed to create window")

@@ -34,7 +34,7 @@ program_configs := [ProgramName]Program{
         frag_filename = "outlinefrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
-            gl.LineWidth(5)
+            gl.LineWidth(1)
         }
     }
 

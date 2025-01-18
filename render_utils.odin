@@ -37,14 +37,9 @@ rotate_transforms :: proc(time: f64, transforms: ^[dynamic]glm.mat4) {
 transform_vertices :: proc(vertices: [dynamic]Vertex, transforms: [dynamic]glm.mat4, transform_counts: [dynamic]int, out: ^[dynamic]Vertex) {
     idx := 0
     for count, i in transform_counts {
-        // fmt.println("=============")
         for _ in 0..<count {
             v := vertices[idx]
-            // fmt.println("----")
-            // fmt.println(v.pos)
-            // fmt.println("to")
             vertex: Vertex = { transforms[i] * v.pos, v.uv }
-            // fmt.println(vertex.pos)
             append(out, vertex)
             idx += 1
         }

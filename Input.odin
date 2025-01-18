@@ -11,6 +11,7 @@ r_pressed : bool = false
 l_pressed : bool = false
 f_pressed : bool = false
 b_pressed : bool = false
+spc_pressed : bool = false
 
 process_input :: proc (quit_handler: proc()) 
 {
@@ -22,32 +23,36 @@ process_input :: proc (quit_handler: proc())
                     case .ESCAPE:
                         quit_handler()
                     case .UP:
-                        u_pressed = true
+                        f_pressed = true
                     case .DOWN:
-                        d_pressed = true
+                        b_pressed = true
                     case .LEFT:
                         l_pressed = true
                     case .RIGHT:
                         r_pressed = true
                     case .RSHIFT:
-                        f_pressed = true
+                        u_pressed = true
                     case .RCTRL:
-                        b_pressed = true
+                        d_pressed = true
+                    case .SPACE:
+                        spc_pressed = true
                 }
             case .KEYUP:
                 #partial switch event.key.keysym.sym {
                     case .UP:
-                        u_pressed = false
+                        f_pressed = false
                     case .DOWN:
-                        d_pressed = false
+                        b_pressed = false
                     case .LEFT:
                         l_pressed = false
                     case .RIGHT:
                         r_pressed = false
                     case .RSHIFT:
-                        f_pressed = false
+                        u_pressed = false
                     case .RCTRL:
-                        b_pressed = false
+                        d_pressed = false
+                    case .SPACE:
+                        spc_pressed = false
                 }
             case .QUIT:
                 quit_handler()
