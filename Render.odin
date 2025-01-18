@@ -13,7 +13,6 @@ vertices_queue: [dynamic]Vertex
 indices_queues: [ProgramName][dynamic]u16
 transform_queue: [dynamic]glm.mat4
 transform_counts: [dynamic]int
-offset_queue: [dynamic]glm.mat4
 
 indices_offset: u16 = 0
 
@@ -24,7 +23,6 @@ init_render_buffers :: proc() {
     vertices_queue = make([dynamic]Vertex)
     transform_queue = make([dynamic]glm.mat4)
     transform_counts = make([dynamic]int)
-    // offset_queue = make([dynamic]glm.mat4)
 }
 
 free_render_buffers :: proc() {
@@ -32,7 +30,6 @@ free_render_buffers :: proc() {
     for iq in indices_queues do delete(iq)
     delete(transform_queue)
     delete(transform_counts)
-    delete(offset_queue)
 }
 
 add_object_to_render_buffers :: proc(shape: Shape, transform: glm.mat4) {
@@ -44,9 +41,11 @@ add_object_to_render_buffers :: proc(shape: Shape, transform: glm.mat4) {
         iq_idx := int(indices_list.shader)
         append(&indices_queues[indices_list.shader], ..shifted_indices[:])
     }
+
+    // should combine count and transform into single struct ?
+
     append(&transform_counts, len(SHAPE_DATA[shape].vertices))
     append(&transform_queue, transform)
-    append(&offset_queue, i_mat)
 }
 
 vbo : u32
