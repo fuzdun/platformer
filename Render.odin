@@ -7,65 +7,49 @@ import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import "core:os"
 
-vao, vbo, ebo : u32
 i_mat :: glm.mat4(1.0)
 
 vertices_queue: [dynamic]Vertex
-indices_queue: [dynamic]u16
+indices_queues: [ProgramName][dynamic]u16
 transform_queue: [dynamic]glm.mat4
-indices_counts: [dynamic]int
-outline_indices_queue: [dynamic]u16
-outline_indices_counts: [dynamic]int
+transform_counts: [dynamic]int
+offset_queue: [dynamic]glm.mat4
 
-offset_queue : [dynamic]glm.mat4
-
-current_shape: Shape = .None
 indices_offset: u16 = 0
-outline_indices_offset: u16 = 0
+
+init_render_buffers :: proc() {
+    for program in ProgramName {
+        indices_queues[program] = make([dynamic]u16) 
+    }
+    vertices_queue = make([dynamic]Vertex)
+    transform_queue = make([dynamic]glm.mat4)
+    transform_counts = make([dynamic]int)
+    offset_queue = make([dynamic]glm.mat4)
+}
+
+free_render_buffers :: proc() {
+    delete(vertices_queue)
+    for iq in indices_queues do delete(iq)
+    delete(transform_queue)
+    delete(transform_counts)
+    delete(offset_queue)
+}
 
 add_object_to_render_buffers :: proc(shape: Shape, transform: glm.mat4) {
-    if current_shape != shape {
-        indices_offset = u16(len(vertices_queue))
-        append(&vertices_queue, ..SHAPE_DATA[shape].vertices)
-        current_shape = shape
+    indices_offset = u16(len(vertices_queue))
+    append(&vertices_queue, ..SHAPE_DATA[shape].vertices)
+    for indices_list in SHAPE_DATA[shape].indices_lists {
+        shifted_indices := make([dynamic]u16); defer delete(shifted_indices)
+        offset_indices(indices_list.indices, indices_offset, &shifted_indices)
+        iq_idx := int(indices_list.shader)
+        append(&indices_queues[indices_list.shader], ..shifted_indices[:])
     }
-    indices := SHAPE_DATA[shape].indices
-    outline_indices := SHAPE_DATA[shape].outline_indices
-    for i in indices {
-        append(&indices_queue, i + indices_offset)
-    }
-    for i in outline_indices {
-        append(&outline_indices_queue, i + indices_offset)
-    }
-    append(&indices_counts, len(indices))
-    append(&outline_indices_counts, len(outline_indices))
+    append(&transform_counts, len(SHAPE_DATA[shape].vertices))
     append(&transform_queue, transform)
     append(&offset_queue, i_mat)
 }
 
-
-rotate_transforms :: proc(time: f64) {
-    for &offset in offset_queue {
-        offset = glm.mat4Rotate({ 0, 1, 0}, f32(time) / 2.0)
-    }
-}
-
-
-add_test_objects :: proc() {
-    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({0, 0, 0}))
-    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({0, 1, -1}) * glm.mat4Rotate({1, 0, 0}, 90))
-    add_object_to_render_buffers(.Triangle, glm.mat4Translate({1, 0, 0}))
-    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({-.5, 1, 0}) * glm.mat4Rotate({0, 0, 1}, 180))
-}
-
-
-// Further design notes:
-// - abstract sorting data into various buffers based on shader type,
-//   then execute one draw sequence per shader
-// - should compute per-object transformations and apply to vertices
-//   before passing to GPU, because I need the coords anyway for 
-//   constructing physics world
-
+vao, vbo : u32
 
 init_draw :: proc() {
     init_shaders()
@@ -74,17 +58,30 @@ init_draw :: proc() {
     gl.BindVertexArray(vao)
 
     gl.GenBuffers(1, &vbo);
-    gl.GenBuffers(1, &ebo)
     gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
 
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
+    gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, uv))
 
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
 
     gl.Enable(gl.DEPTH_TEST)
+}
+
+load_level :: proc() {
+    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({0, 0, 0}))
+    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({0, 2, -1}) * glm.mat4Rotate({1, 0, 0}, 90))
+    add_object_to_render_buffers(.Triangle, glm.mat4Translate({1, 0, 0}))
+    add_object_to_render_buffers(.InvertedPyramid, glm.mat4Translate({-.5, 1, 0}) * glm.mat4Rotate({0, 0, 1}, 180))
+
+
+    for name, program in active_programs {
+        indices := indices_queues[name]
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, program.ebo_id)
+        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
+    }
+
 }
 
 draw_triangles :: proc(time: f64) {
@@ -96,34 +93,25 @@ draw_triangles :: proc(time: f64) {
 
     proj_mat := view * proj * offset
 
+    transformed_vertices := make([dynamic]Vertex); defer delete(transformed_vertices)
+    transform_vertices(vertices_queue, transform_queue, transform_counts, &transformed_vertices)
+
     use_shader(.Pattern)
+    set_matrix_uniform("projection", &proj_mat)
+    set_float_uniform("i_time", f32(time) / 1000)
     gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
 
-    set_matrix_uniform("projection", &proj_mat)
-    set_float_uniform("i_time", f32(time))
-
-    gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices_queue[0]) * len(vertices_queue), raw_data(vertices_queue), gl.STATIC_DRAW)
-    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices_queue[0]) * len(indices_queue), raw_data(indices_queue), gl.STATIC_DRAW)
-
-    indices_index := 0
-    for count, i in indices_counts {
-        transform := transform_queue[i] * offset_queue[i]
-        set_matrix_uniform("transform", &transform)
-        gl.DrawElements(gl.TRIANGLES, i32(count), gl.UNSIGNED_SHORT, rawptr(uintptr(size_of(u16) * indices_index)))
-        indices_index += count
-    }
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(transformed_vertices[0]) * len(transformed_vertices), raw_data(transformed_vertices), gl.STREAM_DRAW)
+    indices_queue := indices_queues[.Pattern]
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, active_programs[.Pattern].ebo_id)
+    gl.DrawElements(gl.TRIANGLES, i32(len(indices_queue)), gl.UNSIGNED_SHORT, nil)
 
     use_shader(.Outline)
     set_matrix_uniform("projection", &proj_mat)
     gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
     gl.LineWidth(5)
+    indices_queue = indices_queues[.Outline]
 
-    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(outline_indices_queue[0]) * len(outline_indices_queue), raw_data(outline_indices_queue), gl.STATIC_DRAW)
-    indices_index = 0
-    for count, i in outline_indices_counts {
-        transform := transform_queue[i] * offset_queue[i]
-        set_matrix_uniform("transform", &transform)
-        gl.DrawElements(gl.TRIANGLES, i32(count), gl.UNSIGNED_SHORT, rawptr(uintptr(size_of(u16) * indices_index)))
-        indices_index += count
-    }
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, active_programs[.Outline].ebo_id)
+    gl.DrawElements(gl.TRIANGLES, i32(len(indices_queue)), gl.UNSIGNED_SHORT, nil)
 }

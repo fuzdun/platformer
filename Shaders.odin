@@ -4,7 +4,7 @@ import "core:strings"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 
-ProgramName :: enum {
+ProgramName :: enum{
     Pattern,
     Outline
 }
@@ -15,7 +15,8 @@ Program :: struct{
 }
 
 ActiveProgram :: struct{
-    id: u32
+    id: u32,
+    ebo_id: u32
 }
 
 program_configs := [ProgramName]Program{
@@ -41,8 +42,10 @@ init_shaders :: proc() -> bool {
             fmt.eprintln("Failed to compile glsl")
             return false
         }
-        as: ActiveProgram = { program_id }
-        active_programs[program] = as
+        buf_id: u32
+        gl.GenBuffers(1, &buf_id)
+        active_programs[program] = { program_id, buf_id }
+        indices_queues[program] = make([dynamic]u16) 
     }
     return true
 }

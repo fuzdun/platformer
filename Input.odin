@@ -1,7 +1,9 @@
 package main
 
+import "core:fmt"
 import "vendor:glfw"
 import "base:runtime"
+import SDL "vendor:sdl2"
 
 u_pressed : bool = false
 d_pressed : bool = false
@@ -10,44 +12,45 @@ l_pressed : bool = false
 f_pressed : bool = false
 b_pressed : bool = false
 
-key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods: i32)
+process_input :: proc (quit_handler: proc()) 
 {
-    context = runtime.default_context()
-    using glfw
-    if key == KEY_UP && action == PRESS {
-        u_pressed = true
-    }
-    if key == KEY_UP && action == RELEASE {
-        u_pressed = false
-    }
-    if key == KEY_DOWN && action == PRESS {
-        d_pressed = true
-    }
-    if key == KEY_DOWN && action == RELEASE {
-        d_pressed = false
-    }
-    if key == KEY_RIGHT && action == PRESS {
-        r_pressed = true
-    }
-    if key == KEY_RIGHT && action == RELEASE {
-        r_pressed = false
-    }
-    if key == KEY_LEFT && action == PRESS {
-        l_pressed = true
-    }
-    if key == KEY_LEFT && action == RELEASE {
-        l_pressed = false
-    }
-    if key == KEY_RIGHT_SHIFT && action == PRESS {
-        f_pressed = true
-    }
-    if key == KEY_RIGHT_SHIFT && action == RELEASE {
-        f_pressed = false
-    }
-    if key == KEY_RIGHT_CONTROL && action == PRESS {
-        b_pressed = true
-    }
-    if key == KEY_RIGHT_CONTROL && action == RELEASE {
-        b_pressed = false
+    event : SDL.Event
+    for SDL.PollEvent(&event) {
+        #partial switch event.type {
+            case .KEYDOWN:
+                #partial switch event.key.keysym.sym {
+                    case .ESCAPE:
+                        quit_handler()
+                    case .UP:
+                        u_pressed = true
+                    case .DOWN:
+                        d_pressed = true
+                    case .LEFT:
+                        l_pressed = true
+                    case .RIGHT:
+                        r_pressed = true
+                    case .RSHIFT:
+                        f_pressed = true
+                    case .RCTRL:
+                        b_pressed = true
+                }
+            case .KEYUP:
+                #partial switch event.key.keysym.sym {
+                    case .UP:
+                        u_pressed = false
+                    case .DOWN:
+                        d_pressed = false
+                    case .LEFT:
+                        l_pressed = false
+                    case .RIGHT:
+                        r_pressed = false
+                    case .RSHIFT:
+                        f_pressed = false
+                    case .RCTRL:
+                        b_pressed = false
+                }
+            case .QUIT:
+                quit_handler()
+        }
     }
 }
