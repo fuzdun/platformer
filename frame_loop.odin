@@ -55,7 +55,8 @@ frame_loop :: proc(window: ^SDL.Window) {
 
         for ; accumulator > target_frame_clocks; accumulator -= target_frame_clocks {
             move_camera(FIXED_DELTA_TIME)
-            // rotate_transforms(elapsed_time, &offset_queue)
+            // gotta fix this
+            // rotate_transforms(elapsed_time, &transform_queue)
         }
 
         gl.Viewport(0, 0, WIDTH, HEIGHT)

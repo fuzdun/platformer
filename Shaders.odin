@@ -11,22 +11,31 @@ ProgramName :: enum{
 
 Program :: struct{
     vertex_filename: string,
-    frag_filename: string
+    frag_filename: string,
+    init_proc: proc()
 }
 
 ActiveProgram :: struct{
     id: u32,
-    ebo_id: u32
+    ebo_id: u32,
+    init_proc: proc()
 }
 
 program_configs := [ProgramName]Program{
     .Pattern = {
         vertex_filename = "patternvertex",
-        frag_filename = "patternfrag"
+        frag_filename = "patternfrag",
+        init_proc = proc() {
+            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+        }
     },
     .Outline = {
         vertex_filename = "outlinevertex",
-        frag_filename = "outlinefrag"
+        frag_filename = "outlinefrag",
+        init_proc = proc() {
+            gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
+            gl.LineWidth(5)
+        }
     }
 
 }
@@ -44,8 +53,7 @@ init_shaders :: proc() -> bool {
         }
         buf_id: u32
         gl.GenBuffers(1, &buf_id)
-        active_programs[program] = { program_id, buf_id }
-        indices_queues[program] = make([dynamic]u16) 
+        active_programs[program] = { program_id, buf_id, config.init_proc }
     }
     return true
 }
@@ -54,7 +62,13 @@ use_shader :: proc(name: ProgramName) {
     if name in active_programs {
         loaded_program = active_programs[name].id
         gl.UseProgram(loaded_program)
+        active_programs[name].init_proc()
     }
+}
+
+draw_shader :: proc(name: ProgramName) {
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, active_programs[name].ebo_id)
+    gl.DrawElements(gl.TRIANGLES, i32(len(indices_queues[name])), gl.UNSIGNED_SHORT, nil)
 }
 
 set_matrix_uniform :: proc(name: string, data: ^glm.mat4) {
