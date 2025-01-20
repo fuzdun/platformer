@@ -113,7 +113,13 @@ draw_triangles :: proc(time: f64) {
     set_float_uniform("i_time", f32(time) / 1000)
     draw_shader(.Pattern)
 
+    use_shader(.New)
+    set_matrix_uniform("projection", &proj_mat)
+    set_float_uniform("i_time", f32(time) / 1000)
+    draw_shader(.New)
+
     use_shader(.Outline)
     set_matrix_uniform("projection", &proj_mat)
     draw_shader(.Outline)
+
 }

@@ -6,7 +6,8 @@ import glm "core:math/linalg/glsl"
 
 ProgramName :: enum{
     Pattern,
-    Outline
+    Outline,
+    New
 }
 
 Program :: struct{
@@ -34,7 +35,14 @@ program_configs := [ProgramName]Program{
         frag_filename = "outlinefrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
-            gl.LineWidth(1)
+            gl.LineWidth(3)
+        }
+    },
+    .New = {
+        vertex_filename = "patternvertex",
+        frag_filename = "newfrag",
+        init_proc = proc() {
+            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
         }
     }
 

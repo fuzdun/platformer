@@ -82,7 +82,7 @@ SHAPE_DATA := #partial [Shape]ShapeData{
         },
         {
             {
-                .Pattern,
+                .Outline,
                 {
                     0, 1, 2,
                     0, 2, 3,
@@ -99,7 +99,7 @@ SHAPE_DATA := #partial [Shape]ShapeData{
                 }
             },
             {
-                .Outline,
+                .New,
                 {
                     0, 1, 2,
                     0, 2, 3,

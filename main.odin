@@ -5,8 +5,8 @@ import "core:fmt"
 import SDL "vendor:sdl2"
 import gl "vendor:OpenGL"
 
-WIDTH :: 900 
-HEIGHT :: 900
+WIDTH :: 1000 
+HEIGHT :: 1000
 TITLE :: "platformer"
 
 main :: proc () {
