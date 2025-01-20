@@ -34,7 +34,7 @@ rotate_transforms :: proc(time: f64, transforms: ^[dynamic]glm.mat4) {
     }
 }
 
-transform_vertices :: proc(vertices: [dynamic]Vertex, transforms: [dynamic]glm.mat4, transform_counts: [dynamic]int, out: ^[dynamic]Vertex) {
+transform_vertices :: proc(vertices: []Vertex, transforms: []glm.mat4, transform_counts: []int, out: ^[dynamic]Vertex) {
     idx := 0
     for count, i in transform_counts {
         for _ in 0..<count {
@@ -45,3 +45,4 @@ transform_vertices :: proc(vertices: [dynamic]Vertex, transforms: [dynamic]glm.m
         }
     }
 }
+
