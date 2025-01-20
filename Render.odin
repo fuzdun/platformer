@@ -38,7 +38,7 @@ add_object_to_render_buffers :: proc(shape: Shape, transform: glm.mat4) {
     indices_offset = u16(len(vertices_queue))
     append(&vertices_queue, ..SHAPE_DATA[shape].vertices)
     for indices_list in SHAPE_DATA[shape].indices_lists {
-        shifted_indices := make([dynamic]u16)
+        shifted_indices := make([dynamic]u16); defer delete(shifted_indices)
         offset_indices(indices_list.indices[:], indices_offset, &shifted_indices)
         iq_idx := int(indices_list.shader)
         append(&indices_queues[indices_list.shader], ..shifted_indices[:])

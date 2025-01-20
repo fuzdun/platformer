@@ -1,78 +1,82 @@
 package main
 import "core:fmt"
 import "base:runtime"
-import la "core:math/linalg"
 
+REGISTRY_SIZE :: 1000
 
-Position :: distinct la.Vector3f64
+// Entities
+next_entity : uint = 0
+free_entities : [dynamic]uint
+entities : SparseSet
 
-ComponentMap :: struct{
-    Position: [dynamic]Position
-}
+component_registry : [Component]SparseSet
 
-ComponentRegistry :: map[typeid]SparseSet(100)
-
-SparseSet :: struct($N: int){
-    sparse: [N]int,
-    packed: [dynamic]int
-}
-
-register_component :: proc($C: typeid) {
-
-}
-
-sst_init :: proc(sst: ^SparseSet($N)) {
-    sst.packed = make([dynamic]int)
-}
-
-sst_delete :: proc(sst: ^SparseSet($N)) {
-    delete(sst.packed)
-}
-
-sst_add :: proc(sst: ^SparseSet($N), entity: int) -> (int, bool) {
-    if !sst_has(sst, entity) {
-        pos := len(sst.packed)
-        append(&sst.packed, entity)
-        sst.sparse[entity] = pos
-        return pos, true
+ecs_init :: proc() {
+    for c in Component {
+        sst : SparseSet
+        sst_init(&sst)
+        component_registry[c] = sst
     }
-    return -1, false
+    sst_init(&entities)
+    free_entities = make([dynamic]uint)
 }
 
-sst_remove :: proc(sst: ^SparseSet($N), entity: int) -> (int, bool) {
-    if sst_has(sst, entity) {
-        packed_i := sst.sparse[entity]
-        sst.sparse[sst.packed[len(sst.packed) - 1]] = packed_i
-        unordered_remove(&sst.packed, packed_i)
-        return packed_i, true
+ecs_free :: proc() {
+    for c in Component {
+        sst_delete(&component_registry[c])
     }
-    return -1, false
+    sst_delete(&entities)
+    delete(free_entities)
 }
 
-sst_has :: proc(sst: ^SparseSet($N), entity: int) -> bool {
-    return len(sst.packed) > 0 && sst.packed[sst.sparse[entity]] == entity
+query_system :: proc(cmps: []Component, f: proc([]uint)) {
+    entity_set := make([dynamic]uint); defer delete(entity_set)
+    entities_with(cmps, &entity_set)
+    f(entity_set[:])
 }
 
-test :: proc() {
-    {}
-    cm : ComponentMap
-    pos : Position = { 0, 0, 0 }
-    append(&cm.Position, pos)
-
-    da := make([dynamic]string)
-    append(&da, "some data")
-    test := cast(^runtime.Raw_Dynamic_Array)&da
-
-    test2 := cast(^[dynamic]string)test
-    fmt.println(test2[0])
-
-    //sst : SparseSet(20)
-    //sst_init(&sst)
-    //if add_idx, add_ok := sst_add(&sst, 2); add_ok {
-    //    fmt.println("added at", add_idx)
-    //}
-    //if r_idx, r_ok := sst_remove(&sst, 2); r_ok {
-    //    fmt.println("removed at", r_idx)
-    //}
-    //fmt.println(sst_has(&sst, 2))
+add_entity :: proc() -> (id: uint) {
+    if len(free_entities) > 0 {
+        id = pop(&free_entities)
+    } else {
+        id = next_entity
+        next_entity += 1
+    }
+    sst_add(&entities, id)
+    return 
 }
+
+remove_entity :: proc(entity: uint) -> bool {
+    if _, ok := sst_remove(&entities, entity); ok {
+        append(&free_entities, entity)
+    }
+    return false
+}
+
+entities_with :: proc(cmps: []Component, out: ^[dynamic]uint) {
+    e_loop: for e in entities.packed {
+        for cmp in cmps {
+            if !has_component(e, cmp) {
+                continue e_loop
+            }
+        }
+        append(out, e)
+    }
+}
+
+has_component :: proc(entity: uint, cmp: Component) -> bool {
+    return sst_has(&component_registry[cmp], entity)
+}
+
+add_component :: proc(entity: uint, arr: ^[dynamic]$T, cmp: Component, val: T) {
+    if sst_add(&component_registry[cmp], entity) {
+        append(arr, val)
+    }
+}
+
+remove_component :: proc(entity: uint, arr: ^[dynamic]$T, cmp: Component) {
+    if idx, ok := sst_remove(&component_registry[cmp], entity); ok {
+        unordered_remove(arr, idx)
+    }
+}
+
