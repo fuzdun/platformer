@@ -1,10 +1,7 @@
 package main
-import "core:fmt"
-import "base:runtime"
 
 REGISTRY_SIZE :: 1000
 
-// Entities
 next_entity : uint = 0
 free_entities : [dynamic]uint
 entities : SparseSet
