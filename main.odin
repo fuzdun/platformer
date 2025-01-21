@@ -9,6 +9,18 @@ WIDTH :: 1000
 HEIGHT :: 1000
 TITLE :: "platformer"
 
+GameState :: struct {
+    ecs: ECSState,
+}
+
+gamestate_init :: proc(gs: ^GameState) {
+    ecs_init(&gs.ecs)
+}
+
+gamestate_free :: proc(gs: ^GameState) {
+    ecs_free(&gs.ecs)
+}
+
 main :: proc () {
     window := SDL.CreateWindow(TITLE, SDL.WINDOWPOS_UNDEFINED, SDL.WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, {.OPENGL})
     if window == nil {
@@ -20,16 +32,23 @@ main :: proc () {
     gl.load_up_to(3, 3, SDL.gl_set_proc_address)
     SDL.GL_SetSwapInterval(1)
 
-    ecs_init(); defer ecs_free()
+    gs : GameState
+    gamestate_init(&gs); defer gamestate_free(&gs)
 
-    wall := add_entity()
-    add_position(wall, {0, 0, 0})
-    add_velocity(wall, {0, 1, 0})
-    apply_velocities()
+    ss: ShaderState
+    shader_state_init(&ss); defer shader_state_free(&ss)
 
+    rs: RenderState
+    init_render_buffers(&rs); defer free_render_buffers(&rs)
 
-    init_render_buffers(); defer free_render_buffers()
-    init_draw()
-    load_level()
-    frame_loop(window)
+    init_draw(&rs, &ss)
+    load_level(&rs, ss)
+
+    using gs
+    wall := add_entity(&ecs)
+    add_position(&ecs, wall, {0, 0, 0})
+    add_velocity(&ecs, wall, {0, 1, 0})
+    fmt.println(ecs.comp_data.positions)
+
+    frame_loop(window, &gs, &rs, &ss)
 }

@@ -43,5 +43,3 @@ sst_get :: proc(sst: ^SparseSet, entity: uint) -> (uint, bool) {
 sst_has :: proc(sst: ^SparseSet, entity: uint) -> bool {
     return len(sst.packed) > 0 && sst.packed[sst.sparse[entity]] == entity
 }
-
-

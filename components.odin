@@ -4,11 +4,17 @@ import la "core:math/linalg"
 Component :: enum { Position, Velocity }
 
 Position :: la.Vector3f64
-positions: [dynamic]Position
-add_position ::    proc(entity: uint, val: Position) { add_component(   entity, &positions, .Position, val) }
-remove_position :: proc(entity: uint)                { remove_component(entity, &positions, .Position) }
+add_position :: proc(ecs: ^ECSState, entity: uint, val: Position) {
+    add_component(ecs, entity, &ecs.comp_data.positions, .Position, val)
+}
+remove_position :: proc(ecs: ^ECSState, entity: uint) {
+    remove_component(ecs, entity, &ecs.comp_data.positions, .Position)
+}
 
 Velocity :: la.Vector3f64
-velocities: [dynamic]Velocity
-add_velocity ::    proc(entity: uint, val: Velocity) { add_component(   entity, &velocities, .Velocity, val) }
-remove_velocity :: proc(entity: uint)                { remove_component(entity, &velocities, .Velocity) }
+add_velocity :: proc(ecs: ^ECSState, entity: uint, val: Velocity) {
+    add_component(ecs, entity, &ecs.comp_data.velocities, .Velocity, val)
+}
+remove_velocity :: proc(ecs: ^ECSState, entity: uint) {
+    remove_component(ecs, entity, &ecs.comp_data.velocities, .Velocity)
+}

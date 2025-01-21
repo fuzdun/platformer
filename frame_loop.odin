@@ -2,12 +2,13 @@ package main
 
 import SDL "vendor:sdl2"
 import gl "vendor:OpenGL"
+import "core:fmt"
 
 @(private="file")
 quit_app := false
 
-frame_loop :: proc(window: ^SDL.Window) {
-    TARGET_FRAME_RATE :: 240.0
+frame_loop :: proc(window: ^SDL.Window, gs: ^GameState, rs: ^RenderState, ss: ^ShaderState) {
+    TARGET_FRAME_RATE :: 60.0
     clocks_per_second := SDL.GetPerformanceFrequency()
     FIXED_DELTA_TIME :: 1.0 / TARGET_FRAME_RATE
     target_frame_clocks := clocks_per_second / TARGET_FRAME_RATE
@@ -53,16 +54,19 @@ frame_loop :: proc(window: ^SDL.Window) {
 
         process_input(quit_handler)
 
+        if accumulator > 2 * target_frame_clocks {
+            fmt.println("dropped frame")
+        }
+
         for ; accumulator > target_frame_clocks; accumulator -= target_frame_clocks {
-            move_camera(FIXED_DELTA_TIME)
-            // gotta fix this
-            // rotate_transforms(elapsed_time, &transform_queue)
+            game_update(gs, FIXED_DELTA_TIME)
         }
 
         gl.Viewport(0, 0, WIDTH, HEIGHT)
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-        draw_triangles(elapsed_time)
+        draw_triangles(rs, ss, elapsed_time)
+
         SDL.GL_SwapWindow(window)
     }
 }
