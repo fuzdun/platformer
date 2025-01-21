@@ -42,7 +42,7 @@ main :: proc () {
     init_render_buffers(&rs); defer free_render_buffers(&rs)
 
     init_draw(&rs, &ss)
-    load_level(&rs, ss)
+    load_level(&gs, &rs, ss)
 
     using gs
     wall := add_entity(&ecs)

@@ -2,11 +2,6 @@ package main
 
 REGISTRY_SIZE :: 1000
 
-CompData :: struct {
-    positions: [dynamic]Position,
-    velocities: [dynamic]Velocity
-}
-
 ECSState :: struct {
     next_entity: uint,
     free_entities: [dynamic]uint,

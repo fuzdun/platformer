@@ -19,13 +19,6 @@ RenderState :: struct {
     vbo: u32
 }
 
-//vertices_queue: [dynamic]Vertex
-//indices_queues: [ProgramName][dynamic]u16
-//transform_queue: [dynamic]glm.mat4
-//transform_counts: [dynamic]int
-
-//vbo : u32
-
 init_render_buffers :: proc(rs: ^RenderState) {
     for program in ProgramName {
         rs.i_queue[program] = make([dynamic]u16) 
@@ -57,7 +50,7 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
     gl.Enable(gl.DEPTH_TEST)
 }
 
-add_object_to_render_buffers :: proc(rs: ^RenderState, shape: Shape, transform: glm.mat4) {
+add_object_to_render_buffers :: proc(gs: ^GameState, rs: ^RenderState, shape: Shape, transform: glm.mat4) {
     indices_offset := u16(len(rs.v_queue))
     append(&rs.v_queue, ..SHAPE_DATA[shape].vertices)
     for indices_list in SHAPE_DATA[shape].indices_lists {
@@ -65,14 +58,11 @@ add_object_to_render_buffers :: proc(rs: ^RenderState, shape: Shape, transform: 
         iq_idx := int(indices_list.shader)
         append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
     }
-
-    // should combine count and transform into single struct ?
-
     append(&rs.t_counts, len(SHAPE_DATA[shape].vertices))
     append(&rs.t_queue, transform)
 }
 
-load_level :: proc(rs: ^RenderState, ss: ShaderState) {
+load_level :: proc(gs: ^GameState, rs: ^RenderState, ss: ShaderState) {
     for _ in 0..<10000 {
         shapes : []Shape = { .Cube, .InvertedPyramid }
         s := rnd.choice(shapes)
@@ -83,6 +73,7 @@ load_level :: proc(rs: ^RenderState, ss: ShaderState) {
         ry := rnd.float32_range(-180, 180)
         rz := rnd.float32_range(-180, 180)
         add_object_to_render_buffers(
+            gs,
             rs,
             s,
             glm.mat4Translate({x, y, z}) *
