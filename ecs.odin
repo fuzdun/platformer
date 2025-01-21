@@ -33,12 +33,6 @@ ecs_free :: proc(ecs: ^ECSState) {
     delete(ecs.free_entities)
 }
 
-query_system :: proc(ecs: ^ECSState, cmps: []Component, dt: f64, f: proc(^CompData, []uint, f64)) {
-    entity_set := make([dynamic]uint); defer delete(entity_set)
-    entities_with(ecs, cmps, &entity_set)
-    f(&ecs.comp_data, entity_set[:], dt)
-}
-
 add_entity :: proc(ecs: ^ECSState) -> (id: uint) {
     if len(ecs.free_entities) > 0 {
         id = pop(&ecs.free_entities)
@@ -57,15 +51,17 @@ remove_entity :: proc(ecs: ^ECSState, entity: uint) -> bool {
     return false
 }
 
-entities_with :: proc(ecs: ^ECSState, cmps: []Component, out: ^[dynamic]uint) {
+entities_with :: proc(ecs: ^ECSState, cmps: []Component) -> []uint {
+    out := make([dynamic]uint); defer delete(out)
     e_loop: for e in ecs.entities.packed {
         for cmp in cmps {
             if !has_component(ecs, e, cmp) {
                 continue e_loop
             }
         }
-        append(out, e)
+        append(&out, e)
     }
+    return out[:]
 }
 
 has_component :: proc(ecs: ^ECSState, entity: uint, cmp: Component) -> bool {

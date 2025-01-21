@@ -61,8 +61,7 @@ add_object_to_render_buffers :: proc(rs: ^RenderState, shape: Shape, transform: 
     indices_offset := u16(len(rs.v_queue))
     append(&rs.v_queue, ..SHAPE_DATA[shape].vertices)
     for indices_list in SHAPE_DATA[shape].indices_lists {
-        shifted_indices := make([dynamic]u16); defer delete(shifted_indices)
-        offset_indices(indices_list.indices[:], indices_offset, &shifted_indices)
+        shifted_indices := offset_indices(indices_list.indices[:], indices_offset)
         iq_idx := int(indices_list.shader)
         append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
     }
@@ -101,8 +100,7 @@ load_level :: proc(rs: ^RenderState, ss: ShaderState) {
 
 
 draw_triangles :: proc(rs: ^RenderState, ss: ^ShaderState, time: f64) {
-    transformed_vertices := make([dynamic]Vertex); defer delete(transformed_vertices)
-    transform_vertices(rs.v_queue[:], rs.t_queue[:], rs.t_counts[:], &transformed_vertices)
+    transformed_vertices := transform_vertices(rs.v_queue[:], rs.t_queue[:], rs.t_counts[:])
     gl.BufferData(gl.ARRAY_BUFFER, size_of(transformed_vertices[0]) * len(transformed_vertices), raw_data(transformed_vertices), gl.STREAM_DRAW)
 
     rot := glm.mat4Rotate({1, 0, 0}, f32(crx)) * glm.mat4Rotate({ 0, 1, 0 }, f32(cry))

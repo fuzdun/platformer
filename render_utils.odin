@@ -22,10 +22,12 @@ shader_program_from_file :: proc(vertex_filename, fragment_filename: string) -> 
     return gl.load_shaders_source(string(vertex_string), string(fragment_string))
 }
 
-offset_indices :: proc(indices: []u16, offset: u16, out: ^[dynamic]u16) {
+offset_indices :: proc(indices: []u16, offset: u16) -> []u16 {
+    out := make([dynamic]u16)
     for ind, i in indices {
-        append(out, ind + offset)
+        append(&out, ind + offset)
     }
+    return out[:]
 }
 
 rotate_transforms :: proc(time: f64, transforms: ^[dynamic]glm.mat4) {
@@ -33,16 +35,30 @@ rotate_transforms :: proc(time: f64, transforms: ^[dynamic]glm.mat4) {
         transform = glm.mat4Rotate({ 0, 1, 0}, f32(time) / 1000 )
     }
 }
+//
+//transform_vertices :: proc(vertices: []Vertex, transforms: []glm.mat4, transform_counts: []int, out: ^[dynamic]Vertex) {
+//    idx := 0
+//    for count, i in transform_counts {
+//        for _ in 0..<count {
+//            v := vertices[idx]
+//            vertex: Vertex = { transforms[i] * v.pos, v.uv }
+//            append(out, vertex)
+//            idx += 1
+//        }
+//    }
+//}
 
-transform_vertices :: proc(vertices: []Vertex, transforms: []glm.mat4, transform_counts: []int, out: ^[dynamic]Vertex) {
+transform_vertices :: proc(vertices: []Vertex, transforms: []glm.mat4, transform_counts: []int) -> []Vertex {
+    out := make([dynamic]Vertex)
     idx := 0
     for count, i in transform_counts {
         for _ in 0..<count {
             v := vertices[idx]
             vertex: Vertex = { transforms[i] * v.pos, v.uv }
-            append(out, vertex)
+            append(&out, vertex)
             idx += 1
         }
     }
+    return out[:]
 }
 
