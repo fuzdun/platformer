@@ -54,9 +54,9 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^GameState, rs: ^RenderState, ss: ^S
 
         process_input(quit_handler)
 
-        if accumulator > 2 * target_frame_clocks {
-            fmt.println("dropped frame")
-        }
+        //if accumulator > 2 * target_frame_clocks {
+        //    fmt.println("dropped frame")
+        //}
 
         for ; accumulator > target_frame_clocks; accumulator -= target_frame_clocks {
             game_update(gs, FIXED_DELTA_TIME)

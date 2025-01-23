@@ -1,17 +1,20 @@
 package main
 import "core:fmt"
 
-REGISTRY_SIZE :: 10000
+REGISTRY_SIZE :: 2000
 
-ECSState :: struct {
+Entity :: map[Component]uint
+
+ECS :: struct {
     next_entity: uint,
     free_entities: [dynamic]uint,
     entities: SparseSet,
     comp_reg: [Component]SparseSet,
-    comp_data: CompData
+    //comp_data: CompData
+    comp_data: map[typeid]CompDetails
 }
 
-ecs_init :: proc(ecs: ^ECSState) {
+ecs_init :: proc(ecs: ^ECS) {
     for c in Component {
         sst : SparseSet
         sst_init(&sst)
@@ -21,7 +24,7 @@ ecs_init :: proc(ecs: ^ECSState) {
     ecs.free_entities = make([dynamic]uint)
 }
 
-ecs_free :: proc(ecs: ^ECSState) {
+ecs_free :: proc(ecs: ^ECS) {
     for c in Component {
         sst_delete(&ecs.comp_reg[c])
     }
@@ -29,7 +32,7 @@ ecs_free :: proc(ecs: ^ECSState) {
     delete(ecs.free_entities)
 }
 
-add_entity :: proc(ecs: ^ECSState) -> (id: uint) {
+add_entity :: proc(ecs: ^ECS) -> (id: uint) {
     if len(ecs.free_entities) > 0 {
         id = pop(&ecs.free_entities)
     } else {
@@ -40,38 +43,28 @@ add_entity :: proc(ecs: ^ECSState) -> (id: uint) {
     return 
 }
 
-remove_entity :: proc(ecs: ^ECSState, entity: uint) -> bool {
+remove_entity :: proc(ecs: ^ECS, entity: uint) -> bool {
     if _, ok := sst_remove(&ecs.entities, entity); ok {
         append(&ecs.free_entities, entity)
     }
     return false
 }
 
-entities_with :: proc(ecs: ^ECSState, cmps: []Component, out: ^[dynamic]uint) {
-    //out := make([dynamic]uint); defer delete(out)
-    e_loop: for e in ecs.entities.packed {
-        for cmp in cmps {
-            if !has_component(ecs, e, cmp) do continue e_loop
-        }
-        append(out, e)
-    }
-}
-
-has_component :: proc(ecs: ^ECSState, entity: uint, cmp: Component) -> bool {
+has_component :: proc(ecs: ^ECS, entity: uint, cmp: Component) -> bool {
     return sst_has(&ecs.comp_reg[cmp], entity)
 }
 
-get_component :: proc(ecs: ^ECSState, entity: uint, cmp: Component) -> uint {
+get_component_idx :: proc(ecs: ^ECS, entity: uint, cmp: Component) -> (uint, bool) {
     return sst_get(&ecs.comp_reg[cmp], entity)
 }
 
-add_component :: proc(ecs: ^ECSState, entity: uint, arr: ^[dynamic]$T, cmp: Component, val: T) {
+add_component :: proc(ecs: ^ECS, entity: uint, arr: ^[dynamic]$T, cmp: Component, val: T) {
     if sst_add(&ecs.comp_reg[cmp], entity) {
         append(arr, val)
     }
 }
 
-remove_component :: proc(ecs: ^ECSState, entity: uint, arr: ^[dynamic]$T, cmp: Component) {
+remove_component :: proc(ecs: ^ECS, entity: uint, arr: ^[dynamic]$T, cmp: Component) {
     if idx, ok := sst_remove(&ecs.comp_reg[cmp], entity); ok {
         unordered_remove(arr, idx)
     }

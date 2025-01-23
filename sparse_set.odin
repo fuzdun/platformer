@@ -33,11 +33,11 @@ sst_remove :: proc(sst: ^SparseSet, entity: uint) -> (uint, bool) {
     return 0, false
 }
 
-sst_get :: proc(sst: ^SparseSet, entity: uint) -> uint {
+sst_get :: proc(sst: ^SparseSet, entity: uint) -> (uint, bool) {
     if sst_has(sst, entity) {
-        return sst.sparse[entity]
+        return sst.sparse[entity], true
     }
-    return 0
+    return 0, false
 }
 
 sst_has :: proc(sst: ^SparseSet, entity: uint) -> bool {

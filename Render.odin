@@ -67,12 +67,12 @@ add_object_to_render_buffers :: proc(gs: ^GameState, rs: ^RenderState, shape: Sh
 
 get_vertices_from_renderables :: proc(gs: ^GameState, rs: ^RenderState, out: ^[dynamic]Vertex){
     using gs.ecs.comp_data
-    ents := make([dynamic]uint); defer delete(ents)
-    entities_with(&gs.ecs, {.Shape, .Transform}, &ents)
+    query := [2]Component {.Shape, .Transform}
+    ents := make([dynamic][2]uint); defer delete(ents)
+    entities_with(&gs.ecs, query, &ents)
     for e in ents {
+        s_i, t_i := e[0], e[1]
         indices_offset := u16(len(out))
-        t_i := get_component(&gs.ecs, e, .Transform)
-        s_i := get_component(&gs.ecs, e, .Shape)
         sd := SHAPE_DATA[shapes[s_i]]
         vertices := sd.vertices
         for indices_list in sd.indices_lists {
@@ -85,7 +85,7 @@ get_vertices_from_renderables :: proc(gs: ^GameState, rs: ^RenderState, out: ^[d
 }
 
 load_level :: proc(gs: ^GameState, rs: ^RenderState, ss: ShaderState) {
-    for _ in 0..<9000 {
+    for _ in 0..<1000 {
         shapes : []Shape = { .Cube, .InvertedPyramid }
         s := rnd.choice(shapes)
         x := rnd.float32_range(-20, 20)

@@ -10,7 +10,7 @@ HEIGHT :: 1000
 TITLE :: "platformer"
 
 GameState :: struct {
-    ecs: ECSState,
+    ecs: ECS,
 }
 
 gamestate_init :: proc(gs: ^GameState) {
@@ -43,11 +43,6 @@ main :: proc () {
 
     init_draw(&rs, &ss)
     load_level(&gs, &rs, ss)
-
-    using gs
-    wall := add_entity(&ecs)
-    add_position(&ecs, wall, {0, 0, 0})
-    add_velocity(&ecs, wall, {0, 1, 0})
 
     frame_loop(window, &gs, &rs, &ss)
 }
