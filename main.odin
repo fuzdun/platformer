@@ -11,6 +11,10 @@ TITLE :: "platformer"
 
 GameState :: struct {
     ecs: ECS,
+    // player state
+    // ui state
+    // game mode
+    // etc
 }
 
 gamestate_init :: proc(gs: ^GameState) {
@@ -42,7 +46,8 @@ main :: proc () {
     init_render_buffers(&rs); defer free_render_buffers(&rs)
 
     init_draw(&rs, &ss)
-    load_level(&gs, &rs, ss)
+    load_random_shapes(&gs, 5000)
 
     frame_loop(window, &gs, &rs, &ss)
 }
+

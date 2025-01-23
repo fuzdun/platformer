@@ -16,6 +16,7 @@ ShapeData :: struct{
     indices_lists: []IndicesList,
 }
 
+
 @(rodata)
 SHAPE_DATA := #partial [Shape]ShapeData{
     .Triangle = {

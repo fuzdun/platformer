@@ -2,73 +2,95 @@ package main
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import "base:runtime"
+import "core:fmt"
 
-Component :: enum {
+//=Components =============================================
+Component :: struct { type: typeid }
+
+ParentStruct :: struct {
+    someprop: int
+}
+
+ChildStruct :: struct {
+    using ps: ParentStruct,
+    something_else: f32
+}
+
+Transform :: glm.mat4 
+Shape :: enum{ Triangle, InvertedPyramid, Cube, None }
+Velocity :: la.Vector3f32
+
+
+COMPONENT_NAME :: enum {
     Velocity,
     Transform,
     Shape,
+    None
 }
 
-CompDetails :: struct {
-    type: typeid,
-    data: ^runtime.Raw_Dynamic_Array,
-    reg: SparseSet,
+CompData :: struct {
+    velocity: [dynamic]Velocity,
+    transform: [dynamic]Transform,
+    shape: [dynamic]Shape
 }
 
+init_comp_data :: proc(cd: ^CompData) {
+    cd.velocity = make([dynamic]Velocity)
+    cd.transform = make([dynamic]Transform)
+    cd.shape = make([dynamic]Shape)
+}
 
-//CompData :: [Component]CompDetails {
-    //velocities: [dynamic]Velocity,
-    //transforms: [dynamic]Transform,
-    //shapes: [dynamic]Shape,
-//}
+//=Get=================================================
+get_velocity :: proc(ecs: ^ECS, eid: uint) -> (^Velocity, bool) {
+    if idx, ok := sst_get(&ecs.comp_reg[.Velocity], eid); ok {
+        return &ecs.comp_data.velocity[idx], true 
+    }
+    return nil, false
+}
+get_transform :: proc(ecs: ^ECS, eid: uint) -> (^Transform, bool) {
+    if idx, ok := sst_get(&ecs.comp_reg[.Transform], eid); ok {
+        return &ecs.comp_data.transform[idx], true 
+    }
+    return nil, false
+}
+get_shape :: proc(ecs: ^ECS, eid: uint) -> (^Shape, bool) {
+    if idx, ok := sst_get(&ecs.comp_reg[.Shape], eid); ok {
+        return &ecs.comp_data.shape[idx], true 
+    }
+    return nil, false
+}
 
-//get_comp_array :: proc() -> ^[dynamic]T{
-//
-//}
+//=Set=================================================
+add_velocity :: proc(ecs: ^ECS, eid: uint, val: Velocity) {
+    if sst_add(&ecs.comp_reg[.Velocity], eid) {
+        append(&ecs.comp_data.velocity, val)
+    }
+}
+add_transform :: proc(ecs: ^ECS, eid: uint, val: Transform) {
+    if sst_add(&ecs.comp_reg[.Transform], eid) {
+        append(&ecs.comp_data.transform, val)
+    }
+}
+add_shape :: proc(ecs: ^ECS, eid: uint, val: Shape) {
+    if sst_add(&ecs.comp_reg[.Shape], eid) {
+        append(&ecs.comp_data.shape, val)
+    }
+}
 
+//=Delete==============================================
+remove_velocity :: proc(ecs: ^ECS, eid: uint) {
+    if idx, ok := sst_remove(&ecs.comp_reg[.Velocity], eid); ok {
+        unordered_remove(&ecs.comp_data.velocity, idx)
+    }
+}
+remove_transform :: proc(ecs: ^ECS, eid: uint) {
+    if idx, ok := sst_remove(&ecs.comp_reg[.Transform], eid); ok {
+        unordered_remove(&ecs.comp_data.transform, idx)
+    }
+}
+remove_shape :: proc(ecs: ^ECS, eid: uint) {
+    if idx, ok := sst_remove(&ecs.comp_reg[.Shape], eid); ok {
+        unordered_remove(&ecs.comp_data.shape, idx)
+    }
+}
 
-//Velocity :: la.Vector3f32
-//add_velocity :: proc(ecs: ^ECS, eid: uint, val: Velocity) {
-//    add_component(ecs, eid, &ecs.comp_data.velocities, .Velocity, val)
-//}
-//remove_velocity :: proc(ecs: ^ECS, eid: uint) {
-//    remove_component(ecs, eid, &ecs.comp_data.velocities, .Velocity)
-//}
-//get_velocity_entity :: proc(ecs: ^ECS, e: Entity) -> ^Velocity {
-//    return &ecs.comp_data.velocities[e[.Velocity]]
-//}
-//get_velocity_eid :: proc(ecs: ^ECS, eid: uint) -> ^Velocity {
-//    return &ecs.comp_data.velocities[eid]
-//}
-//get_velocity :: proc {get_velocity_eid, get_velocity_entity}
-//
-//
-//Transform ::glm.mat4 
-//add_transform :: proc(ecs: ^ECS, eid: uint, val: Transform) {
-//    add_component(ecs, eid, &ecs.comp_data.transforms, .Transform, val)
-//}
-//remove_transform :: proc(ecs: ^ECS, eid: uint) {
-//    remove_component(ecs, eid, &ecs.comp_data.transforms, .Transform)
-//}
-//get_transform_entity :: proc(ecs: ^ECS, e: Entity) -> ^Transform {
-//    return &ecs.comp_data.transforms[e[.Transform]]
-//}
-//get_transform_eid :: proc(ecs: ^ECS, eid: uint) -> ^Transform {
-//    return &ecs.comp_data.transforms[get_component_idx(ecs, eid, .Transform)]
-//}
-//
-//
-//Shape :: enum{ Triangle, InvertedPyramid, Cube, None }
-//add_shape :: proc(ecs: ^ECS, eid: uint, val: Shape) {
-//    add_component(ecs, eid, &ecs.comp_data.shapes, .Shape, val)
-//}
-//remove_shape :: proc(ecs: ^ECS, eid: uint) {
-//    remove_component(ecs, eid, &ecs.comp_data.shapes, .Shape)
-//}
-//get_shape_entity :: proc(ecs: ^ECS, e: Entity) -> ^Shape {
-//    return &ecs.comp_data.shapes[e[.Shape]]
-//}
-//get_shape_eid :: proc(ecs: ^ECS, eid: uint) -> ^Shape {
-//    return &ecs.comp_data.shapes[eid]
-//}
-//

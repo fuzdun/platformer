@@ -50,10 +50,12 @@ transform_vertices_arr :: proc(vertices: []Vertex, transforms: []glm.mat4, trans
     return out[:]
 }
 
-transform_vertices :: proc(vertices: []Vertex, transform: glm.mat4, out: ^[dynamic]Vertex) {
-    for v in vertices {
+transform_vertices :: proc(vertices: []Vertex, transform: glm.mat4) -> (out: []Vertex) {
+    out = make([]Vertex, len(vertices))
+    for v, idx in vertices {
         vertex: Vertex = { transform * v.pos, v.uv }
-        append(out, vertex)
+        out[idx] = vertex
     }
+    return
 }
 

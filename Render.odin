@@ -2,12 +2,11 @@ package main
 
 import "core:fmt"
 import "core:math"
-import rnd "core:math/rand"
 import str "core:strings"
 import gl "vendor:OpenGL"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
-import "core:os"
+import rnd "core:math/rand"
 
 I_MAT :: glm.mat4(1.0)
 
@@ -50,67 +49,31 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
     gl.Enable(gl.DEPTH_TEST)
 }
 
-add_object_to_render_buffers :: proc(gs: ^GameState, rs: ^RenderState, shape: Shape, transform: glm.mat4) {
-    x := rnd.float32_range(-1, 1)
-    y := rnd.float32_range(-1, 1)
-    z := rnd.float32_range(-1, 1)
-    vx := rnd.float32_range(-.01, .01)
-    vy := rnd.float32_range(-.01, .01)
-    vz := rnd.float32_range(-.01, .01)
-    obj := add_entity(&gs.ecs)
-    add_transform(&gs.ecs, obj, glm.mat4Translate({x, y, z}))
-    if rnd.float32_range(0, 1) < 0.5 {
-        add_velocity(&gs.ecs, obj, {vx, vy, vz})
-    }
-    add_shape(&gs.ecs, obj, shape)
-}
-
-get_vertices_from_renderables :: proc(gs: ^GameState, rs: ^RenderState, out: ^[dynamic]Vertex){
-    using gs.ecs.comp_data
-    query := [2]Component {.Shape, .Transform}
-    ents := make([dynamic][2]uint); defer delete(ents)
-    entities_with(&gs.ecs, query, &ents)
+get_vertices_update_indices :: proc(gs: ^GameState, rs: ^RenderState) -> (out: [dynamic]Vertex){
+    using gs.ecs
+    out = make([dynamic]Vertex)
+    ents := entities_with(&gs.ecs, {.Shape, .Transform})
     for e in ents {
-        s_i, t_i := e[0], e[1]
+        shape := get_shape(&gs.ecs, e) or_else nil
+        transform := get_transform(&gs.ecs, e) or_else nil
         indices_offset := u16(len(out))
-        sd := SHAPE_DATA[shapes[s_i]]
+        sd := SHAPE_DATA[shape^]
         vertices := sd.vertices
         for indices_list in sd.indices_lists {
             shifted_indices := offset_indices(indices_list.indices[:], indices_offset)
             iq_idx := int(indices_list.shader)
             append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
         }
-        transform_vertices(vertices, transforms[t_i], out)
+        append(&out, ..transform_vertices(vertices, transform^))
     }
-}
-
-load_level :: proc(gs: ^GameState, rs: ^RenderState, ss: ShaderState) {
-    for _ in 0..<1000 {
-        shapes : []Shape = { .Cube, .InvertedPyramid }
-        s := rnd.choice(shapes)
-        x := rnd.float32_range(-20, 20)
-        y := rnd.float32_range(-20, 20)
-        z := rnd.float32_range(-20, 20)
-        rx := rnd.float32_range(-180, 180)
-        ry := rnd.float32_range(-180, 180)
-        rz := rnd.float32_range(-180, 180)
-        add_object_to_render_buffers(
-            gs,
-            rs,
-            s,
-            glm.mat4Translate({x, y, z}) *
-            glm.mat4Rotate({1, 0, 0}, rx) *
-            glm.mat4Rotate({0, 1, 0}, ry) *
-            glm.mat4Rotate({0, 0, 1}, rz)
-        )
-    }
+    return
 }
 
 
 draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time: f64) {
     clear_indices_queues(rs)
-    transformed_vertices := make([dynamic]Vertex); defer delete(transformed_vertices)
-    get_vertices_from_renderables(gs, rs, &transformed_vertices)
+    transformed_vertices := get_vertices_update_indices(gs, rs)
+    defer delete(transformed_vertices)
     for name, program in ss.active_programs {
         indices := rs.i_queue[name]
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, program.ebo_id)
