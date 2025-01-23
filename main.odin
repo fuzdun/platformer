@@ -48,7 +48,6 @@ main :: proc () {
     wall := add_entity(&ecs)
     add_position(&ecs, wall, {0, 0, 0})
     add_velocity(&ecs, wall, {0, 1, 0})
-    fmt.println(ecs.comp_data.positions)
 
     frame_loop(window, &gs, &rs, &ss)
 }

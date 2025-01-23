@@ -14,8 +14,6 @@ I_MAT :: glm.mat4(1.0)
 RenderState :: struct {
     v_queue: [dynamic]Vertex,
     i_queue: [ProgramName][dynamic]u16,
-    t_queue: [dynamic]glm.mat4,
-    t_counts: [dynamic]int,
     vbo: u32
 }
 
@@ -24,15 +22,17 @@ init_render_buffers :: proc(rs: ^RenderState) {
         rs.i_queue[program] = make([dynamic]u16) 
     }
     rs.v_queue = make([dynamic]Vertex)
-    rs.t_queue = make([dynamic]glm.mat4)
-    rs.t_counts = make([dynamic]int)
+}
+
+clear_indices_queues :: proc(rs: ^RenderState) {
+    for &arr in rs.i_queue {
+        clear(&arr)
+    }
 }
 
 free_render_buffers :: proc(rs: ^RenderState) {
     delete(rs.v_queue)
     for iq in rs.i_queue do delete(iq)
-    delete(rs.t_queue)
-    delete(rs.t_counts)
 }
 
 init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
@@ -51,19 +51,41 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
 }
 
 add_object_to_render_buffers :: proc(gs: ^GameState, rs: ^RenderState, shape: Shape, transform: glm.mat4) {
-    indices_offset := u16(len(rs.v_queue))
-    append(&rs.v_queue, ..SHAPE_DATA[shape].vertices)
-    for indices_list in SHAPE_DATA[shape].indices_lists {
-        shifted_indices := offset_indices(indices_list.indices[:], indices_offset)
-        iq_idx := int(indices_list.shader)
-        append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
+    x := rnd.float32_range(-1, 1)
+    y := rnd.float32_range(-1, 1)
+    z := rnd.float32_range(-1, 1)
+    vx := rnd.float32_range(-.01, .01)
+    vy := rnd.float32_range(-.01, .01)
+    vz := rnd.float32_range(-.01, .01)
+    obj := add_entity(&gs.ecs)
+    add_transform(&gs.ecs, obj, glm.mat4Translate({x, y, z}))
+    if rnd.float32_range(0, 1) < 0.5 {
+        add_velocity(&gs.ecs, obj, {vx, vy, vz})
     }
-    append(&rs.t_counts, len(SHAPE_DATA[shape].vertices))
-    append(&rs.t_queue, transform)
+    add_shape(&gs.ecs, obj, shape)
+}
+
+get_vertices_from_renderables :: proc(gs: ^GameState, rs: ^RenderState, out: ^[dynamic]Vertex){
+    using gs.ecs.comp_data
+    ents := make([dynamic]uint); defer delete(ents)
+    entities_with(&gs.ecs, {.Shape, .Transform}, &ents)
+    for e in ents {
+        indices_offset := u16(len(out))
+        t_i := get_component(&gs.ecs, e, .Transform)
+        s_i := get_component(&gs.ecs, e, .Shape)
+        sd := SHAPE_DATA[shapes[s_i]]
+        vertices := sd.vertices
+        for indices_list in sd.indices_lists {
+            shifted_indices := offset_indices(indices_list.indices[:], indices_offset)
+            iq_idx := int(indices_list.shader)
+            append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
+        }
+        transform_vertices(vertices, transforms[t_i], out)
+    }
 }
 
 load_level :: proc(gs: ^GameState, rs: ^RenderState, ss: ShaderState) {
-    for _ in 0..<10000 {
+    for _ in 0..<9000 {
         shapes : []Shape = { .Cube, .InvertedPyramid }
         s := rnd.choice(shapes)
         x := rnd.float32_range(-20, 20)
@@ -82,16 +104,18 @@ load_level :: proc(gs: ^GameState, rs: ^RenderState, ss: ShaderState) {
             glm.mat4Rotate({0, 0, 1}, rz)
         )
     }
+}
+
+
+draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time: f64) {
+    clear_indices_queues(rs)
+    transformed_vertices := make([dynamic]Vertex); defer delete(transformed_vertices)
+    get_vertices_from_renderables(gs, rs, &transformed_vertices)
     for name, program in ss.active_programs {
         indices := rs.i_queue[name]
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, program.ebo_id)
         gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
     }
-}
-
-
-draw_triangles :: proc(rs: ^RenderState, ss: ^ShaderState, time: f64) {
-    transformed_vertices := transform_vertices(rs.v_queue[:], rs.t_queue[:], rs.t_counts[:])
     gl.BufferData(gl.ARRAY_BUFFER, size_of(transformed_vertices[0]) * len(transformed_vertices), raw_data(transformed_vertices), gl.STREAM_DRAW)
 
     rot := glm.mat4Rotate({1, 0, 0}, f32(crx)) * glm.mat4Rotate({ 0, 1, 0 }, f32(cry))
@@ -113,5 +137,4 @@ draw_triangles :: proc(rs: ^RenderState, ss: ^ShaderState, time: f64) {
     use_shader(ss, .Outline)
     set_matrix_uniform(ss, "projection", &proj_mat)
     draw_shader(rs, ss, .Outline)
-
 }

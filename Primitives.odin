@@ -1,8 +1,6 @@
 package main
 import glm "core:math/linalg/glsl"
 
-Shape :: enum{ Triangle, InvertedPyramid, Cube, None }
-
 Vertex :: struct{
     pos: glm.vec4,
     uv: glm.vec2

@@ -1,6 +1,7 @@
 package main
+import "core:fmt"
 
-REGISTRY_SIZE :: 1000
+REGISTRY_SIZE :: 10000
 
 ECSState :: struct {
     next_entity: uint,
@@ -46,21 +47,22 @@ remove_entity :: proc(ecs: ^ECSState, entity: uint) -> bool {
     return false
 }
 
-entities_with :: proc(ecs: ^ECSState, cmps: []Component) -> []uint {
-    out := make([dynamic]uint); defer delete(out)
+entities_with :: proc(ecs: ^ECSState, cmps: []Component, out: ^[dynamic]uint) {
+    //out := make([dynamic]uint); defer delete(out)
     e_loop: for e in ecs.entities.packed {
         for cmp in cmps {
-            if !has_component(ecs, e, cmp) {
-                continue e_loop
-            }
+            if !has_component(ecs, e, cmp) do continue e_loop
         }
-        append(&out, e)
+        append(out, e)
     }
-    return out[:]
 }
 
 has_component :: proc(ecs: ^ECSState, entity: uint, cmp: Component) -> bool {
     return sst_has(&ecs.comp_reg[cmp], entity)
+}
+
+get_component :: proc(ecs: ^ECSState, entity: uint, cmp: Component) -> uint {
+    return sst_get(&ecs.comp_reg[cmp], entity)
 }
 
 add_component :: proc(ecs: ^ECSState, entity: uint, arr: ^[dynamic]$T, cmp: Component, val: T) {
