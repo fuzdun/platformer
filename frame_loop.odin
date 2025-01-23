@@ -75,9 +75,6 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^GameState, rs: ^RenderState, ss: ^S
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         draw_triangles(gs, rs, ss, elapsed_time)
         SDL.GL_SwapWindow(window)
-
-        // Free temp allocator
-        free_all(context.temp_allocator)
     }
 }
 

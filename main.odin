@@ -6,8 +6,8 @@ import SDL "vendor:sdl2"
 import gl "vendor:OpenGL"
 import "core:mem"
 
-WIDTH :: 1000 
-HEIGHT :: 1000
+WIDTH :: 1920.0
+HEIGHT :: 1080.0
 TITLE :: "platformer"
 
 GameState :: struct {
@@ -31,6 +31,7 @@ gamestate_free :: proc(gs: ^GameState) {
 }
 
 main :: proc () {
+    // debug mem leak detector
     when ODIN_DEBUG {
         track: mem.Tracking_Allocator
         mem.tracking_allocator_init(&track, context.allocator)
@@ -51,6 +52,7 @@ main :: proc () {
             mem.tracking_allocator_destroy(&track)
         }
     }
+
     // create SDL window
     window := SDL.CreateWindow(TITLE, SDL.WINDOWPOS_UNDEFINED, SDL.WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, {.OPENGL})
     if window == nil {
