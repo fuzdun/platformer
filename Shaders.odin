@@ -89,11 +89,13 @@ draw_shader :: proc(rs: ^RenderState, sh: ^ShaderState, name: ProgramName) {
 }
 
 set_matrix_uniform :: proc(sh: ^ShaderState, name: string, data: ^glm.mat4) {
-    location := gl.GetUniformLocation(sh.loaded_program, strings.clone_to_cstring(name))
+    cstr_name := strings.clone_to_cstring(name); defer delete(cstr_name)
+    location := gl.GetUniformLocation(sh.loaded_program, cstr_name)
     gl.UniformMatrix4fv(location, 1, gl.FALSE, &data[0, 0])
 }
 
 set_float_uniform :: proc(sh: ^ShaderState, name: string, data: f32) {
-    location := gl.GetUniformLocation(sh.loaded_program, strings.clone_to_cstring(name))
+    cstr_name := strings.clone_to_cstring(name); defer delete(cstr_name)
+    location := gl.GetUniformLocation(sh.loaded_program, cstr_name)
     gl.Uniform1f(location, data)
 }

@@ -54,6 +54,7 @@ ecs_free :: proc(ecs: ^ECS) {
     sst_delete(&ecs.entities)
     delete(ecs.free_entities)
     delete(ecs.comp_reg)
+    free_comp_data(&ecs.comp_data)
 }
 
 //Queries=========================================

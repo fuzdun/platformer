@@ -10,11 +10,13 @@ shader_program_from_file :: proc(vertex_filename, fragment_filename: string) -> 
     dir := "shaders/"
     ext := ".glsl"
     vertex_string, vertex_ok := os.read_entire_file(str.concatenate({dir, vertex_filename, ext}))
+    defer delete(vertex_string)
     if !vertex_ok {
         fmt.println("failed to read vertex shader file")
         return 0, false
     }
     fragment_string, fragment_ok := os.read_entire_file(str.concatenate({dir, fragment_filename, ext}))
+    defer delete(fragment_string)
     if !fragment_ok {
         fmt.println("failed to read fragment shader file")
         return 0, false

@@ -1,6 +1,6 @@
 package main
 
-REGISTRY_SIZE :: 10000
+REGISTRY_SIZE :: 5000
 
 SparseSet :: struct{
     sparse: [REGISTRY_SIZE]uint,

@@ -40,6 +40,12 @@ init_comp_data :: proc(cd: ^CompData) {
     cd.shape = make([dynamic]Shape)
 }
 
+free_comp_data :: proc(cd: ^CompData) {
+    delete(cd.velocity)
+    delete(cd.transform)
+    delete(cd.shape)
+}
+
 //=Get=================================================
 get_velocity :: proc(ecs: ^ECS, eid: uint) -> (^Velocity, bool) {
     if idx, ok := sst_get(&ecs.comp_reg[.Velocity], eid); ok {

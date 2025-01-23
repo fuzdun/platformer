@@ -53,6 +53,7 @@ get_vertices_update_indices :: proc(gs: ^GameState, rs: ^RenderState) -> (out: [
     using gs.ecs
     out = make([dynamic]Vertex)
     ents := entities_with(&gs.ecs, {.Shape, .Transform})
+    defer delete(ents)
     for e in ents {
         shape := get_shape(&gs.ecs, e) or_else nil
         transform := get_transform(&gs.ecs, e) or_else nil
@@ -61,10 +62,13 @@ get_vertices_update_indices :: proc(gs: ^GameState, rs: ^RenderState) -> (out: [
         vertices := sd.vertices
         for indices_list in sd.indices_lists {
             shifted_indices := offset_indices(indices_list.indices[:], indices_offset)
+            defer delete(shifted_indices)
             iq_idx := int(indices_list.shader)
             append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
         }
-        append(&out, ..transform_vertices(vertices, transform^))
+        transformed_vertices := transform_vertices(vertices, transform^)
+        defer delete(transformed_vertices)
+        append(&out, ..transformed_vertices)
     }
     return
 }
