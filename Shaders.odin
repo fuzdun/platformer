@@ -7,7 +7,9 @@ import glm "core:math/linalg/glsl"
 ProgramName :: enum{
     Pattern,
     Outline,
-    New
+    New,
+    Reactive,
+    Player
 }
 
 Program :: struct{
@@ -35,7 +37,7 @@ PROGRAM_CONFIGS :: [ProgramName]Program{
         frag_filename = "outlinefrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
-            gl.LineWidth(3)
+            gl.LineWidth(5)
         }
     },
     .New = {
@@ -44,8 +46,21 @@ PROGRAM_CONFIGS :: [ProgramName]Program{
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
         }
+    },
+    .Player = {
+        vertex_filename = "patternvertex",
+        frag_filename = "playerfrag",
+        init_proc = proc() {
+            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+        }
+    },
+    .Reactive = {
+        vertex_filename = "patternvertex",
+        frag_filename = "reactivefrag",
+        init_proc = proc() {
+            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+        }
     }
-
 }
 
 ShaderState :: struct {
@@ -98,4 +113,10 @@ set_float_uniform :: proc(sh: ^ShaderState, name: string, data: f32) {
     cstr_name := strings.clone_to_cstring(name); defer delete(cstr_name)
     location := gl.GetUniformLocation(sh.loaded_program, cstr_name)
     gl.Uniform1f(location, data)
+}
+
+set_vec3_uniform :: proc(sh: ^ShaderState, name: string, data: ^glm.vec3) {
+    cstr_name := strings.clone_to_cstring(name); defer delete(cstr_name)
+    location := gl.GetUniformLocation(sh.loaded_program, cstr_name)
+    gl.Uniform3fv(location, 1, &data[0])
 }

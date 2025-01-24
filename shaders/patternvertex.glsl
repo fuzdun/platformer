@@ -7,13 +7,10 @@ out vec2 uv;
 out float time;
 
 uniform float i_time;
-// uniform mat4 transform;
 uniform mat4 projection;
 
 void main() {
-    gl_Position = projection * aPos; //vec4(aPos.x, aPos.y, aPos.z, 1.0);
-    // gl_Position = projection * transform * vec4(aPos.x, aPos.y, aPos.z, 1.0);
-    // gl_Position = projection * aPos;
+    gl_Position = projection * aPos;
     uv = vertexUV;
     time = i_time;
 }

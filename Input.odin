@@ -5,10 +5,14 @@ import "vendor:glfw"
 import "base:runtime"
 import SDL "vendor:sdl2"
 
-u_pressed : bool = false
+a_pressed : bool = false
+s_pressed : bool = false
 d_pressed : bool = false
-r_pressed : bool = false
-l_pressed : bool = false
+w_pressed : bool = false
+up_pressed : bool = false
+down_pressed : bool = false
+right_pressed : bool = false
+left_pressed : bool = false
 f_pressed : bool = false
 b_pressed : bool = false
 spc_pressed : bool = false
@@ -27,13 +31,21 @@ process_input :: proc (quit_handler: proc())
                     case .DOWN:
                         b_pressed = true
                     case .LEFT:
-                        l_pressed = true
+                        left_pressed = true
                     case .RIGHT:
-                        r_pressed = true
-                    case .RSHIFT:
-                        u_pressed = true
-                    case .RCTRL:
+                        right_pressed = true
+                    case .a:
+                        a_pressed = true
+                    case .s:
+                        s_pressed = true
+                    case .d:
                         d_pressed = true
+                    case .w:
+                        w_pressed = true
+                    case .RSHIFT:
+                        up_pressed = true
+                    case .RCTRL:
+                        down_pressed = true
                     case .SPACE:
                         spc_pressed = true
                 }
@@ -44,13 +56,21 @@ process_input :: proc (quit_handler: proc())
                     case .DOWN:
                         b_pressed = false
                     case .LEFT:
-                        l_pressed = false
+                        left_pressed = false
                     case .RIGHT:
-                        r_pressed = false
+                        right_pressed = false
                     case .RSHIFT:
-                        u_pressed = false
+                        up_pressed = false
                     case .RCTRL:
+                        down_pressed = false
+                    case .a:
+                        a_pressed = false
+                    case .s:
+                        s_pressed = false
+                    case .d:
                         d_pressed = false
+                    case .w:
+                        w_pressed = false
                     case .SPACE:
                         spc_pressed = false
                 }

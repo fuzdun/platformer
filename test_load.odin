@@ -14,9 +14,9 @@ load_random_shapes :: proc(gs: ^GameState, num: int) {
         rx := rnd.float32_range(-180, 180)
         ry := rnd.float32_range(-180, 180)
         rz := rnd.float32_range(-180, 180)
-        vx := rnd.float32_range(-.01, .01)
-        vy := rnd.float32_range(-.01, .01)
-        vz := rnd.float32_range(-.01, .01)
+        vx := rnd.float32_range(-.2, .2)
+        vy := rnd.float32_range(-.2, .2)
+        vz := rnd.float32_range(-.2, .2)
         transform := glm.mat4Translate({x, y, z}) *
                      glm.mat4Rotate({1, 0, 0}, rx) *
                      glm.mat4Rotate({0, 1, 0}, ry) *
@@ -26,5 +26,11 @@ load_random_shapes :: proc(gs: ^GameState, num: int) {
             add_velocity(&gs.ecs, obj, {vx, vy, vz})
         }
     }
+}
+
+load_test_floor :: proc(gs: ^GameState, w: f32, h: f32) {
+    flr := add_entity(&gs.ecs)
+    add_shape(&gs.ecs, flr, .Plane)
+    add_transform(&gs.ecs, flr, glm.mat4Translate({0, -.5, 0}) * glm.mat4Scale({w, 0, h}))
 }
 

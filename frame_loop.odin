@@ -66,7 +66,7 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^GameState, rs: ^RenderState, ss: ^S
 
         for ; accumulator > target_frame_clocks; accumulator -= target_frame_clocks {
             // Fixed update
-            game_update(gs, FIXED_DELTA_TIME)
+            game_update(gs, elapsed_time, FIXED_DELTA_TIME)
         }
 
         // Render

@@ -17,7 +17,7 @@ ChildStruct :: struct {
 }
 
 Transform :: glm.mat4 
-Shape :: enum{ Triangle, InvertedPyramid, Cube, None }
+Shape :: enum{ Triangle, InvertedPyramid, Cube, Sphere, Plane, None }
 Velocity :: la.Vector3f32
 
 
