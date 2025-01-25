@@ -8,9 +8,9 @@ load_random_shapes :: proc(gs: ^GameState, num: int) {
         shapes : []Shape = { .Cube, .InvertedPyramid }
         shape := rnd.choice(shapes)
         add_shape(&gs.ecs, obj, shape)
-        x := rnd.float32_range(-30, 30)
-        y := rnd.float32_range(-30, 30)
-        z := rnd.float32_range(-30, 30)
+        x := rnd.float32_range(-50, 50)
+        y := rnd.float32_range(-50, 50)
+        z := rnd.float32_range(-50, 50)
         rx := rnd.float32_range(-180, 180)
         ry := rnd.float32_range(-180, 180)
         rz := rnd.float32_range(-180, 180)

@@ -80,7 +80,7 @@ main :: proc () {
     init_draw(&rs, &ss)
 
     // load test geometry
-    load_random_shapes(&gs, 200)
+    load_random_shapes(&gs, 500)
     load_test_floor(&gs, 10, 10)
 
     // start frame loop
