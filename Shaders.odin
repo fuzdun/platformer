@@ -55,7 +55,7 @@ PROGRAM_CONFIGS :: [ProgramName]Program{
         }
     },
     .Reactive = {
-        vertex_filename = "patternvertex",
+        vertex_filename = "reactivevertex",
         frag_filename = "reactivefrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)

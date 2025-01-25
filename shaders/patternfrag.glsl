@@ -5,7 +5,7 @@ in float time;
 
 out vec4 fragColor;
 
-#define pi     3.14159265
+#define pi 3.14159265
 
 float generator(vec2 uv,float x)
 {
@@ -31,5 +31,5 @@ void main()
     vec3 col=vec3(0.1,0.2,0.2)*generator(uv2,x);
     
     // Output to screen
-    fragColor = vec4(col,1.0);
+    fragColor = vec4(col, 0.25);
 }

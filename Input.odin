@@ -9,6 +9,8 @@ a_pressed : bool = false
 s_pressed : bool = false
 d_pressed : bool = false
 w_pressed : bool = false
+q_pressed : bool = false
+e_pressed : bool = false
 up_pressed : bool = false
 down_pressed : bool = false
 right_pressed : bool = false
@@ -42,6 +44,10 @@ process_input :: proc (quit_handler: proc())
                         d_pressed = true
                     case .w:
                         w_pressed = true
+                    case .q:
+                        q_pressed = true
+                    case .e:
+                        e_pressed = true
                     case .RSHIFT:
                         up_pressed = true
                     case .RCTRL:
@@ -71,6 +77,10 @@ process_input :: proc (quit_handler: proc())
                         d_pressed = false
                     case .w:
                         w_pressed = false
+                    case .q:
+                        q_pressed = false
+                    case .e:
+                        e_pressed = false
                     case .SPACE:
                         spc_pressed = false
                 }

@@ -24,49 +24,49 @@ last_moved : f64 = 0
 AUTO_MOVE_DELAY :: 400.0 
 
 move_camera :: proc(elapsed_time: f64, delta_time: f64) {
-    if spc_pressed {
-        if f_pressed do crx -= turn_speed * delta_time
-        if b_pressed do crx += turn_speed * delta_time
-        if right_pressed do cry += turn_speed * delta_time
-        if left_pressed do cry -= turn_speed * delta_time
-        if up_pressed do crz += turn_speed * delta_time
-        if down_pressed do crz -= turn_speed * delta_time
-    } else {
-        rot := glm.mat4Rotate({1, 0, 0}, f32(crx)) * glm.mat4Rotate({ 0, 1, 0 }, f32(cry))
-        fwd := glm.vec4({0, 0, 1, 1}) * rot
-        up := glm.vec4({0, 1, 0, 1}) * rot
-        right := glm.vec4({1, 0, 0, 1}) * rot
-        if up_pressed {
-            cvx -= f64(up.x) * C_SPD * delta_time
-            cvy -= f64(up.y) * C_SPD * delta_time
-            cvz -= f64(up.z) * C_SPD * delta_time
-        }
-        if down_pressed {
-            cvx += f64(up.x) * C_SPD * delta_time
-            cvy += f64(up.y) * C_SPD * delta_time
-            cvz += f64(up.z) * C_SPD * delta_time
-        }
-        if left_pressed {
-            cvx += f64(right.x) * C_SPD * delta_time
-            cvy += f64(right.y) * C_SPD * delta_time
-            cvz += f64(right.z) * C_SPD * delta_time
-        }
-        if right_pressed {
-            cvx -= f64(right.x) * C_SPD * delta_time
-            cvy -= f64(right.y) * C_SPD * delta_time
-            cvz -= f64(right.z) * C_SPD * delta_time
-        }
-        if f_pressed {
-            cvx += f64(fwd.x) * C_SPD * delta_time
-            cvy += f64(fwd.y) * C_SPD * delta_time
-            cvz += f64(fwd.z) * C_SPD * delta_time
-        }
-        if b_pressed {
-            cvx -= f64(fwd.x) * C_SPD * delta_time
-            cvy -= f64(fwd.y) * C_SPD * delta_time
-            cvz -= f64(fwd.z) * C_SPD * delta_time
-        }
+    //if spc_pressed {
+    //    if f_pressed do crx -= turn_speed * delta_time
+    //    if b_pressed do crx += turn_speed * delta_time
+    //    if right_pressed do cry += turn_speed * delta_time
+    //    if left_pressed do cry -= turn_speed * delta_time
+    //    if up_pressed do crz += turn_speed * delta_time
+    //    if down_pressed do crz -= turn_speed * delta_time
+    //} else {
+    rot := glm.mat4Rotate({1, 0, 0}, f32(crx)) * glm.mat4Rotate({ 0, 1, 0 }, f32(cry))
+    fwd := glm.vec4({0, 0, 1, 1}) * rot
+    up := glm.vec4({0, 1, 0, 1}) * rot
+    right := glm.vec4({1, 0, 0, 1}) * rot
+    if up_pressed {
+        cvx -= f64(up.x) * C_SPD * delta_time
+        cvy -= f64(up.y) * C_SPD * delta_time
+        cvz -= f64(up.z) * C_SPD * delta_time
     }
+    if down_pressed {
+        cvx += f64(up.x) * C_SPD * delta_time
+        cvy += f64(up.y) * C_SPD * delta_time
+        cvz += f64(up.z) * C_SPD * delta_time
+    }
+    if left_pressed {
+        cvx += f64(right.x) * C_SPD * delta_time
+        cvy += f64(right.y) * C_SPD * delta_time
+        cvz += f64(right.z) * C_SPD * delta_time
+    }
+    if right_pressed {
+        cvx -= f64(right.x) * C_SPD * delta_time
+        cvy -= f64(right.y) * C_SPD * delta_time
+        cvz -= f64(right.z) * C_SPD * delta_time
+    }
+    if f_pressed {
+        cvx += f64(fwd.x) * C_SPD * delta_time
+        cvy += f64(fwd.y) * C_SPD * delta_time
+        cvz += f64(fwd.z) * C_SPD * delta_time
+    }
+    if b_pressed {
+        cvx -= f64(fwd.x) * C_SPD * delta_time
+        cvy -= f64(fwd.y) * C_SPD * delta_time
+        cvz -= f64(fwd.z) * C_SPD * delta_time
+    }
+    //}
 
 
     cx += cvx * delta_time

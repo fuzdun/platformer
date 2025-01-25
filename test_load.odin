@@ -8,9 +8,9 @@ load_random_shapes :: proc(gs: ^GameState, num: int) {
         shapes : []Shape = { .Cube, .InvertedPyramid }
         shape := rnd.choice(shapes)
         add_shape(&gs.ecs, obj, shape)
-        x := rnd.float32_range(-20, 20)
-        y := rnd.float32_range(-20, 20)
-        z := rnd.float32_range(-20, 20)
+        x := rnd.float32_range(-30, 30)
+        y := rnd.float32_range(-30, 30)
+        z := rnd.float32_range(-30, 30)
         rx := rnd.float32_range(-180, 180)
         ry := rnd.float32_range(-180, 180)
         rz := rnd.float32_range(-180, 180)
@@ -18,6 +18,7 @@ load_random_shapes :: proc(gs: ^GameState, num: int) {
         vy := rnd.float32_range(-.2, .2)
         vz := rnd.float32_range(-.2, .2)
         transform := glm.mat4Translate({x, y, z}) *
+                     glm.mat4Scale({10, 10, 10}) *
                      glm.mat4Rotate({1, 0, 0}, rx) *
                      glm.mat4Rotate({0, 1, 0}, ry) *
                      glm.mat4Rotate({0, 0, 1}, rz)
