@@ -127,6 +127,18 @@ SHAPE_DATA := #partial [Shape]ShapeData{
 
             },
             {
+                .New,
+                {
+                    0, 1, 2,
+                    2, 1, 3,
+                    3, 1, 4,
+                    4, 1, 0,
+                    0, 2, 4,
+                    2, 3, 4
+                }
+
+            },
+            {
                 .Outline,
                 {
                     0, 1, 2,
@@ -151,6 +163,23 @@ SHAPE_DATA := #partial [Shape]ShapeData{
         {
             {
                 .Outline,
+                {
+                    0, 1, 2,
+                    0, 2, 3,
+                    3, 2, 6,
+                    3, 6, 7,
+                    4, 5, 6,
+                    4, 6, 7,
+                    4, 5, 1,
+                    4, 1, 0,
+                    0, 3, 4,
+                    7, 4, 3,
+                    1, 5, 6,
+                    1, 6, 2
+                }
+            },
+            {
+                .Pattern,
                 {
                     0, 1, 2,
                     0, 2, 3,
@@ -204,6 +233,13 @@ SHAPE_DATA := #partial [Shape]ShapeData{
         {
             {
                 .Reactive,
+                {
+                    0, 1, 3,
+                    3, 1, 2 
+                }
+            },
+            {
+                .Trail,
                 {
                     0, 1, 3,
                     3, 1, 2 

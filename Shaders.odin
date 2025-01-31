@@ -9,7 +9,8 @@ ProgramName :: enum{
     Outline,
     New,
     Reactive,
-    Player
+    Player,
+    Trail
 }
 
 Program :: struct{
@@ -23,6 +24,7 @@ ActiveProgram :: struct{
     ebo_id: u32,
     init_proc: proc()
 }
+
 
 PROGRAM_CONFIGS :: [ProgramName]Program{
     .Pattern = {
@@ -60,7 +62,14 @@ PROGRAM_CONFIGS :: [ProgramName]Program{
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
         }
-    }
+    },
+    .Trail = {
+        vertex_filename = "trailvertex",
+        frag_filename = "trailfrag",
+        init_proc = proc() {
+            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+        }
+    } 
 }
 
 ShaderState :: struct {

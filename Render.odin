@@ -53,19 +53,22 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
 get_vertices_update_indices :: proc(gs: ^GameState, rs: ^RenderState) -> (out: [dynamic]Vertex){
     using gs.ecs
     out = make([dynamic]Vertex)
-    ents := entities_with(&gs.ecs, {.Shape, .Transform})
+    ents := entities_with(&gs.ecs, {.Shape, .Transform, .ActiveShaders})
     defer delete(ents)
     for e in ents {
         shape := get_shape(&gs.ecs, e) or_else nil
         transform := get_transform(&gs.ecs, e) or_else nil
+        active_shaders := get_shaders(&gs.ecs, e) or_else nil
         indices_offset := u16(len(out))
         sd := SHAPE_DATA[shape^]
         vertices := sd.vertices
         for indices_list in sd.indices_lists {
-            shifted_indices := offset_indices(indices_list.indices[:], indices_offset)
-            defer delete(shifted_indices)
-            iq_idx := int(indices_list.shader)
-            append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
+            if indices_list.shader in active_shaders^ {
+                shifted_indices := offset_indices(indices_list.indices[:], indices_offset)
+                defer delete(shifted_indices)
+                iq_idx := int(indices_list.shader)
+                append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
+            }
         }
         transformed_vertices := transform_vertices(vertices, transform^)
         defer delete(transformed_vertices)
@@ -121,6 +124,12 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
     set_matrix_uniform(ss, "projection", &proj_mat)
     draw_shader(rs, ss, .Reactive)
 
+    use_shader(ss, .Trail)
+    set_vec3_uniform(ss, "player_pos_in", &player_pos)
+    set_float_uniform(ss, "i_time", f32(time) / 1000)
+    set_matrix_uniform(ss, "projection", &proj_mat)
+    draw_shader(rs, ss, .Trail)
+
     use_shader(ss, .Pattern)
     set_matrix_uniform(ss, "projection", &proj_mat)
     set_float_uniform(ss, "i_time", f32(time) / 1000)
@@ -130,6 +139,7 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
     set_matrix_uniform(ss, "projection", &proj_mat)
     set_float_uniform(ss, "i_time", f32(time) / 1000)
     draw_shader(rs, ss, .New)
+
 
     //use_shader(ss, .Outline)
     //set_matrix_uniform(ss, "projection", &proj_mat)
