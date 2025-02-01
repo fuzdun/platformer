@@ -52,11 +52,12 @@ transform_vertices_arr :: proc(vertices: []Vertex, transforms: []glm.mat4, trans
     return out[:]
 }
 
-transform_vertices :: proc(vertices: []Vertex, transform: glm.mat4) -> (out: []Vertex) {
+transform_vertices :: proc(vertices: []Vertex, position: Position, scale: Scale, rotation: Rotation) -> (out: []Vertex) {
     out = make([]Vertex, len(vertices))
     for v, idx in vertices {
-        vertex: Vertex = { transform * v.pos, v.uv }
-        out[idx] = vertex
+        new_pos := v.pos
+        new_pos.xyz = la.quaternion128_mul_vector3(rotation, new_pos.xyz) * scale + position
+        out[idx] = { new_pos, v.uv }
     }
     return
 }

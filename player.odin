@@ -3,54 +3,63 @@ import "core:math"
 import la "core:math/linalg"
 import "core:fmt"
 
-px : f64 = 0
-py : f64 = 0
-pz : f64 = 0
+Input_State :: struct {
+    a_pressed: bool,
+    d_pressed: bool,
+    s_pressed: bool,
+    w_pressed: bool,
+    spc_pressed: bool,
+}
 
-pv: [3]f64 = {0, 0, 0}
+// should update this
+Player_Input_State :: struct {
+    got_jump: bool,
+    got_input: bool,
+    got_dir: bool,
+    dir: la.Vector2f64,
+}
+
+Player_State :: struct {
+    position: [3]f64,
+    velocity: [3]f64,
+}
 
 MAX_PLAYER_SPEED := 10.0
 P_JUMP_SPEED := 10.0
 P_ACCEL := 20.0
 GRAV := 0.25
 
-move_player :: proc(elapsed_time: f64, delta_time: f64) {
-    if a_pressed {
-       pv.x += P_ACCEL * delta_time
+move_player :: proc(is: Input_State, ps: ^Player_State, elapsed_time: f64, delta_time: f64) {
+    if is.a_pressed {
+       ps.velocity.x -= P_ACCEL * delta_time
     }
-    if d_pressed {
-        pv.x -= P_ACCEL * delta_time
+    if is.d_pressed {
+        ps.velocity.x += P_ACCEL * delta_time
     }
-    if w_pressed {
-        pv.z += P_ACCEL * delta_time
+    if is.w_pressed {
+        ps.velocity.z -= P_ACCEL * delta_time
     }
-    if s_pressed {
-        pv.z -= P_ACCEL * delta_time
+    if is.s_pressed {
+        ps.velocity.z += P_ACCEL * delta_time
     }
-    if spc_pressed && py == 0 {
-        pv.y = - P_JUMP_SPEED
+    if is.spc_pressed && ps.position.y == 0 {
+        ps.velocity.y = P_JUMP_SPEED
     }
-    //if q_pressed {
-    //    pv.y += P_ACCEL * delta_time
-    //}
-    //if e_pressed {
-    //    pv.y -= P_ACCEL * delta_time
-    //}
-    clamped_xz := la.clamp_length(pv.xz, MAX_PLAYER_SPEED)
-    pv.xz = clamped_xz
+    clamped_xz := la.clamp_length(ps.velocity.xz, MAX_PLAYER_SPEED)
+    ps.velocity.xz = clamped_xz
     
-    got_input := a_pressed || d_pressed || w_pressed || s_pressed
+    got_input := is.a_pressed || is.d_pressed || is.w_pressed || is.s_pressed
 
     //if !got_input {
-        pv.xz *= math.pow(0.05, delta_time)
+        ps.velocity.xz *= math.pow(0.05, delta_time)
     //}
 
-    pv.y += GRAV
+    ps.velocity.y -= GRAV
 
-    px += pv.x * delta_time
-    py += pv.y * delta_time
-    pz += pv.z * delta_time
+    ps.position.x += ps.velocity.x * delta_time
+    ps.position.y += ps.velocity.y * delta_time
+    ps.position.z += ps.velocity.z * delta_time
 
-    py = min(py, 0)
+    ps.position.y = max(ps.position.y, 0)
 }
 

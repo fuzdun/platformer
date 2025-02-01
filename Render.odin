@@ -51,37 +51,35 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
 }
 
 get_vertices_update_indices :: proc(gs: ^GameState, rs: ^RenderState) -> (out: [dynamic]Vertex){
-    using gs.ecs
     out = make([dynamic]Vertex)
-    ents := entities_with(&gs.ecs, {.Shape, .Transform, .ActiveShaders})
-    defer delete(ents)
-    for e in ents {
-        shape := get_shape(&gs.ecs, e) or_else nil
-        transform := get_transform(&gs.ecs, e) or_else nil
-        active_shaders := get_shaders(&gs.ecs, e) or_else nil
+    scale_identity : Scale = {1, 1, 1}
+    for lg in gs.level_geometry {
         indices_offset := u16(len(out))
-        sd := SHAPE_DATA[shape^]
+        sd := SHAPE_DATA[lg.shape]
         vertices := sd.vertices
         for indices_list in sd.indices_lists {
-            if indices_list.shader in active_shaders^ {
+            if indices_list.shader in lg.shaders {
                 shifted_indices := offset_indices(indices_list.indices[:], indices_offset)
                 defer delete(shifted_indices)
                 iq_idx := int(indices_list.shader)
                 append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
             }
         }
-        transformed_vertices := transform_vertices(vertices, transform^)
+        scale := .Scale in lg.attributes ? lg.scale : {1, 1, 1}
+        rotation := lg.rotation
+        transformed_vertices := transform_vertices(vertices, lg.position, scale, lg.rotation)
         defer delete(transformed_vertices)
         append(&out, ..transformed_vertices)
     }
     return
 }
 
-queue_draw_player :: proc(rs: ^RenderState, out: ^[dynamic]Vertex) {
+queue_draw_player :: proc(ps: Player_State, rs: ^RenderState, out: ^[dynamic]Vertex) {
     indices_offset := u16(len(out))
     sd := SHAPE_DATA[.Sphere]
-    p_trans := glm.mat4Translate({f32(-px), f32(-py), f32(-pz)})
-    transformed_vertices := transform_vertices(sd.vertices, p_trans)
+    rot := la.quaternion_from_euler_angles(f32(0), f32(0), f32(0), .XYZ)
+    p_pos := ps.position
+    transformed_vertices := transform_vertices(sd.vertices, {f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)}, {1, 1, 1}, rot)
     defer delete(transformed_vertices)
     append(out, ..transformed_vertices) 
     for indices_list in sd.indices_lists {
@@ -98,7 +96,7 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
     clear_indices_queues(rs)
     transformed_vertices := get_vertices_update_indices(gs, rs)
     defer delete(transformed_vertices)
-    queue_draw_player(rs, &transformed_vertices)
+    queue_draw_player(gs.player_state, rs, &transformed_vertices)
     for name, program in ss.active_programs {
         indices := rs.i_queue[name]
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, program.ebo_id)
@@ -106,11 +104,14 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
     }
     gl.BufferData(gl.ARRAY_BUFFER, size_of(transformed_vertices[0]) * len(transformed_vertices), raw_data(transformed_vertices), gl.STREAM_DRAW)
 
-    rot := glm.mat4LookAt({0, 0, 0}, {f32(cx - px), f32(cy - py), f32(cz - pz)}, {0, 1, 0})
+    c_pos := gs.camera_state.position
+    p_pos := gs.player_state.position
+    rot := glm.mat4LookAt({0, 0, 0}, {f32(p_pos.x - c_pos.x), f32(p_pos.y - c_pos.y), f32(p_pos.z - c_pos.z)}, {0, 1, 0})
     proj := glm.mat4Perspective(45, WIDTH / HEIGHT, 0.01, 100)
-    offset := glm.mat4Translate({f32(cx), f32(cy), f32(cz)})
+    offset := glm.mat4Translate({f32(-c_pos.x), f32(-c_pos.y), f32(-c_pos.z)})
 
     proj_mat := proj * rot * offset
+    player_pos := glm.vec3({f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)})
 
     use_shader(ss, .Player)
     set_matrix_uniform(ss, "projection", &proj_mat)
@@ -118,7 +119,6 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
     draw_shader(rs, ss, .Player)
 
     use_shader(ss, .Reactive)
-    player_pos := glm.vec3({f32(-px), f32(-py), f32(-pz)})
     set_vec3_uniform(ss, "player_pos_in", &player_pos)
     set_float_uniform(ss, "i_time", f32(time) / 1000)
     set_matrix_uniform(ss, "projection", &proj_mat)
@@ -140,14 +140,8 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
     set_float_uniform(ss, "i_time", f32(time) / 1000)
     draw_shader(rs, ss, .New)
 
-
-    //use_shader(ss, .Outline)
-    //set_matrix_uniform(ss, "projection", &proj_mat)
-    //draw_shader(rs, ss, .Outline)
-
-}
-
-draw_sphere :: proc(gs: ^GameState, rs: ^RenderState){
-
+    use_shader(ss, .Outline)
+    set_matrix_uniform(ss, "projection", &proj_mat)
+    draw_shader(rs, ss, .Outline)
 }
 

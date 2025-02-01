@@ -58,7 +58,7 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^GameState, rs: ^RenderState, ss: ^S
         }
 
         // Handle input
-        process_input(quit_handler)
+        process_input(&gs.input_state, quit_handler)
 
         if accumulator > 2 * target_frame_clocks {
             fmt.println("dropped frame")

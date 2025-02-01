@@ -40,7 +40,7 @@ void main() {
     float d = length(global_pos.xz - player_pos.xz) + noise(a + time * 10) * .3;
     float dfrac = d / uvd;
     float absd = abs(uvd - d);
-    float border = smoothstep(-0.1, 0, absd) - smoothstep(0, 0.1, absd);
+    float border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.0, 0.1, absd);
     // vec3 color = vec3(1.0);
     vec3 color = d < uvd ? vec3(.25, .15, max(1.0 - (d / uvd) * .5, 0.6)) : vec3(.25, .15, 0.6);
     color += vec3(.5, 0, 0) * border;

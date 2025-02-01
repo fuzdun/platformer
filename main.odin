@@ -11,23 +11,18 @@ HEIGHT :: 1080.0
 TITLE :: "platformer"
 
 GameState :: struct {
-    ecs: ECS,
-    // player state
-    // ui state
-    // game mode
-    // etc
+    level_geometry: #soa[dynamic]Level_Geometry,
+    player_state: Player_State,
+    input_state: Input_State,
+    camera_state: Camera_State
 }
 
 gamestate_init :: proc(gs: ^GameState) {
-    ecs_init(&gs.ecs)
-    // init player state
-    // etc
+    gs.level_geometry = make(Level_Geometry_State)
 }
 
 gamestate_free :: proc(gs: ^GameState) {
-    ecs_free(&gs.ecs)
-    // free player state
-    // etc
+    delete(gs.level_geometry)
 }
 
 main :: proc () {

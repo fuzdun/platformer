@@ -81,10 +81,6 @@ add_sphere_data :: proc() {
             vr2 += 1
         }
     }
-    //outline_il := IndicesList({.Outline, outline_indices[:]})
-    //sd.vertices = vertices[:]
-    //sd.indices_lists = {fill_il}
-    //SHAPE_DATA[.Sphere] = sd^
 }
 
 SHAPE_DATA := #partial [Shape]ShapeData{
