@@ -19,10 +19,13 @@ GameState :: struct {
 
 gamestate_init :: proc(gs: ^GameState) {
     gs.level_geometry = make(Level_Geometry_State)
+    gs.player_state.trail = make([dynamic][3]f32)
+    resize(&gs.player_state.trail, TRAIL_SIZE)
 }
 
 gamestate_free :: proc(gs: ^GameState) {
     delete(gs.level_geometry)
+    delete(gs.player_state.trail)
 }
 
 main :: proc () {

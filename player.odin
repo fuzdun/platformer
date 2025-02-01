@@ -1,6 +1,7 @@
 package main
 import "core:math"
 import la "core:math/linalg"
+import glm "core:math/linalg/glsl"
 import "core:fmt"
 
 Input_State :: struct {
@@ -22,14 +23,21 @@ Player_Input_State :: struct {
 Player_State :: struct {
     position: [3]f64,
     velocity: [3]f64,
+    trail: [dynamic]glm.vec3
 }
 
 MAX_PLAYER_SPEED := 10.0
 P_JUMP_SPEED := 10.0
 P_ACCEL := 20.0
 GRAV := 0.25
+TRAIL_SIZE :: 50 
 
 move_player :: proc(is: Input_State, ps: ^Player_State, elapsed_time: f64, delta_time: f64) {
+    
+    pop(&ps.trail)
+    new_pt: [3]f32 = {f32(ps.position.x), f32(ps.position.y), f32(ps.position.z)}
+    inject_at(&ps.trail, 0, new_pt)
+
     if is.a_pressed {
        ps.velocity.x -= P_ACCEL * delta_time
     }

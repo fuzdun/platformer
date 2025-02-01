@@ -112,6 +112,7 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
 
     proj_mat := proj * rot * offset
     player_pos := glm.vec3({f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)})
+    player_trail : [3]glm.vec3 = { gs.player_state.trail[16], gs.player_state.trail[32], gs.player_state.trail[49] }
 
     use_shader(ss, .Player)
     set_matrix_uniform(ss, "projection", &proj_mat)
@@ -119,13 +120,14 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
     draw_shader(rs, ss, .Player)
 
     use_shader(ss, .Reactive)
-    set_vec3_uniform(ss, "player_pos_in", &player_pos)
+    set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
     set_float_uniform(ss, "i_time", f32(time) / 1000)
     set_matrix_uniform(ss, "projection", &proj_mat)
     draw_shader(rs, ss, .Reactive)
 
     use_shader(ss, .Trail)
-    set_vec3_uniform(ss, "player_pos_in", &player_pos)
+    set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
+    set_vec3_uniform(ss, "player_trail_in", 3, &player_trail[0])
     set_float_uniform(ss, "i_time", f32(time) / 1000)
     set_matrix_uniform(ss, "projection", &proj_mat)
     draw_shader(rs, ss, .Trail)

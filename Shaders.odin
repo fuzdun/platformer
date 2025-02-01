@@ -124,8 +124,9 @@ set_float_uniform :: proc(sh: ^ShaderState, name: string, data: f32) {
     gl.Uniform1f(location, data)
 }
 
-set_vec3_uniform :: proc(sh: ^ShaderState, name: string, data: ^glm.vec3) {
+set_vec3_uniform :: proc(sh: ^ShaderState, name: string, count: i32, data: ^glm.vec3) {
     cstr_name := strings.clone_to_cstring(name); defer delete(cstr_name)
     location := gl.GetUniformLocation(sh.loaded_program, cstr_name)
-    gl.Uniform3fv(location, 1, &data[0])
+    gl.Uniform3fv(location, count, &data[0])
 }
+
