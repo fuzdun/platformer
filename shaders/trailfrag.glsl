@@ -66,10 +66,6 @@ void main()
         }
     }
 
-    // fragColor = vec4(color, 1.0);
-
-    // vec3 pos1 = vec3(-2, 0, -2);
-    // vec3 pos2 = vec3(2, 0, 2);
 	  vec3 col = vec3(0.0);
 
     vec2 res1 = distanceToSegment(player_pos.xz, player_trail[0].xz, global_pos.xz);
@@ -79,13 +75,12 @@ void main()
     float t = (d == res1[0] ? res1[1] : (d == res2[0] ? 1.0 + res2[1] : 2.0 + res3[1])) / 3.0;
     d += t * 0.69;
 
-
     float line_len = length(player_pos.xy - player_trail[0].xy) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
     float freq = 2.0 * line_len;
-    float width = sin(-time * 70.0 + t * TWOPI * freq) * 5.0 + 40.0;
+    float width =  sin(-time * 70.0 + t * TWOPI * freq) * 5.0 + 40.0;
     float border_d = 0.01 * width;
     vec3 intColor = mix(vec3(1.0, 0.0, 0.0), vec3(0.5, 0.0, 0.5), t);
-    col = mix( col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) );
+    col = res1[1] > 0.1 ?  mix( col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : col;
 
     col = mix(col, reactive_color, 0.5);
 	  fragColor = vec4( col, 1.0 );

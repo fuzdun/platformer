@@ -12,24 +12,22 @@ shader_program_from_file :: proc(vertex_filename, fragment_filename: string) -> 
     vertex_string, vertex_ok := os.read_entire_file(str.concatenate({dir, vertex_filename, ext}))
     defer delete(vertex_string)
     if !vertex_ok {
-        fmt.println("failed to read vertex shader file")
+        fmt.eprintln("failed to read vertex shader file")
         return 0, false
     }
     fragment_string, fragment_ok := os.read_entire_file(str.concatenate({dir, fragment_filename, ext}))
     defer delete(fragment_string)
     if !fragment_ok {
-        fmt.println("failed to read fragment shader file")
+        fmt.eprintln("failed to read fragment shader file")
         return 0, false
     }
     return gl.load_shaders_source(string(vertex_string), string(fragment_string))
 }
 
-offset_indices :: proc(indices: []u16, offset: u16) -> []u16 {
-    out := make([dynamic]u16)
+offset_indices :: proc(indices: []u16, offset: u16, out: ^[dynamic]u16) {
     for ind, i in indices {
-        append(&out, ind + offset)
+        append(out, ind + offset)
     }
-    return out[:]
 }
 
 rotate_transforms :: proc(time: f64, transforms: ^[dynamic]glm.mat4) {
@@ -51,14 +49,24 @@ transform_vertices_arr :: proc(vertices: []Vertex, transforms: []glm.mat4, trans
     }
     return out[:]
 }
+//
+//transform_vertices :: proc(vertices: []Vertex, position: Position, scale: Scale, rotation: Rotation) -> (out: []Vertex) {
+//    out = make([]Vertex, len(vertices))
+//    for v, idx in vertices {
+//        new_pos := v.pos
+//        new_pos.xyz = la.quaternion128_mul_vector3(rotation, new_pos.xyz) * scale + position
+//        out[idx] = { new_pos, v.uv }
+//    }
+//    return
+//}
 
-transform_vertices :: proc(vertices: []Vertex, position: Position, scale: Scale, rotation: Rotation) -> (out: []Vertex) {
-    out = make([]Vertex, len(vertices))
+transform_vertices :: proc(vertices: []Vertex, position: Position, scale: Scale, rotation: Rotation, out: ^[dynamic]Vertex) {
     for v, idx in vertices {
         new_pos := v.pos
         new_pos.xyz = la.quaternion128_mul_vector3(rotation, new_pos.xyz) * scale + position
-        out[idx] = { new_pos, v.uv }
+        new_v : Vertex = {new_pos, v.uv}
+        append(out, new_v)
+        //out[idx] = { new_pos, v.uv }
     }
-    return
 }
 

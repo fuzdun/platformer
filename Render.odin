@@ -50,8 +50,7 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
     gl.Enable(gl.DEPTH_TEST)
 }
 
-get_vertices_update_indices :: proc(gs: ^GameState, rs: ^RenderState) -> (out: [dynamic]Vertex){
-    out = make([dynamic]Vertex)
+get_vertices_update_indices :: proc(gs: ^GameState, rs: ^RenderState, out: ^[dynamic]Vertex) {
     scale_identity : Scale = {1, 1, 1}
     for lg in gs.level_geometry {
         indices_offset := u16(len(out))
@@ -59,17 +58,12 @@ get_vertices_update_indices :: proc(gs: ^GameState, rs: ^RenderState) -> (out: [
         vertices := sd.vertices
         for indices_list in sd.indices_lists {
             if indices_list.shader in lg.shaders {
-                shifted_indices := offset_indices(indices_list.indices[:], indices_offset)
-                defer delete(shifted_indices)
-                iq_idx := int(indices_list.shader)
-                append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
+                offset_indices(indices_list.indices[:], indices_offset, &rs.i_queue[indices_list.shader])
             }
         }
         scale := .Scale in lg.attributes ? lg.scale : {1, 1, 1}
         rotation := lg.rotation
-        transformed_vertices := transform_vertices(vertices, lg.position, scale, lg.rotation)
-        defer delete(transformed_vertices)
-        append(&out, ..transformed_vertices)
+        transform_vertices(vertices, lg.position, scale, lg.rotation, out)
     }
     return
 }
@@ -79,13 +73,9 @@ queue_draw_player :: proc(ps: Player_State, rs: ^RenderState, out: ^[dynamic]Ver
     sd := SHAPE_DATA[.Sphere]
     rot := la.quaternion_from_euler_angles(f32(0), f32(0), f32(0), .XYZ)
     p_pos := ps.position
-    transformed_vertices := transform_vertices(sd.vertices, {f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)}, {1, 1, 1}, rot)
-    defer delete(transformed_vertices)
-    append(out, ..transformed_vertices) 
+    transform_vertices(sd.vertices, {f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)}, {1, 1, 1}, rot, out)
     for indices_list in sd.indices_lists {
-        shifted_indices := offset_indices(indices_list.indices[:], indices_offset)
-        defer delete(shifted_indices)
-        append(&rs.i_queue[indices_list.shader], ..shifted_indices[:])
+        offset_indices(indices_list.indices[:], indices_offset, &rs.i_queue[indices_list.shader])
     }
 }
 
@@ -94,8 +84,9 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
     gl.Enable(gl.BLEND)
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     clear_indices_queues(rs)
-    transformed_vertices := get_vertices_update_indices(gs, rs)
+    transformed_vertices := make([dynamic]Vertex)
     defer delete(transformed_vertices)
+    get_vertices_update_indices(gs, rs, &transformed_vertices)
     queue_draw_player(gs.player_state, rs, &transformed_vertices)
     for name, program in ss.active_programs {
         indices := rs.i_queue[name]
