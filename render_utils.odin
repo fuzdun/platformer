@@ -66,7 +66,6 @@ transform_vertices :: proc(vertices: []Vertex, position: Position, scale: Scale,
         new_pos.xyz = la.quaternion128_mul_vector3(rotation, new_pos.xyz) * scale + position
         new_v : Vertex = {new_pos, v.uv}
         append(out, new_v)
-        //out[idx] = { new_pos, v.uv }
     }
 }
 

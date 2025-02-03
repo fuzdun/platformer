@@ -79,8 +79,18 @@ queue_draw_player :: proc(ps: Player_State, rs: ^RenderState, out: ^[dynamic]Ver
     }
 }
 
+queue_draw_aabb :: proc(gs: ^GameState, rs: ^RenderState, ps: ^Physics_State, out: ^[dynamic]Vertex) {
+    for obj in ps.objects {
+        shader : ProgramName = obj.collided ? .RedOutline : .Outline
+        indices_offset := u16(len(out))
+        lg := gs.level_geometry[obj.id]
+        vertices := aabb_vertices(obj)
+        append(out, ..vertices[:])
+        offset_indices(AABB_INDICES, indices_offset, &rs.i_queue[shader])
+    }
+}
 
-draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time: f64) {
+draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, ps: ^Physics_State, time: f64) {
     gl.Enable(gl.BLEND)
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     clear_indices_queues(rs)
@@ -88,11 +98,17 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
     defer delete(transformed_vertices)
     get_vertices_update_indices(gs, rs, &transformed_vertices)
     queue_draw_player(gs.player_state, rs, &transformed_vertices)
+
+    if gs.input_state.c_pressed {
+        queue_draw_aabb(gs, rs, ps, &transformed_vertices)    
+    }
+
     for name, program in ss.active_programs {
         indices := rs.i_queue[name]
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, program.ebo_id)
         gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
     }
+
     gl.BufferData(gl.ARRAY_BUFFER, size_of(transformed_vertices[0]) * len(transformed_vertices), raw_data(transformed_vertices), gl.STREAM_DRAW)
 
     c_pos := gs.camera_state.position
@@ -136,5 +152,9 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, time:
     use_shader(ss, .Outline)
     set_matrix_uniform(ss, "projection", &proj_mat)
     draw_shader(rs, ss, .Outline)
+
+    use_shader(ss, .RedOutline)
+    set_matrix_uniform(ss, "projection", &proj_mat)
+    draw_shader(rs, ss, .RedOutline)
 }
 

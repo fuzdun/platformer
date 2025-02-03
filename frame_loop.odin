@@ -7,7 +7,7 @@ import "core:fmt"
 @(private="file")
 quit_app := false
 
-frame_loop :: proc(window: ^SDL.Window, gs: ^GameState, rs: ^RenderState, ss: ^ShaderState) {
+frame_loop :: proc(window: ^SDL.Window, gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, ps: ^Physics_State) {
     TARGET_FRAME_RATE :: 60.0
     FIXED_DELTA_TIME :: 1.0 / TARGET_FRAME_RATE
     clocks_per_second := SDL.GetPerformanceFrequency()
@@ -66,14 +66,14 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^GameState, rs: ^RenderState, ss: ^S
 
         for ; accumulator > target_frame_clocks; accumulator -= target_frame_clocks {
             // Fixed update
-            game_update(gs, elapsed_time, FIXED_DELTA_TIME)
+            game_update(gs, ps, elapsed_time, FIXED_DELTA_TIME)
         }
 
         // Render
         gl.Viewport(0, 0, WIDTH, HEIGHT)
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-        draw_triangles(gs, rs, ss, elapsed_time)
+        draw_triangles(gs, rs, ss, ps, elapsed_time)
         SDL.GL_SwapWindow(window)
     }
 }

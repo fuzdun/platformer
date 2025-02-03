@@ -7,6 +7,7 @@ import glm "core:math/linalg/glsl"
 ProgramName :: enum{
     Pattern,
     Outline,
+    RedOutline,
     New,
     Reactive,
     Player,
@@ -26,7 +27,7 @@ ActiveProgram :: struct{
 }
 
 
-PROGRAM_CONFIGS :: [ProgramName]Program{
+PROGRAM_CONFIGS :: #partial[ProgramName]Program{
     .Pattern = {
         vertex_filename = "patternvertex",
         frag_filename = "patternfrag",
@@ -39,7 +40,15 @@ PROGRAM_CONFIGS :: [ProgramName]Program{
         frag_filename = "outlinefrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
-            gl.LineWidth(5)
+            gl.LineWidth(3)
+        }
+    },
+    .RedOutline = {
+        vertex_filename = "outlinevertex",
+        frag_filename = "redoutlinefrag",
+        init_proc = proc() {
+            gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
+            gl.LineWidth(3)
         }
     },
     .New = {

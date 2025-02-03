@@ -74,14 +74,19 @@ main :: proc () {
     rs: RenderState
     init_render_buffers(&rs); defer free_render_buffers(&rs)
 
+    ps: Physics_State
+    init_physics_state(&ps); defer free_physics_state(&ps)
+
     // initialize OpenGL state
     init_draw(&rs, &ss)
 
     // load test geometry
-    load_random_shapes(&gs, 200)
-    load_test_floor(&gs, 10, 10)
+    //load_random_shapes(&gs, 200)
+    //load_test_floor(&gs, 10, 10)
+    load_physics_test_box(&gs, 10, 10, 10, 100)
+    
 
     // start frame loop
-    frame_loop(window, &gs, &rs, &ss)
+    frame_loop(window, &gs, &rs, &ss, &ps)
 }
 

@@ -4,14 +4,6 @@ import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import "core:fmt"
 
-Input_State :: struct {
-    a_pressed: bool,
-    d_pressed: bool,
-    s_pressed: bool,
-    w_pressed: bool,
-    spc_pressed: bool,
-}
-
 // should update this
 Player_Input_State :: struct {
     got_jump: bool,
