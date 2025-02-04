@@ -2,7 +2,21 @@ package main
 import la "core:math/linalg"
 import "core:fmt"
 
-AABB_INDICES :: []u16 {0, 1, 2, 0, 2, 3, 3, 2, 6, 3, 6, 7, 4, 5, 6, 4, 6, 7, 4, 5, 1, 4, 1, 0, 0, 3, 4, 7, 4, 3, 1, 5, 6, 1, 6, 2}
+//AABB_INDICES :: []u16 {0, 1, 2, 0, 2, 3, 3, 2, 6, 3, 6, 7, 4, 5, 6, 4, 6, 7, 4, 5, 1, 4, 1, 0, 0, 3, 4, 7, 4, 3, 1, 5, 6, 1, 6, 2}
+AABB_INDICES :: []u16 {
+  0, 1,
+  0, 3,
+  1, 2,
+  2, 3,
+  3, 7,
+  2, 6,
+  4, 5,
+  4, 7,
+  6, 7,
+  6, 5,
+  4, 0,
+  5, 1
+}
 
 Physics_State :: struct {
     vertices: [dynamic][3]f32,

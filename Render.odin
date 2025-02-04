@@ -124,37 +124,37 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, ps: ^
     use_shader(ss, .Player)
     set_matrix_uniform(ss, "projection", &proj_mat)
     set_float_uniform(ss, "i_time", f32(time) / 1000)
-    draw_shader(rs, ss, .Player)
+    shader_draw_triangles(rs, ss, .Player)
 
     use_shader(ss, .Reactive)
     set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
     set_float_uniform(ss, "i_time", f32(time) / 1000)
     set_matrix_uniform(ss, "projection", &proj_mat)
-    draw_shader(rs, ss, .Reactive)
+    shader_draw_triangles(rs, ss, .Reactive)
 
     use_shader(ss, .Trail)
     set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
     set_vec3_uniform(ss, "player_trail_in", 3, &player_trail[0])
     set_float_uniform(ss, "i_time", f32(time) / 1000)
     set_matrix_uniform(ss, "projection", &proj_mat)
-    draw_shader(rs, ss, .Trail)
+    shader_draw_triangles(rs, ss, .Trail)
 
     use_shader(ss, .Pattern)
     set_matrix_uniform(ss, "projection", &proj_mat)
     set_float_uniform(ss, "i_time", f32(time) / 1000)
-    draw_shader(rs, ss, .Pattern)
+    shader_draw_triangles(rs, ss, .Pattern)
 
     use_shader(ss, .New)
     set_matrix_uniform(ss, "projection", &proj_mat)
     set_float_uniform(ss, "i_time", f32(time) / 1000)
-    draw_shader(rs, ss, .New)
+    shader_draw_triangles(rs, ss, .New)
 
     use_shader(ss, .Outline)
     set_matrix_uniform(ss, "projection", &proj_mat)
-    draw_shader(rs, ss, .Outline)
+    shader_draw_lines(rs, ss, .Outline)
 
     use_shader(ss, .RedOutline)
     set_matrix_uniform(ss, "projection", &proj_mat)
-    draw_shader(rs, ss, .RedOutline)
+    shader_draw_lines(rs, ss, .RedOutline)
 }
 

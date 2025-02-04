@@ -83,7 +83,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program{
 
 ShaderState :: struct {
     active_programs: map[ProgramName]ActiveProgram,
-    loaded_program: u32
+    loaded_program: u32,
 }
 
 shader_state_init :: proc(shst: ^ShaderState) {
@@ -116,9 +116,14 @@ use_shader :: proc(sh: ^ShaderState, name: ProgramName) {
     }
 }
 
-draw_shader :: proc(rs: ^RenderState, sh: ^ShaderState, name: ProgramName) {
+shader_draw_triangles :: proc(rs: ^RenderState, sh: ^ShaderState, name: ProgramName) {
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, sh.active_programs[name].ebo_id)
     gl.DrawElements(gl.TRIANGLES, i32(len(rs.i_queue[name])), gl.UNSIGNED_SHORT, nil)
+}
+
+shader_draw_lines :: proc(rs: ^RenderState, sh: ^ShaderState, name: ProgramName) {
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, sh.active_programs[name].ebo_id)
+    gl.DrawElements(gl.LINES, i32(len(rs.i_queue[name])), gl.UNSIGNED_SHORT, nil)
 }
 
 set_matrix_uniform :: proc(sh: ^ShaderState, name: string, data: ^glm.mat4) {
