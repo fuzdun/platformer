@@ -8,6 +8,7 @@ ProgramName :: enum{
     Pattern,
     Outline,
     RedOutline,
+    BlueOutline,
     New,
     Reactive,
     Player,
@@ -48,7 +49,15 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program{
         frag_filename = "redoutlinefrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
-            gl.LineWidth(3)
+            gl.LineWidth(20)
+        }
+    },
+    .BlueOutline = {
+        vertex_filename = "outlinevertex",
+        frag_filename = "blueoutlinefrag",
+        init_proc = proc() {
+            gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
+            gl.LineWidth(20)
         }
     },
     .New = {

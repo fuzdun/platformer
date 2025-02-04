@@ -10,20 +10,20 @@ WIDTH :: 1920.0
 HEIGHT :: 1080.0
 TITLE :: "platformer"
 
-GameState :: struct {
+Game_State :: struct {
     level_geometry: #soa[dynamic]Level_Geometry,
     player_state: Player_State,
     input_state: Input_State,
     camera_state: Camera_State
 }
 
-gamestate_init :: proc(gs: ^GameState) {
+gamestate_init :: proc(gs: ^Game_State) {
     gs.level_geometry = make(Level_Geometry_State)
     gs.player_state.trail = make([dynamic][3]f32)
     resize(&gs.player_state.trail, TRAIL_SIZE)
 }
 
-gamestate_free :: proc(gs: ^GameState) {
+gamestate_free :: proc(gs: ^Game_State) {
     delete(gs.level_geometry)
     delete(gs.player_state.trail)
 }
@@ -65,7 +65,7 @@ main :: proc () {
     SDL.GL_SetSwapInterval(1)
 
     // allocate / defer deallocate state structs
-    gs : GameState
+    gs : Game_State
     gamestate_init(&gs); defer gamestate_free(&gs)
 
     ss: ShaderState
@@ -82,7 +82,7 @@ main :: proc () {
 
     // load test geometry
     //load_random_shapes(&gs, 200)
-    //load_test_floor(&gs, 10, 10)
+    //load_test_floor(&gs, 400, 400)
     load_physics_test_box(&gs, 10, 10, 10, 100)
     
 

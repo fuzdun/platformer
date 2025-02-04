@@ -3,7 +3,7 @@ import rnd "core:math/rand"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 
-load_random_shapes :: proc(gs: ^GameState, num: int) {
+load_random_shapes :: proc(gs: ^Game_State, num: int) {
     for _ in 0..<num {
         shaders : []ProgramName = {.New, .Pattern}
         shapes : []Shape = {.Cube, .InvertedPyramid}
@@ -34,7 +34,7 @@ load_random_shapes :: proc(gs: ^GameState, num: int) {
     }
 }
 
-load_test_floor :: proc(gs: ^GameState, w: f32, h: f32) {
+load_test_floor :: proc(gs: ^Game_State, w: f32, h: f32) {
     flr : Level_Geometry
     flr.shape = .Plane
     flr.position = {0, -.5, 0}

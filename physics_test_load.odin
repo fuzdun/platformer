@@ -2,7 +2,7 @@ package main
 import la "core:math/linalg"
 import rnd "core:math/rand"
 
-load_physics_test_box :: proc(gs: ^GameState, w: f32, h: f32, d: f32, num: int) {
+load_physics_test_box :: proc(gs: ^Game_State, w: f32, h: f32, d: f32, num: int) {
     for _ in 0..<num {
         shaders : []ProgramName = {.New, .Pattern}
         shapes : []Shape = {.Cube, .InvertedPyramid}
@@ -33,7 +33,7 @@ load_physics_test_box :: proc(gs: ^GameState, w: f32, h: f32, d: f32, num: int) 
     }
 }
 
-//load_random_shapes :: proc(gs: ^GameState, num: int) {
+//load_random_shapes :: proc(gs: ^Game_State, num: int) {
 //    for _ in 0..<num {
 //
 //

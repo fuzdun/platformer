@@ -42,7 +42,6 @@ Level_Geometry :: struct {
 // AOS -> SOA
 Level_Geometry_State :: #soa[dynamic]Level_Geometry
 
-
 // ==============
 // OTHER ENTITIES
 // ==============

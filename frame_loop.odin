@@ -7,7 +7,7 @@ import "core:fmt"
 @(private="file")
 quit_app := false
 
-frame_loop :: proc(window: ^SDL.Window, gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, ps: ^Physics_State) {
+frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: ^Physics_State) {
     TARGET_FRAME_RATE :: 60.0
     FIXED_DELTA_TIME :: 1.0 / TARGET_FRAME_RATE
     clocks_per_second := SDL.GetPerformanceFrequency()

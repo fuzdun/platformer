@@ -50,7 +50,7 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
     gl.Enable(gl.DEPTH_TEST)
 }
 
-get_vertices_update_indices :: proc(gs: ^GameState, rs: ^RenderState, out: ^[dynamic]Vertex) {
+get_vertices_update_indices :: proc(gs: ^Game_State, rs: ^RenderState, out: ^[dynamic]Vertex) {
     scale_identity : Scale = {1, 1, 1}
     for lg in gs.level_geometry {
         indices_offset := u16(len(out))
@@ -79,18 +79,14 @@ queue_draw_player :: proc(ps: Player_State, rs: ^RenderState, out: ^[dynamic]Ver
     }
 }
 
-queue_draw_aabb :: proc(gs: ^GameState, rs: ^RenderState, ps: ^Physics_State, out: ^[dynamic]Vertex) {
-    for obj in ps.objects {
-        shader : ProgramName = obj.collided ? .RedOutline : .Outline
-        indices_offset := u16(len(out))
-        lg := gs.level_geometry[obj.id]
-        vertices := aabb_vertices(obj)
-        append(out, ..vertices[:])
-        offset_indices(AABB_INDICES, indices_offset, &rs.i_queue[shader])
+queue_draw_aabb :: proc(gs: ^Game_State, rs: ^RenderState, ps: ^Physics_State, out: ^[dynamic]Vertex) {
+    for pn in ProgramName {
+        offset_indices(ps.debug_render_queue.indices[pn][:], u16(len(out)), &rs.i_queue[pn])
     }
+    append(out, ..ps.debug_render_queue.vertices[:])
 }
 
-draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, ps: ^Physics_State, time: f64) {
+draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: ^Physics_State, time: f64) {
     gl.Enable(gl.BLEND)
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     clear_indices_queues(rs)
@@ -99,9 +95,7 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, ps: ^
     get_vertices_update_indices(gs, rs, &transformed_vertices)
     queue_draw_player(gs.player_state, rs, &transformed_vertices)
 
-    if gs.input_state.c_pressed {
-        queue_draw_aabb(gs, rs, ps, &transformed_vertices)    
-    }
+    queue_draw_aabb(gs, rs, ps, &transformed_vertices)    
 
     for name, program in ss.active_programs {
         indices := rs.i_queue[name]
@@ -156,5 +150,9 @@ draw_triangles :: proc(gs: ^GameState, rs: ^RenderState, ss: ^ShaderState, ps: ^
     use_shader(ss, .RedOutline)
     set_matrix_uniform(ss, "projection", &proj_mat)
     shader_draw_lines(rs, ss, .RedOutline)
+
+    use_shader(ss, .BlueOutline)
+    set_matrix_uniform(ss, "projection", &proj_mat)
+    shader_draw_lines(rs, ss, .BlueOutline)
 }
 

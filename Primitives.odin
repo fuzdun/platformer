@@ -141,6 +141,8 @@ SHAPE_DATA := #partial [Shape]ShapeData{
                     2, 1, 3,
                     3, 1, 4,
                     4, 1, 0,
+                    0, 4, 2,
+                    2, 4, 3
                 }
             }
         }
