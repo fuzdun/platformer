@@ -2,19 +2,21 @@ package main
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 import "core:fmt"
+import "core:math"
 
 Physics_State :: struct {
-    vertices: [dynamic][3]f32,
-    objects: [dynamic]Physics_Object,
+    collisions: [dynamic]Collision,
     debug_render_queue: struct {
         vertices: [dynamic]Vertex,
         indices: [ProgramName][dynamic]u16
     }
 }
 
-Physics_Object :: struct {
+Collision :: struct {
     id: int,
-    indices: [dynamic]u16,
+    pos: [3]f32,
+    normal: [3]f32,
+    t: f32
 }
 
 AABB_INDICES :: []u16 {0, 1, 0, 3, 1, 2, 2, 3, 3, 7, 2, 6, 4, 5, 4, 7, 6, 7, 6, 5, 4, 0, 5, 1}
@@ -34,8 +36,7 @@ aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1
 }
 
 init_physics_state :: proc(ps: ^Physics_State) {
-    ps.vertices = make([dynamic][3]f32)
-    ps.objects = make([dynamic]Physics_Object)
+    ps.collisions = make([dynamic]Collision)
     ps.debug_render_queue.vertices = make([dynamic]Vertex)
     for pn in ProgramName {
         ps.debug_render_queue.indices[pn] = make([dynamic]u16)
@@ -43,11 +44,7 @@ init_physics_state :: proc(ps: ^Physics_State) {
 }
 
 clear_physics_state :: proc(ps: ^Physics_State) {
-    for &obj in ps.objects {
-        delete(obj.indices)
-    }
-    clear(&ps.objects)
-    clear(&ps.vertices)
+    clear(&ps.collisions)
     clear(&ps.debug_render_queue.vertices)
     for &iq in ps.debug_render_queue.indices {
         clear(&iq)
@@ -55,43 +52,40 @@ clear_physics_state :: proc(ps: ^Physics_State) {
 }
 
 free_physics_state :: proc(ps: ^Physics_State) {
-    for obj in ps.objects {
-        delete(obj.indices)
-    }
-    delete(ps.vertices)
-    delete(ps.objects)
+    delete(ps.collisions)
     delete(ps.debug_render_queue.vertices)
     for &iq in ps.debug_render_queue.indices {
         delete(iq)
     }
 }
 
-broad_phase_collisions :: proc(gs: ^Game_State, phys_s: ^Physics_State) {
-    clear_physics_state(phys_s)
+get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32) {
+    clear_physics_state(ps)
 
-    filter : bit_set[Level_Geometry_Component_Name] = { .Colliding, .Position, .Shape }
+    filter: bit_set[Level_Geometry_Component_Name] = { .Colliding, .Position, .Shape }
     ppos := gs.player_state.position
+    ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])
     player_sq_radius := f32(SPHERE_RADIUS * SPHERE_RADIUS)
 
     for lg, id in gs.level_geometry {
         if filter <= lg.attributes {
-            indices_offset := u16(len(phys_s.vertices))
-            debug_indices_offset := u16(len(phys_s.debug_render_queue.vertices))
+            off := u16(len(ps.debug_render_queue.vertices))
 
             aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
             aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
 
             sd := SHAPE_DATA[lg.shape]
+            vertices := make([dynamic][3]f32); defer delete(vertices)
             for v, idx in sd.vertices {
-                new_pos := la.quaternion128_mul_vector3(lg.rotation, v.pos.xyz * lg.scale) + lg.position
-                append(&phys_s.vertices, new_pos)
-                aabbx0 = min(new_pos.x, aabbx0)
-                aabby0 = min(new_pos.y, aabby0)
-                aabbz0 = min(new_pos.z, aabbz0)
-                aabbx1 = max(new_pos.x, aabbx1)
-                aabby1 = max(new_pos.y, aabby1)
-                aabbz1 = max(new_pos.z, aabbz1)
+                new_pos := la.quaternion128_mul_vector3(lg.rotation, lg.scale * v.pos.xyz) + lg.position
+                append(&vertices, new_pos)
+                aabbx0 = min(new_pos.x - 1, aabbx0)
+                aabby0 = min(new_pos.y - 1, aabby0)
+                aabbz0 = min(new_pos.z - 1, aabbz0)
+                aabbx1 = max(new_pos.x + 1, aabbx1)
+                aabby1 = max(new_pos.y + 1, aabby1)
+                aabbz1 = max(new_pos.z + 1, aabbz1)
             }
             total : f32 = 0
             if px < aabbx0 do total += (px - aabbx0) * (px - aabbx0)
@@ -100,58 +94,63 @@ broad_phase_collisions :: proc(gs: ^Game_State, phys_s: ^Physics_State) {
             if py > aabby1 do total += (py - aabby1) * (py - aabby1)
             if pz < aabbz0 do total += (pz - aabbz0) * (pz - aabbz0)
             if pz > aabbz1 do total += (pz - aabbz1) * (pz - aabbz1)
-            if total < player_sq_radius {
-                po : Physics_Object
-                po.id = id
-                po.indices = make([dynamic]u16)
-                for il in sd.indices_lists {
-                    if il.shader == .Outline {
-                        offset_indices(il.indices, indices_offset, &po.indices)
-                    }
-                }
-                append(&phys_s.objects, po)
-            }
             if gs.input_state.c_pressed {
                 // debug wireframe rendering
                 debug_vertices := aabb_vertices(aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1)
-                append(&phys_s.debug_render_queue.vertices, ..debug_vertices[:])
+                append(&ps.debug_render_queue.vertices, ..debug_vertices[:])
             }
             if gs.input_state.c_pressed {
                 // debug wireframe rendering
                 shader: ProgramName = total < player_sq_radius ? .RedOutline : .Outline
-                offset_indices(AABB_INDICES, debug_indices_offset, &phys_s.debug_render_queue.indices[shader])
+                offset_indices(AABB_INDICES, off, &ps.debug_render_queue.indices[shader])
+            }
+            if total < player_sq_radius {
+                coll_indices := make([dynamic]u16); defer delete(coll_indices)
+                for il in sd.indices_lists {
+                    if il.shader == .Outline {
+                        append(&coll_indices, ..il.indices)
+                    }
+                }
+                l := len(coll_indices)
+                for i := 0; i <= l - 3; i += 3 {
+                    off := u16(len(ps.debug_render_queue.vertices))
+                    tri_indices := coll_indices[i:i+3]
+                    tri_vertex0 := vertices[tri_indices[0]]
+                    tri_vertex1 := vertices[tri_indices[1]]
+                    tri_vertex2 := vertices[tri_indices[2]]
+                    velocity_normal := la.normalize(gs.player_state.velocity)
+                    velocity_len := la.length(gs.player_state.velocity * delta_time)
+                    closest_pt, normal := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, ppos32)
+                    if la.dot(normal, velocity_normal) > 0 do continue
+                    if player_sq_radius > la.length2(ppos32 - closest_pt) {
+                        //fmt.println("player in surface! must force out with normal")
+                    }
+                    if t, q, ok := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); ok {
+                        //fmt.println("===========")
+                        //fmt.println(t)
+                        //fmt.println(velocity_len)
+                        if t = t / velocity_len; t <= 1 {
+                            coll : Collision
+                            coll.id = id
+                            coll.pos = q
+                            coll.normal = normal
+                            coll.t = t
+                            append(&ps.collisions, coll)
+                        }
+                        if gs.input_state.c_pressed {
+                            v0: Vertex = {{tri_vertex0[0], tri_vertex0[1], tri_vertex0[2], 1}, {1, 1}}
+                            v1: Vertex = {{tri_vertex1[0], tri_vertex1[1], tri_vertex1[2], 1}, {1, 1}}
+                            v2: Vertex = {{tri_vertex2[0], tri_vertex2[1], tri_vertex2[2], 1}, {1, 1}}
+                            v3: Vertex = {{closest_pt[0], closest_pt[1], closest_pt[2], 1}, {1, 1}}
+                            v4: Vertex = {{q[0], q[1], q[2], 1}, {1, 1}}
+                            append(&ps.debug_render_queue.indices[.BlueOutline], off, off + 1, off + 1, off + 2, off + 2, off, off + 3, off + 4)
+                            append(&ps.debug_render_queue.vertices, v0, v1, v2, v3, v4)
+
+                        }
+                    }
+                }         
             }
         }
-    }
-}
-
-narrow_phase_collisions :: proc(gs: ^Game_State, ps: ^Physics_State) {
-    player_sq_radius := f32(SPHERE_RADIUS * SPHERE_RADIUS)
-    ppos := gs.player_state.position
-    ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
-    for po in ps.objects {
-        l := len(po.indices)
-        for i := 0; i <= l - 3; i += 3 {
-            off := u16(len(ps.debug_render_queue.vertices))
-            tri_indices := po.indices[i:i+3] 
-            tri_vertex0 := ps.vertices[tri_indices[0]]
-            tri_vertex1 := ps.vertices[tri_indices[1]]
-            tri_vertex2 := ps.vertices[tri_indices[2]]
-            closest_pt, normal := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, ppos32)
-            surface_penetration := SPHERE_RADIUS - la.length(closest_pt - ppos32)
-            if surface_penetration >= 0 {
-                if gs.input_state.c_pressed {
-                    normal_offset := closest_pt + normal * surface_penetration * 5
-                    v0: Vertex = {{tri_vertex0[0], tri_vertex0[1], tri_vertex0[2], 1}, {1, 1}}
-                    v1: Vertex = {{tri_vertex1[0], tri_vertex1[1], tri_vertex1[2], 1}, {1, 1}}
-                    v2: Vertex = {{tri_vertex2[0], tri_vertex2[1], tri_vertex2[2], 1}, {1, 1}}
-                    v3: Vertex = {{closest_pt[0], closest_pt[1], closest_pt[2], 1}, {1, 1}}
-                    v4: Vertex = {{normal_offset[0], normal_offset[1], normal_offset[2], 1}, {1, 1}}
-                    append(&ps.debug_render_queue.indices[.BlueOutline], off, off + 1, off + 1, off + 2, off + 2, off, off + 3, off + 4)
-                    append(&ps.debug_render_queue.vertices, v0, v1, v2, v3, v4)
-                }
-            }
-        }         
     }
 }
 
@@ -196,5 +195,45 @@ closest_line_pt :: proc(l0: [3]f32, l1: [3]f32, p: [3]f32) -> [3]f32{
     t := la.dot(p - l0, line) / la.dot(line, line)
     t = clamp(t, 0, 1)
     return l0 + t * line
+}
+
+ray_sphere_intersect :: proc(origin: [3]f32, dir: [3]f32, ppos: [3]f32) -> (t: f32, q: [3]f32, ok: bool) {
+    m := origin - ppos 
+    b := la.dot(m, dir)
+    c := la.dot(m, m) - SPHERE_SQ_RADIUS
+    if c > 0 && b > 0 {
+        ok = false
+        return
+    }
+    discr := b * b - c
+    if discr < 0 {
+        ok = false
+        return
+    }
+    t = max(-b - math.sqrt(discr), 0)
+    q = origin + t * dir
+    ok = true
+    return
+}
+
+resolve_collisions :: proc(pls: ^Player_State, phs: ^Physics_State, delta_time: f32) {
+    velocity_normal := la.normalize(pls.velocity)
+    best_coll: Collision
+    smallest_impulse: f32 = max(f32)
+    //for coll in phs.collisions {
+    //    impulse := coll.penetration / la.dot(coll.normal, velocity_normal) 
+    //    if abs(impulse) < abs(smallest_impulse) {
+    //        smallest_impulse = impulse
+    //        best_coll = coll
+    //    }
+    //    //}
+    //}
+    //if smallest_impulse < 0 {
+    //    fmt.println(smallest_impulse)
+    //    pls.position += smallest_impulse * velocity_normal * 1.001
+    //    new_dir := velocity_normal - la.dot(best_coll.normal, velocity_normal) * best_coll.normal 
+    //    pls.velocity = new_dir * la.length(pls.velocity)
+    //    pls.position += new_dir * -smallest_impulse
+    //}
 }
 

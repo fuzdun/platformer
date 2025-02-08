@@ -87,8 +87,8 @@ queue_draw_aabb :: proc(gs: ^Game_State, rs: ^RenderState, ps: ^Physics_State, o
 }
 
 draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: ^Physics_State, time: f64) {
-    gl.Enable(gl.BLEND)
-    gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    //gl.Enable(gl.BLEND)
+    //gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     clear_indices_queues(rs)
     transformed_vertices := make([dynamic]Vertex)
     defer delete(transformed_vertices)

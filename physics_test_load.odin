@@ -31,6 +31,26 @@ load_physics_test_box :: proc(gs: ^Game_State, w: f32, h: f32, d: f32, num: int)
         }
         append(&gs.level_geometry, box)
     }
+    //flr : Level_Geometry
+    //flr.shape = .Plane
+    //flr.position = {0, -.5, 0}
+    //rx:f32 = 0
+    //ry:f32 = 0
+    //rz:f32 = 0
+    //flr.rotation = la.quaternion_from_euler_angles(rx, ry, rz, .XYZ)
+    //flr.scale = {100, 0, 100}
+    //flr.shaders = {.Trail}
+    //flr.attributes = {.Position, .Shape, .ActiveShaders, .Scale, .Rotation}
+    //append(&gs.level_geometry, flr)
+        //box : Level_Geometry
+        //rx, ry, rz : f32 = 0, 0, 0
+        //box.position = {0, 0, -10}
+        //box.scale = {10, 10, 10}
+        //box.shaders  = {.New}
+        //box.shape = .Cube
+        //box.rotation = la.quaternion_from_euler_angles(rx, ry, rz, .XYZ)
+        //box.attributes = {.Position, .Shape, .ActiveShaders, .Scale, .Colliding, .Rotation}
+        //append(&gs.level_geometry, box)
 }
 
 //load_random_shapes :: proc(gs: ^Game_State, num: int) {

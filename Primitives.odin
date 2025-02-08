@@ -19,6 +19,7 @@ ShapeData :: struct{
 }
 
 SPHERE_RADIUS :: 0.5
+SPHERE_SQ_RADIUS :: SPHERE_RADIUS * SPHERE_RADIUS
 SPHERE_SECTOR_COUNT :: 21
 SPHERE_STACK_COUNT :: 20 
 SPHERE_V_COUNT :: (SPHERE_STACK_COUNT + 1) * (SPHERE_SECTOR_COUNT + 1)
@@ -231,6 +232,13 @@ SHAPE_DATA := #partial [Shape]ShapeData{
         {
             {
                 .Reactive,
+                {
+                    0, 1, 3,
+                    3, 1, 2 
+                }
+            },
+            {
+                .Outline,
                 {
                     0, 1, 3,
                     3, 1, 2 
