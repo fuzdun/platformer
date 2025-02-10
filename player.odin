@@ -15,48 +15,55 @@ Player_Input_State :: struct {
 Player_State :: struct {
     position: [3]f32,
     velocity: [3]f32,
-    trail: [dynamic]glm.vec3
+    trail: [dynamic]glm.vec3,
+    on_ground: bool,
+    ground_x: [3]f32,
+    ground_z: [3]f32
 }
 
-MAX_PLAYER_SPEED: f32: 10.0
-P_JUMP_SPEED: f32: 15.0
-P_ACCEL: f32: 20.0
-GRAV: f32: 0.25
+GROUND_FRICTION :: 0.001
+MAX_PLAYER_SPEED: f32: 30.0
+P_JUMP_SPEED: f32: 20.0
+P_ACCEL: f32: 50.0
+GRAV: f32: 20.0
 TRAIL_SIZE :: 50 
+GROUND_RAY: [3]f32: {0, -0.6, 0}
+GROUNDED_RADIUS: f32: 0.25 
+GROUNDED_RADIUS2:: GROUNDED_RADIUS * GROUNDED_RADIUS
+GROUND_VERTICAL_OFFSET: [3]f32: {0, -0.00, 0}
+AIR_SPEED :: 0.75
 
 update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time: f64, delta_time: f32) {
     
     pop(&ps.trail)
     new_pt: [3]f32 = {f32(ps.position.x), f32(ps.position.y), f32(ps.position.z)}
     inject_at(&ps.trail, 0, new_pt)
-
+    right_vec := ps.on_ground || ps.position.y == 0 ? ps.ground_x : [3]f32{1, 0, 0} * AIR_SPEED
+    fwd_vec := ps.on_ground || ps.position.y == 0 ? ps.ground_z : [3]f32{0, 0, -1} * AIR_SPEED
     if is.a_pressed {
-       ps.velocity.x -= P_ACCEL * delta_time
+       ps.velocity -= P_ACCEL * delta_time * right_vec
     }
     if is.d_pressed {
-        ps.velocity.x += P_ACCEL * delta_time
+        ps.velocity += P_ACCEL * delta_time * right_vec
     }
     if is.w_pressed {
-        ps.velocity.z -= P_ACCEL * delta_time
+        ps.velocity += P_ACCEL * delta_time * fwd_vec
     }
     if is.s_pressed {
-        ps.velocity.z += P_ACCEL * delta_time
+        ps.velocity -= P_ACCEL * delta_time * fwd_vec
     }
-    //if is.spc_pressed && ps.position.y == 0 {
-    //    ps.velocity.y = P_JUMP_SPEED
-    //}
     clamped_xz := la.clamp_length(ps.velocity.xz, MAX_PLAYER_SPEED)
     ps.velocity.xz = clamped_xz
-    ps.velocity.xz *= math.pow(0.05, delta_time)
-    //ps.velocity.y = 0
-    ps.velocity.y -= GRAV
-    //if ps.position.y == 0 {
-    //    ps.velocity.y = 0
-    //}
-    if is.spc_pressed && ps.position.y == 0 {
+    got_dir_input := is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed
+    if (ps.on_ground || ps.position.y == 0) && !got_dir_input {
+        ps.velocity.xz *= math.pow(GROUND_FRICTION, delta_time)
+    }
+    if !ps.on_ground {
+        ps.velocity.y -= GRAV * delta_time
+    }
+    if is.spc_pressed && (ps.on_ground || ps.position.y == 0) {
         ps.velocity.y = P_JUMP_SPEED
     }
-    //fmt.println(ps.velocity)
 }
 
 move_player :: proc(gs: ^Game_State, phs: ^Physics_State, delta_time: f32) {

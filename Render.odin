@@ -48,6 +48,7 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
     gl.EnableVertexAttribArray(1)
 
     gl.Enable(gl.DEPTH_TEST)
+    gl.Enable(gl.CULL_FACE)
 }
 
 get_vertices_update_indices :: proc(gs: ^Game_State, rs: ^RenderState, out: ^[dynamic]Vertex) {
@@ -87,8 +88,8 @@ queue_draw_aabb :: proc(gs: ^Game_State, rs: ^RenderState, ps: ^Physics_State, o
 }
 
 draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: ^Physics_State, time: f64) {
-    //gl.Enable(gl.BLEND)
-    //gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    gl.Enable(gl.BLEND)
+    gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     clear_indices_queues(rs)
     transformed_vertices := make([dynamic]Vertex)
     defer delete(transformed_vertices)
@@ -108,12 +109,16 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: 
     c_pos := gs.camera_state.position
     p_pos := gs.player_state.position
     rot := glm.mat4LookAt({0, 0, 0}, {f32(p_pos.x - c_pos.x), f32(p_pos.y - c_pos.y), f32(p_pos.z - c_pos.z)}, {0, 1, 0})
-    proj := glm.mat4Perspective(45, WIDTH / HEIGHT, 0.01, 100)
+    proj := glm.mat4Perspective(45, WIDTH / HEIGHT, 0.01, 400)
     offset := glm.mat4Translate({f32(-c_pos.x), f32(-c_pos.y), f32(-c_pos.z)})
 
     proj_mat := proj * rot * offset
     player_pos := glm.vec3({f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)})
     player_trail : [3]glm.vec3 = { gs.player_state.trail[16], gs.player_state.trail[32], gs.player_state.trail[49] }
+
+    use_shader(ss, .BlueOutline)
+    set_matrix_uniform(ss, "projection", &proj_mat)
+    shader_draw_lines(rs, ss, .BlueOutline)
 
     use_shader(ss, .Player)
     set_matrix_uniform(ss, "projection", &proj_mat)
@@ -151,8 +156,5 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: 
     set_matrix_uniform(ss, "projection", &proj_mat)
     shader_draw_lines(rs, ss, .RedOutline)
 
-    use_shader(ss, .BlueOutline)
-    set_matrix_uniform(ss, "projection", &proj_mat)
-    shader_draw_lines(rs, ss, .BlueOutline)
 }
 

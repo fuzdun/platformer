@@ -6,10 +6,10 @@ import SDL "vendor:sdl2"
 import gl "vendor:OpenGL"
 import "core:mem"
 
-WIDTH :: 1920.0
-HEIGHT :: 1080.0
-//WIDTH :: 720
-//HEIGHT :: 720
+//WIDTH :: 1920.0
+//HEIGHT :: 1080.0
+WIDTH :: 720
+HEIGHT :: 720
 TITLE :: "platformer"
 
 Game_State :: struct {
@@ -69,6 +69,9 @@ main :: proc () {
     // allocate / defer deallocate state structs
     gs : Game_State
     gamestate_init(&gs); defer gamestate_free(&gs)
+    gs.player_state.position.z = 60
+    gs.player_state.ground_x = {1, 0, 0}
+    gs.player_state.ground_z = {0, 0, -1}
 
     ss: ShaderState
     shader_state_init(&ss); defer shader_state_free(&ss)
@@ -85,7 +88,7 @@ main :: proc () {
     // load test geometry
     //load_random_shapes(&gs, 200)
     load_test_floor(&gs, 400, 400)
-    load_physics_test_box(&gs, 10, 10, 10, 200)
+    load_physics_test_box(&gs, 30, 30, 30, 700)
     
 
     // start frame loop

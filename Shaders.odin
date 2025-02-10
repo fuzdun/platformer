@@ -33,14 +33,15 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program{
         vertex_filename = "patternvertex",
         frag_filename = "patternfrag",
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+            gl.PolygonMode(gl.FRONT, gl.FILL)
+            //gl.PolygonMode(gl.FRONT, gl.FILL)
         }
     },
     .Outline = {
         vertex_filename = "outlinevertex",
         frag_filename = "outlinefrag",
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
+            gl.PolygonMode(gl.FRONT, gl.LINE)
             gl.LineWidth(3)
         }
     },
@@ -48,7 +49,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program{
         vertex_filename = "outlinevertex",
         frag_filename = "redoutlinefrag",
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
+            gl.PolygonMode(gl.FRONT, gl.LINE)
             gl.LineWidth(20)
         }
     },
@@ -56,36 +57,36 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program{
         vertex_filename = "outlinevertex",
         frag_filename = "blueoutlinefrag",
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
-            gl.LineWidth(20)
+            gl.PolygonMode(gl.FRONT, gl.LINE)
+            gl.LineWidth(4)
         }
     },
     .New = {
         vertex_filename = "patternvertex",
         frag_filename = "newfrag",
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+            gl.PolygonMode(gl.FRONT, gl.FILL)
         }
     },
     .Player = {
         vertex_filename = "patternvertex",
         frag_filename = "playerfrag",
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+            gl.PolygonMode(gl.FRONT, gl.FILL)
         }
     },
     .Reactive = {
         vertex_filename = "reactivevertex",
         frag_filename = "reactivefrag",
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+            gl.PolygonMode(gl.FRONT, gl.FILL)
         }
     },
     .Trail = {
         vertex_filename = "trailvertex",
         frag_filename = "trailfrag",
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+            gl.PolygonMode(gl.FRONT, gl.FILL)
         }
     } 
 }

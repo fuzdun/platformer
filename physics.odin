@@ -67,6 +67,10 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32) {
     ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])
     player_sq_radius := f32(SPHERE_RADIUS * SPHERE_RADIUS)
+    best_ground_dist: f32 = 1000
+    best_ground_t := [3]f32{0, 0, 0}
+    best_ground_normal := [3]f32{0, 0, 0}
+    gs.player_state.on_ground = false
 
     for lg, id in gs.level_geometry {
         if filter <= lg.attributes {
@@ -120,41 +124,69 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32) {
                     tri_vertex2 := vertices[tri_indices[2]]
                     velocity_normal := la.normalize(gs.player_state.velocity)
                     velocity_len := la.length(gs.player_state.velocity * delta_time)
-                    closest_pt, normal := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, ppos32)
+                    closest_pt, normal, plane_dist := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, ppos32)
                     if la.dot(normal, velocity_normal) > 0 do continue
-                    if player_sq_radius > la.length2(ppos32 - closest_pt) {
-                        //fmt.println("player in surface! must force out with normal")
-                    }
-                    if t, q, ok := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); ok {
-                        //fmt.println("===========")
-                        //fmt.println(t)
-                        //fmt.println(velocity_len)
-                        if t = t / velocity_len; t <= 1 {
+                    //if player_sq_radius > la.length2(ppos32 - closest_pt) {
+                    //    //fmt.println("player in surface! must force out with normal")
+                    //}
+                    if sphere_t, sphere_q, sphere_ok := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); sphere_ok {
+                        if sphere_t = sphere_t / velocity_len; sphere_t <= 1 {
                             coll : Collision
                             coll.id = id
-                            coll.pos = q
+                            coll.pos = sphere_q
                             coll.normal = normal
-                            coll.t = t
+                            coll.t = sphere_t
                             append(&ps.collisions, coll)
                         }
-                        if gs.input_state.c_pressed {
-                            v0: Vertex = {{tri_vertex0[0], tri_vertex0[1], tri_vertex0[2], 1}, {1, 1}}
-                            v1: Vertex = {{tri_vertex1[0], tri_vertex1[1], tri_vertex1[2], 1}, {1, 1}}
-                            v2: Vertex = {{tri_vertex2[0], tri_vertex2[1], tri_vertex2[2], 1}, {1, 1}}
-                            v3: Vertex = {{closest_pt[0], closest_pt[1], closest_pt[2], 1}, {1, 1}}
-                            v4: Vertex = {{q[0], q[1], q[2], 1}, {1, 1}}
-                            append(&ps.debug_render_queue.indices[.BlueOutline], off, off + 1, off + 1, off + 2, off + 2, off, off + 3, off + 4)
-                            append(&ps.debug_render_queue.vertices, v0, v1, v2, v3, v4)
-
+                    }
+                    plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, GROUND_RAY, normal, plane_dist);
+                    if plane_ok {
+                        dist2 := la.length2(closest_pt - plane_q)
+                        if dist2 < GROUNDED_RADIUS2 && dist2 < best_ground_dist {
+                            best_ground_dist = dist2
+                            best_ground_t = plane_t
+                            best_ground_normal = normal
                         }
                     }
-                }         
+                }
+
             }
-        }
+        }         
     }
+    if best_ground_dist < 1000 {
+        gs.player_state.on_ground = true
+        //gs.player_state.velocity.y = 0
+        //gs.player_state.position += GROUND_RAY * best_ground_t + GROUND_VERTICAL_OFFSET
+        ground_x := [3]f32{1, 0, 0}
+        gs.player_state.ground_x = ground_x - la.dot(ground_x, best_ground_normal) * best_ground_normal
+        ground_z := [3]f32{0, 0, -1}
+        gs.player_state.ground_z = ground_z - la.dot(ground_z, best_ground_normal) * best_ground_normal
+        //if gs.input_state.c_pressed {
+        //    v0: Vertex = {{tri_vertex0[0], tri_vertex0[1], tri_vertex0[2], 1}, {1, 1}}
+        //    v1: Vertex = {{tri_vertex1[0], tri_vertex1[1], tri_vertex1[2], 1}, {1, 1}}
+        //    v2: Vertex = {{tri_vertex2[0], tri_vertex2[1], tri_vertex2[2], 1}, {1, 1}}
+        //    v3: Vertex = {{ppos32[0], ppos32[1], ppos32[2], 1}, {1, 1}}
+        //    x_end := ppos32 + gs.player_state.ground_x * 100
+        //    v4: Vertex = {{x_end[0], x_end[1], x_end[2], 1}, {1, 1}}
+        //    append(&ps.debug_render_queue.indices[.BlueOutline], off, off + 1, off + 1, off + 2, off + 2, off, off + 3, off + 4)
+        //    append(&ps.debug_render_queue.vertices, v0, v1, v2, v3, v4)
+        //}
+    } 
 }
 
-closest_triangle_pt :: proc(t0: [3]f32, t1: [3]f32, t2: [3]f32, p: [3]f32) -> ([3]f32,[3]f32)  {
+ray_plane_intersection :: proc(start: [3]f32, offset: [3]f32, plane_n: [3]f32, plane_d: f32) -> (t: f32, q: [3]f32, ok: bool) {
+    t = (plane_d - la.dot(plane_n, start)) / la.dot(plane_n, offset) 
+    if t >= 0 && t <= 1 {
+        q =  start + t * offset
+        ok = true
+        return
+    }
+    ok = false
+    return
+}
+
+// returns closest pt, plane normal and plane distance from origin (scalar)
+closest_triangle_pt :: proc(t0: [3]f32, t1: [3]f32, t2: [3]f32, p: [3]f32) -> ([3]f32, [3]f32, f32)  {
     // get plane
     plane_n := la.normalize(la.cross(t1 - t0, t2 - t0)) // normal
     plane_dist := la.dot(plane_n, t0)
@@ -168,7 +200,7 @@ closest_triangle_pt :: proc(t0: [3]f32, t1: [3]f32, t2: [3]f32, p: [3]f32) -> ([
     c -= proj_pt
     u, v, w := la.cross(b, c), la.cross(c, a), la.cross(a, b)
     if la.dot(u, v) >= 0 && la.dot(u, w) >= 0 {
-        return proj_pt, plane_n 
+        return proj_pt, plane_n, plane_dist 
     }
     // otherwise, get closest point in triangle edge line segments
     t01_pt := closest_line_pt(t0, t1, proj_pt)
@@ -179,15 +211,15 @@ closest_triangle_pt :: proc(t0: [3]f32, t1: [3]f32, t2: [3]f32, p: [3]f32) -> ([
     t20_len2 := la.length2(t20_pt - proj_pt)
     min := min(t01_len2, t12_len2, t20_len2)
     if min == t01_len2 {
-        return t01_pt, plane_n
+        return t01_pt, plane_n, plane_dist
     }
     if min == t12_len2 {
-        return t12_pt, plane_n
+        return t12_pt, plane_n, plane_dist
     }
     if min == t20_len2 {
-        return t20_pt, plane_n
+        return t20_pt, plane_n, plane_dist
     }
-    return {0, 0, 0}, plane_n
+    return {0, 0, 0}, plane_n, plane_dist
 }
 
 closest_line_pt :: proc(l0: [3]f32, l1: [3]f32, p: [3]f32) -> [3]f32{

@@ -9,8 +9,8 @@ Camera_State :: struct {
 }
 
 move_camera :: proc(ps: Player_State, cs: ^Camera_State, elapsed_time: f64, delta_time: f32) {
-    tgt_y := ps.position.y + 6 
-    tgt_z := ps.position.z + 12
+    tgt_y := ps.position.y + 12
+    tgt_z := ps.position.z + 16
     tgt : [3]f32 = {ps.position.x, tgt_y, tgt_z}
-    cs.position = math.lerp(cs.position, tgt, f32(0.05))
+    cs.position = math.lerp(cs.position, tgt, f32(0.075))
 }
