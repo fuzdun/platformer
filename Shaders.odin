@@ -50,7 +50,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program{
         frag_filename = "redoutlinefrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.LINE)
-            gl.LineWidth(20)
+            gl.LineWidth(4)
         }
     },
     .BlueOutline = {
@@ -84,7 +84,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program{
     },
     .Trail = {
         vertex_filename = "trailvertex",
-        frag_filename = "trailfrag",
+        frag_filename = "newreactivefrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
         }

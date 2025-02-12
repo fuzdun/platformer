@@ -59,7 +59,7 @@ free_physics_state :: proc(ps: ^Physics_State) {
     }
 }
 
-get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32) {
+get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, elapsed_time: f32) {
     clear_physics_state(ps)
 
     filter: bit_set[Level_Geometry_Component_Name] = { .Colliding, .Position, .Shape }
@@ -155,6 +155,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32) {
     }
     if best_ground_dist < 1000 {
         gs.player_state.on_ground = true
+        gs.player_state.left_ground = elapsed_time
         //gs.player_state.velocity.y = 0
         //gs.player_state.position += GROUND_RAY * best_ground_t + GROUND_VERTICAL_OFFSET
         ground_x := [3]f32{1, 0, 0}

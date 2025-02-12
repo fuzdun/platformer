@@ -12,6 +12,8 @@ Input_State :: struct {
     w_pressed: bool,
     c_pressed: bool,
     spc_pressed: bool,
+    hor_axis: f32,
+    vert_axis: f32
 }
 
 process_input :: proc (is: ^Input_State, quit_handler: proc()) 
@@ -19,40 +21,65 @@ process_input :: proc (is: ^Input_State, quit_handler: proc())
     event : SDL.Event
     for SDL.PollEvent(&event) {
         #partial switch event.type {
-            case .KEYDOWN:
-                #partial switch event.key.keysym.sym {
-                    case .ESCAPE:
-                        quit_handler()
-                    case .a:
-                        is.a_pressed = true
-                    case .s:
-                        is.s_pressed = true
-                    case .d:
-                        is.d_pressed = true
-                    case .w:
-                        is.w_pressed = true
-                    case .c:
-                        is.c_pressed = true
-                    case .SPACE:
-                        is.spc_pressed = true
+        case .CONTROLLERAXISMOTION:
+            if event.jaxis.axis == 0 {
+                if (event.jaxis.value < -10000 || event.jaxis.value > 10000) {
+                    is.hor_axis = f32(event.jaxis.value) / 32767.0
+                } else {
+                    is.hor_axis = 0
                 }
-            case .KEYUP:
-                #partial switch event.key.keysym.sym {
-                    case .a:
-                        is.a_pressed = false
-                    case .s:
-                        is.s_pressed = false
-                    case .d:
-                        is.d_pressed = false
-                    case .w:
-                        is.w_pressed = false
-                    case .c:
-                        is.c_pressed = false
-                    case .SPACE:
-                        is.spc_pressed = false
+            }
+            if event.jaxis.axis == 1 {
+                if (event.jaxis.value < -10000 || event.jaxis.value > 10000) {
+                    is.vert_axis = -f32(event.jaxis.value) / 32767.0
+                } else {
+                    is.vert_axis = 0
                 }
-            case .QUIT:
+            }
+        case .CONTROLLERBUTTONDOWN:
+            switch event.cbutton.button {
+            case 1:
+                is.spc_pressed = true
+            }
+        case .CONTROLLERBUTTONUP:
+            switch event.cbutton.button {
+            case 1:
+                is.spc_pressed = false
+            }
+        case .KEYDOWN:
+            #partial switch event.key.keysym.sym {
+            case .ESCAPE:
                 quit_handler()
+            case .a:
+                is.a_pressed = true
+            case .s:
+                is.s_pressed = true
+            case .d:
+                is.d_pressed = true
+            case .w:
+                is.w_pressed = true
+            case .c:
+                is.c_pressed = true
+            case .SPACE:
+                is.spc_pressed = true
+            }
+        case .KEYUP:
+            #partial switch event.key.keysym.sym {
+            case .a:
+                is.a_pressed = false
+            case .s:
+                is.s_pressed = false
+            case .d:
+                is.d_pressed = false
+            case .w:
+                is.w_pressed = false
+            case .c:
+                is.c_pressed = false
+            case .SPACE:
+                is.spc_pressed = false
+            }
+        case .QUIT:
+            quit_handler()
         }
     }
 }

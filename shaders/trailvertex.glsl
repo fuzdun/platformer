@@ -15,7 +15,8 @@ uniform vec3 player_pos_in;
 uniform vec3[3] player_trail_in;
 
 void main() {
-    gl_Position = projection * aPos;
+    float dist = max(0, player_pos_in.z - 50 - aPos.z);
+    gl_Position = projection * (aPos + vec4(dist * dist * 0.01, dist * dist * 0.01, -dist * dist * 0.01, 0));
     uv = vertexUV;
     time = i_time;
     player_pos = player_pos_in;
