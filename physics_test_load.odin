@@ -36,11 +36,12 @@ load_physics_test_box :: proc(gs: ^Game_State, w: f32, h: f32, d: f32, num: int)
     box : Level_Geometry
     rx, ry, rz : f32 = 0, 0, -.35 
     box.position = {0, -2, 4}
-    box.scale = {40, 40, 40}
+    box.scale = {10, 10, 10}
     box.shaders  = {.Trail, .RedOutline}
     box.shape = .Cube
+    box.shape_string = "cube"
     box.rotation = la.quaternion_from_euler_angles(rx, ry, rz, .XYZ)
-    box.attributes = {.Position, .Shape, .ActiveShaders, .Scale, .Colliding, .Rotation}
+    box.attributes = {.Position, .Shape, .ShapeString, .ActiveShaders, .Scale, .Colliding, .Rotation}
     append(&gs.level_geometry, box)
 
     box2 : Level_Geometry

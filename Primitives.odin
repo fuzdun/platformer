@@ -3,6 +3,11 @@ import glm "core:math/linalg/glsl"
 import "core:math"
 import "core:fmt"
 
+Mesh_Type :: enum{
+    Render,
+    Collision,
+}
+
 Vertex :: struct{
     pos: glm.vec4,
     uv: glm.vec2
@@ -17,6 +22,17 @@ ShapeData :: struct{
     vertices: []Vertex,
     indices_lists: []IndicesList,
 }
+
+Indices_List :: [Mesh_Type][]u16
+//    shader: Mesh_Type,
+//    indices: []u16
+//}
+
+Shape_Data :: struct{
+    vertices: []Vertex,
+    indices_lists: [Mesh_Type][]u16,
+}
+
 
 SPHERE_RADIUS :: 0.5
 SPHERE_SQ_RADIUS :: SPHERE_RADIUS * SPHERE_RADIUS
@@ -111,6 +127,18 @@ SHAPE_DATA := #partial [Shape]ShapeData{
             {{-0.25, 0.25, -0.2, 1},  {1, 0}},
         },
         {
+            //{
+            //    .Rendering,
+            //    {
+            //        0, 1, 2,
+            //        2, 1, 3,
+            //        3, 1, 4,
+            //        4, 1, 0,
+            //        0, 2, 4,
+            //        2, 3, 4
+            //    }
+            //
+            //},
             {
                 .Pattern,
                 {

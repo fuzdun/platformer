@@ -84,7 +84,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program{
     },
     .Trail = {
         vertex_filename = "trailvertex",
-        frag_filename = "newreactivefrag",
+        frag_filename = "trailfrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
         }

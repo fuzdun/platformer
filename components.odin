@@ -15,6 +15,7 @@ Level_Geometry_Component_Name :: enum {
     Scale,
     Rotation,
     Shape,
+    ShapeString,
     Colliding,
     ActiveShaders,
 }
@@ -24,6 +25,7 @@ Position :: la.Vector3f32
 Scale :: la.Vector3f32
 Rotation :: quaternion128
 Shape :: enum{ Triangle, InvertedPyramid, Cube, Sphere, Plane, None }
+ShapeString :: string
 Velocity :: la.Vector3f32
 Active_Shaders :: bit_set[ProgramName; u32]
 Level_Geometry_Attributes :: bit_set[Level_Geometry_Component_Name]
@@ -35,6 +37,7 @@ Level_Geometry :: struct {
     rotation: Rotation,
     scale: Scale,
     shape: Shape,
+    shape_string: ShapeString,
     shaders: Active_Shaders,
     attributes: Level_Geometry_Attributes 
 }

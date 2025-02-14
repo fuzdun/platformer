@@ -79,7 +79,12 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
             aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
 
-            sd := SHAPE_DATA[lg.shape]
+            sd : ShapeData
+            if .ShapeString in lg.attributes {
+                sd = gs.level_resources[lg.shape_string] 
+            } else {
+                sd = SHAPE_DATA[lg.shape]
+            }
             vertices := make([dynamic][3]f32); defer delete(vertices)
             for v, idx in sd.vertices {
                 new_pos := la.quaternion128_mul_vector3(lg.rotation, lg.scale * v.pos.xyz) + lg.position

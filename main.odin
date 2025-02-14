@@ -13,6 +13,7 @@ HEIGHT :: 1080.0
 TITLE :: "platformer"
 
 Game_State :: struct {
+    level_resources: map[string]Shape_Data,
     level_geometry: #soa[dynamic]Level_Geometry,
     player_state: Player_State,
     input_state: Input_State,
@@ -20,12 +21,14 @@ Game_State :: struct {
 }
 
 gamestate_init :: proc(gs: ^Game_State) {
+    gs.level_resources = make(map[string]Shape_Data)
     gs.level_geometry = make(Level_Geometry_State)
     gs.player_state.trail = make([dynamic][3]f32)
     resize(&gs.player_state.trail, TRAIL_SIZE)
 }
 
 gamestate_free :: proc(gs: ^Game_State) {
+    delete(gs.level_resources)
     delete(gs.level_geometry)
     delete(gs.player_state.trail)
 }
@@ -84,6 +87,9 @@ main :: proc () {
     gs.player_state.ground_x = {1, 0, 0}
     gs.player_state.ground_z = {0, 0, -1}
 
+    load_geometry_data(&gs)
+    //fmt.println(gs.level_resources["cube"])
+
     ss: ShaderState
     shader_state_init(&ss); defer shader_state_free(&ss)
 
@@ -104,7 +110,7 @@ main :: proc () {
     
 
     // start frame loop
-    load_blender_model("Cube2")
-    //frame_loop(window, &gs, &rs, &ss, &ps)
+    //load_blender_model("cube")
+    frame_loop(window, &gs, &rs, &ss, &ps)
 }
 

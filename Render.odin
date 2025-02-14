@@ -16,6 +16,15 @@ RenderState :: struct {
     vbo: u32
 }
 
+load_geometry_data :: proc(gs: ^Game_State) {
+    names: [1]string = {"cube"}
+    for name in names {
+        if ok := load_blender_model(name, gs); ok {
+            //fmt.println(gs.level_resources[name].indices_lists)
+        }
+    }
+}
+
 init_render_buffers :: proc(rs: ^RenderState) {
     add_sphere_data()
     for program in ProgramName {
@@ -57,8 +66,13 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
 get_vertices_update_indices :: proc(gs: ^Game_State, rs: ^RenderState, out: ^[dynamic]Vertex) {
     scale_identity : Scale = {1, 1, 1}
     for lg in gs.level_geometry {
+        sd: ShapeData
+        if .ShapeString in lg.attributes {
+            sd = gs.level_resources[lg.shape_string]
+        } else {
+            sd = SHAPE_DATA[lg.shape]
+        }
         indices_offset := u16(len(out))
-        sd := SHAPE_DATA[lg.shape]
         vertices := sd.vertices
         for indices_list in sd.indices_lists {
             if indices_list.shader in lg.shaders {
