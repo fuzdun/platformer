@@ -20,13 +20,13 @@ load_geometry_data :: proc(gs: ^Game_State) {
     names: [1]string = {"cube"}
     for name in names {
         if ok := load_blender_model(name, gs); ok {
-            //fmt.println(gs.level_resources[name].indices_lists)
+            //fmt.println(gs.level_resources[name])
         }
     }
 }
 
-init_render_buffers :: proc(rs: ^RenderState) {
-    add_sphere_data()
+init_render_buffers :: proc(gs: ^Game_State, rs: ^RenderState) {
+    add_player_sphere_data(gs)
     for program in ProgramName {
         rs.i_queue[program] = make([dynamic]u16) 
     }
@@ -66,35 +66,40 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
 get_vertices_update_indices :: proc(gs: ^Game_State, rs: ^RenderState, out: ^[dynamic]Vertex) {
     scale_identity : Scale = {1, 1, 1}
     for lg in gs.level_geometry {
-        sd: ShapeData
-        if .ShapeString in lg.attributes {
-            sd = gs.level_resources[lg.shape_string]
-        } else {
-            sd = SHAPE_DATA[lg.shape]
+        if .Shape not_in lg.attributes {
+            continue
         }
+        sd: Shape_Data
+        sd = gs.level_resources[lg.shape]
+        //} else {
+        //    sd = SHAPE_DATA[lg.shape]
+        //}
         indices_offset := u16(len(out))
         vertices := sd.vertices
-        for indices_list in sd.indices_lists {
-            if indices_list.shader in lg.shaders {
-                offset_indices(indices_list.indices[:], indices_offset, &rs.i_queue[indices_list.shader])
-            }
+        for shader in lg.shaders {
+            indices := sd.indices
+            offset_indices(indices[:], indices_offset, &rs.i_queue[shader])
         }
-        scale := .Scale in lg.attributes ? lg.scale : {1, 1, 1}
-        rotation := lg.rotation
-        transform_vertices(vertices, lg.position, scale, lg.rotation, out)
+        //for indices_list in sd.indices_lists {
+        //    if indices_list.shader in lg.shaders {
+        //        offset_indices(indices_list.indices[:], indices_offset, &rs.i_queue[indices_list.shader])
+        //    }
+        //}
+        trns := lg.transform
+        transform_vertices(vertices, trns.position, trns.scale, trns.rotation, out)
     }
     return
 }
 
-queue_draw_player :: proc(ps: Player_State, rs: ^RenderState, out: ^[dynamic]Vertex) {
+queue_draw_player :: proc(gs: Game_State, rs: ^RenderState, out: ^[dynamic]Vertex) {
     indices_offset := u16(len(out))
-    sd := SHAPE_DATA[.Sphere]
+    sd := gs.player_geometry
     rot := la.quaternion_from_euler_angles(f32(0), f32(0), f32(0), .XYZ)
-    p_pos := ps.position
+    p_pos := gs.player_state.position
     transform_vertices(sd.vertices, {f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)}, {1, 1, 1}, rot, out)
-    for indices_list in sd.indices_lists {
-        offset_indices(indices_list.indices[:], indices_offset, &rs.i_queue[indices_list.shader])
-    }
+    //for indices_list in sd.indices {
+    offset_indices(sd.indices[:], indices_offset, &rs.i_queue[.Player])
+    //}
 }
 
 queue_draw_aabb :: proc(gs: ^Game_State, rs: ^RenderState, ps: ^Physics_State, out: ^[dynamic]Vertex) {
@@ -109,7 +114,7 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: 
     transformed_vertices := make([dynamic]Vertex)
     defer delete(transformed_vertices)
     get_vertices_update_indices(gs, rs, &transformed_vertices)
-    queue_draw_player(gs.player_state, rs, &transformed_vertices)
+    queue_draw_player(gs^, rs, &transformed_vertices)
 
     queue_draw_aabb(gs, rs, ps, &transformed_vertices)    
 

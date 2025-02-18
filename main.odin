@@ -13,6 +13,7 @@ HEIGHT :: 1080.0
 TITLE :: "platformer"
 
 Game_State :: struct {
+    player_geometry: Shape_Data,
     level_resources: map[string]Shape_Data,
     level_geometry: #soa[dynamic]Level_Geometry,
     player_state: Player_State,
@@ -94,7 +95,7 @@ main :: proc () {
     shader_state_init(&ss); defer shader_state_free(&ss)
 
     rs: RenderState
-    init_render_buffers(&rs); defer free_render_buffers(&rs)
+    init_render_buffers(&gs, &rs); defer free_render_buffers(&rs)
 
     ps: Physics_State
     init_physics_state(&ps); defer free_physics_state(&ps)
@@ -103,14 +104,10 @@ main :: proc () {
     init_draw(&rs, &ss)
     SDL.GL_SetSwapInterval(1)
 
-    // load test geometry
-    //load_random_shapes(&gs, 200)
-    load_test_floor(&gs, 1000, 1000)
-    load_physics_test_box(&gs, 30, 30, 30, 400)
-    
+    encode_test_level_cbor()
+    load_level_cbor(&gs, "test_level")
 
     // start frame loop
-    //load_blender_model("cube")
     frame_loop(window, &gs, &rs, &ss, &ps)
 }
 

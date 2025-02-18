@@ -62,7 +62,7 @@ free_physics_state :: proc(ps: ^Physics_State) {
 get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, elapsed_time: f32) {
     clear_physics_state(ps)
 
-    filter: bit_set[Level_Geometry_Component_Name] = { .Colliding, .Position, .Shape }
+    filter: bit_set[Level_Geometry_Component_Name; u64] = { .Collider, .Transform, .Shape }
     ppos := gs.player_state.position
     ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])
@@ -79,15 +79,12 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
             aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
 
-            sd : ShapeData
-            if .ShapeString in lg.attributes {
-                sd = gs.level_resources[lg.shape_string] 
-            } else {
-                sd = SHAPE_DATA[lg.shape]
-            }
+            coll : Shape_Data
+            coll = gs.level_resources[lg.collider] 
             vertices := make([dynamic][3]f32); defer delete(vertices)
-            for v, idx in sd.vertices {
-                new_pos := la.quaternion128_mul_vector3(lg.rotation, lg.scale * v.pos.xyz) + lg.position
+            trns := lg.transform
+            for v, idx in coll.vertices {
+                new_pos := la.quaternion128_mul_vector3(trns.rotation, trns.scale * v.pos.xyz) + trns.position
                 append(&vertices, new_pos)
                 aabbx0 = min(new_pos.x - 1, aabbx0)
                 aabby0 = min(new_pos.y - 1, aabby0)
@@ -115,11 +112,11 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             }
             if total < player_sq_radius {
                 coll_indices := make([dynamic]u16); defer delete(coll_indices)
-                for il in sd.indices_lists {
-                    if il.shader == .Outline {
-                        append(&coll_indices, ..il.indices)
-                    }
-                }
+                //for il in sd.indices_lists {
+                //    if il.shader == .Outline {
+                        append(&coll_indices, ..coll.indices)
+                //    }
+                //}
                 l := len(coll_indices)
                 for i := 0; i <= l - 3; i += 3 {
                     off := u16(len(ps.debug_render_queue.vertices))
@@ -131,9 +128,6 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                     velocity_len := la.length(gs.player_state.velocity * delta_time)
                     closest_pt, normal, plane_dist := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, ppos32)
                     if la.dot(normal, velocity_normal) > 0 do continue
-                    //if player_sq_radius > la.length2(ppos32 - closest_pt) {
-                    //    //fmt.println("player in surface! must force out with normal")
-                    //}
                     if sphere_t, sphere_q, sphere_ok := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); sphere_ok {
                         if sphere_t = sphere_t / velocity_len; sphere_t <= 1 {
                             coll : Collision

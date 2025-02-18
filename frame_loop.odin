@@ -34,7 +34,6 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^RenderState, ss: ^
     quit_handler :: proc () { quit_app = true }
 
     for !quit_app {
-        //frame_start_time := time.now()
         if quit_app do break
 
         elapsed_time := f64(SDL.GetTicks())
@@ -60,12 +59,11 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^RenderState, ss: ^
         delta_time += averager_res / 4
         averager_res %= 4
 
-        //fmt.println("=====acc before dt:", accumulator)
         accumulator += delta_time
 
         if accumulator > target_frame_clocks * 8 {
             resync = true
-        }  //timer resync if requested
+        }
 
 
         if(resync) {
@@ -76,29 +74,19 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^RenderState, ss: ^
 
         // Handle input
         process_input(&gs.input_state, quit_handler)
-        //fmt.println("other stuff: ", time.since(frame_start_time))
 
-        //fmt.println("acc before updates:", accumulator)
         for accumulator >= target_frame_clocks {
             // Fixed update
-            //update_time := time.now()
-            //update_start_time := time.now()
             game_update(gs, ps, elapsed_time, FIXED_DELTA_TIME)
-            //fmt.println("update:", time.since(update_time))
             accumulator -= target_frame_clocks 
-            //fmt.println("update time: ", time.tick_since(update_time))
         }
-        //fmt.println("acc after updates:", accumulator)
 
         // Render
         gl.Viewport(0, 0, WIDTH, HEIGHT)
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-        //draw_time := time.now()
         draw_triangles(gs, rs, ss, ps, elapsed_time)
         SDL.GL_SwapWindow(window)
-        //fmt.println("draw time: ", time.since(draw_time))
-        //fmt.println("=====", time.since(frame_start_time))
     }
 }
 

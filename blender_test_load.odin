@@ -10,9 +10,7 @@ import gl "vendor:OpenGL"
 load_blender_model :: proc(filename: string, gs: ^Game_State) -> bool {
 
     // read binary data
-    dir := "models/"
-    ext := ".glb"
-    data, ok := os.read_entire_file_from_filename(str.concatenate({dir, filename, ext}))
+    data, ok := os.read_entire_file_from_filename(str.concatenate({"models/", filename, ".glb"}))
     if !ok {
         fmt.eprintln("failed to read file")
         return false
@@ -58,57 +56,59 @@ load_blender_model :: proc(filename: string, gs: ^Game_State) -> bool {
     // read up to binary data length
     bin_data := bytes.buffer_next(&buf, int(bin_len))
 
-    // get byte offsets/lengths of mesh attributes from json
+    //// get byte offsets/lengths of mesh attributes from json
     json_obj := parsed_json.(json.Object)
+    //fmt.println(json_obj)
     buffer_views := json_obj["bufferViews"].(json.Array)
+    sd := read_mesh_data_from_binary(buffer_views, bin_data, 0)
+    gs.level_resources[filename] = sd
+    if len(json_obj["scenes"].(json.Array)[0].(json.Object)["nodes"].(json.Array)) == 2 {
+        coll := read_mesh_data_from_binary(buffer_views, bin_data, 1)   
+        gs.level_resources[str.concatenate({filename, "_collider"})] = coll
+    }
+    return true
+}
 
-    pos_offset := int(buffer_views[0].(json.Object)["byteOffset"].(json.Float))
-    pos_len := int(buffer_views[0].(json.Object)["byteLength"].(json.Float))
+read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, i: int) -> (sd: Shape_Data) {
+    idx := i * 4
+    pos_offset := int(buffer_views[idx].(json.Object)["byteOffset"].(json.Float))
+    pos_len := int(buffer_views[idx].(json.Object)["byteLength"].(json.Float))
 
-    norm_offset := int(buffer_views[1].(json.Object)["byteOffset"].(json.Float))
-    norm_len := int(buffer_views[1].(json.Object)["byteLength"].(json.Float))
+    norm_offset := int(buffer_views[idx + 1].(json.Object)["byteOffset"].(json.Float))
+    norm_len := int(buffer_views[1 + 1].(json.Object)["byteLength"].(json.Float))
 
-    uv_offset := int(buffer_views[2].(json.Object)["byteOffset"].(json.Float))
-    uv_len := int(buffer_views[2].(json.Object)["byteLength"].(json.Float))
+    uv_offset := int(buffer_views[idx + 2].(json.Object)["byteOffset"].(json.Float))
+    uv_len := int(buffer_views[idx + 2].(json.Object)["byteLength"].(json.Float))
 
-    indices_offset := int(buffer_views[3].(json.Object)["byteOffset"].(json.Float))
-    indices_len := int(buffer_views[3].(json.Object)["byteLength"].(json.Float))
+    indices_offset := int(buffer_views[idx + 3].(json.Object)["byteOffset"].(json.Float))
+    indices_len := int(buffer_views[idx + 3].(json.Object)["byteLength"].(json.Float))
 
-    // get binary chunks corresponding to attributes and recast to arrays of proper datatype
-    pos_start_ptr: rawptr = &bin_data[pos_offset]
+    pos_start_ptr: rawptr = &binary_data[pos_offset]
     pos_bytes_len := pos_len / size_of([3]f32)
     pos_data := (cast([^][3]f32)pos_start_ptr)[:pos_bytes_len]
 
-    norm_start_ptr: rawptr = &bin_data[norm_offset]
+    norm_start_ptr: rawptr = &binary_data[norm_offset]
     norm_bytes_len := norm_len / size_of([3]f32)
     norm_data := (cast([^][3]f32)norm_start_ptr)[:norm_bytes_len]
 
-    uv_start_ptr: rawptr = &bin_data[uv_offset]
+    uv_start_ptr: rawptr = &binary_data[uv_offset]
     uv_bytes_len := uv_len / size_of([2]f32)
     uv_data := (cast([^][2]f32)uv_start_ptr)[:uv_bytes_len]
 
-    indices_start_ptr: rawptr = &bin_data[indices_offset]
+    indices_start_ptr: rawptr = &binary_data[indices_offset]
     indices_bytes_len := indices_len / size_of(u16)
     indices_data := (cast([^]u16)indices_start_ptr)[:indices_bytes_len]
 
-    //fmt.println("===vertices===")
-    //fmt.println(pos_data)
-    //fmt.println("===normals===")
-    //fmt.println(norm_data)
-    //fmt.println("===uv===")
-    //fmt.println(uv_data)
-    //fmt.println("===indices===")
-    //fmt.println(indices_data)
-         
-    sd: Shape_Data
     sd.vertices = make([]Vertex, len(pos_data))
-    sd.indices_lists[.Render] = make([]u16, len(indices_data))
-    sd.indices_lists[.Collision] = make([]u16, len(indices_data))
+    sd.indices = make([]u16, len(indices_data))
     for pos, i in pos_data {
         sd.vertices[i] = {{pos[0], pos[1], pos[2], 1.0}, uv_data[i]}
-        copy(sd.indices_lists[.Render], indices_data)
-        copy(sd.indices_lists[.Collision], indices_data)
     }
-    gs.level_resources[filename] = sd
-    return true
+    copy(sd.indices, indices_data)
+    return
 }
+
+
+
+
+

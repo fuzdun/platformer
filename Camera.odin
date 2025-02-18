@@ -14,3 +14,4 @@ move_camera :: proc(ps: Player_State, cs: ^Camera_State, elapsed_time: f64, delt
     tgt : [3]f32 = {ps.position.x, tgt_y, tgt_z}
     cs.position = math.lerp(cs.position, tgt, f32(0.075))
 }
+
