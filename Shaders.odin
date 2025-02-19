@@ -1,6 +1,7 @@
 package main
 import "core:fmt"
 import "core:strings"
+import "core:os"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 
@@ -12,7 +13,7 @@ ProgramName :: enum{
     New,
     Reactive,
     Player,
-    Trail
+    Trail,
 }
 
 Program :: struct{
@@ -27,14 +28,12 @@ ActiveProgram :: struct{
     init_proc: proc()
 }
 
-
-PROGRAM_CONFIGS :: #partial[ProgramName]Program{
+PROGRAM_CONFIGS := #partial[ProgramName]Program{
     .Pattern = {
         vertex_filename = "patternvertex",
         frag_filename = "patternfrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
-            //gl.PolygonMode(gl.FRONT, gl.FILL)
         }
     },
     .Outline = {
@@ -46,7 +45,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program{
         }
     },
     .RedOutline = {
-        vertex_filename = "outlinevertex",
+        vertex_filename = EDIT ? "outlinevertex" : "outlinethumpervertex",
         frag_filename = "redoutlinefrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.LINE)
@@ -83,12 +82,12 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program{
         }
     },
     .Trail = {
-        vertex_filename = "trailvertex",
+        vertex_filename = EDIT ? "trailvertex" : "thumpervertex",
         frag_filename = "trailfrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
         }
-    } 
+    },
 }
 
 ShaderState :: struct {

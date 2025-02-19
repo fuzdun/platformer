@@ -80,7 +80,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
 
             coll : Shape_Data
-            coll = gs.level_resources[lg.collider] 
+            coll = gs.level_colliders[lg.collider] 
             vertices := make([dynamic][3]f32); defer delete(vertices)
             trns := lg.transform
             for v, idx in coll.vertices {
@@ -246,26 +246,5 @@ ray_sphere_intersect :: proc(origin: [3]f32, dir: [3]f32, ppos: [3]f32) -> (t: f
     q = origin + t * dir
     ok = true
     return
-}
-
-resolve_collisions :: proc(pls: ^Player_State, phs: ^Physics_State, delta_time: f32) {
-    velocity_normal := la.normalize(pls.velocity)
-    best_coll: Collision
-    smallest_impulse: f32 = max(f32)
-    //for coll in phs.collisions {
-    //    impulse := coll.penetration / la.dot(coll.normal, velocity_normal) 
-    //    if abs(impulse) < abs(smallest_impulse) {
-    //        smallest_impulse = impulse
-    //        best_coll = coll
-    //    }
-    //    //}
-    //}
-    //if smallest_impulse < 0 {
-    //    fmt.println(smallest_impulse)
-    //    pls.position += smallest_impulse * velocity_normal * 1.001
-    //    new_dir := velocity_normal - la.dot(best_coll.normal, velocity_normal) * best_coll.normal 
-    //    pls.velocity = new_dir * la.length(pls.velocity)
-    //    pls.position += new_dir * -smallest_impulse
-    //}
 }
 

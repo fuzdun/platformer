@@ -71,20 +71,12 @@ get_vertices_update_indices :: proc(gs: ^Game_State, rs: ^RenderState, out: ^[dy
         }
         sd: Shape_Data
         sd = gs.level_resources[lg.shape]
-        //} else {
-        //    sd = SHAPE_DATA[lg.shape]
-        //}
         indices_offset := u16(len(out))
         vertices := sd.vertices
         for shader in lg.shaders {
             indices := sd.indices
             offset_indices(indices[:], indices_offset, &rs.i_queue[shader])
         }
-        //for indices_list in sd.indices_lists {
-        //    if indices_list.shader in lg.shaders {
-        //        offset_indices(indices_list.indices[:], indices_offset, &rs.i_queue[indices_list.shader])
-        //    }
-        //}
         trns := lg.transform
         transform_vertices(vertices, trns.position, trns.scale, trns.rotation, out)
     }
@@ -128,11 +120,10 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: 
 
     c_pos := gs.camera_state.position
     p_pos := gs.player_state.position
-    rot := glm.mat4LookAt({0, 0, 0}, {f32(p_pos.x - c_pos.x), f32(p_pos.y - c_pos.y), f32(p_pos.z - c_pos.z)}, {0, 1, 0})
-    proj := glm.mat4Perspective(45, WIDTH / HEIGHT, 0.01, 1000)
-    offset := glm.mat4Translate({f32(-c_pos.x), f32(-c_pos.y), f32(-c_pos.z)})
 
-    proj_mat := proj * rot * offset
+    
+    proj_mat := construct_camera_matrix(&gs.camera_state)
+
     player_pos := glm.vec3({f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)})
     player_trail : [3]glm.vec3 = { gs.player_state.trail[16], gs.player_state.trail[32], gs.player_state.trail[49] }
 

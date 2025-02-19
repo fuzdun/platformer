@@ -9,16 +9,20 @@ import la "core:math/linalg"
 shader_program_from_file :: proc(vertex_filename, fragment_filename: string) -> (u32, bool) {
     dir := "shaders/"
     ext := ".glsl"
-    vertex_string, vertex_ok := os.read_entire_file(str.concatenate({dir, vertex_filename, ext}))
+    filename := str.concatenate({dir, vertex_filename, ext})
+    defer delete(filename)
+    vertex_string, vertex_ok := os.read_entire_file(filename)
     defer delete(vertex_string)
     if !vertex_ok {
-        fmt.eprintln("failed to read vertex shader file")
+        fmt.eprintln("failed to read vertex shader file:", vertex_string)
         return 0, false
     }
-    fragment_string, fragment_ok := os.read_entire_file(str.concatenate({dir, fragment_filename, ext}))
+    filename2 := str.concatenate({dir, fragment_filename, ext})
+    defer delete(filename2)
+    fragment_string, fragment_ok := os.read_entire_file(filename2)
     defer delete(fragment_string)
     if !fragment_ok {
-        fmt.eprintln("failed to read fragment shader file")
+        fmt.eprintln("failed to read fragment shader file:", fragment_string)
         return 0, false
     }
     return gl.load_shaders_source(string(vertex_string), string(fragment_string))

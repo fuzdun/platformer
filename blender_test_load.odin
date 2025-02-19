@@ -10,12 +10,14 @@ import gl "vendor:OpenGL"
 load_blender_model :: proc(filename: string, gs: ^Game_State) -> bool {
 
     // read binary data
-    data, ok := os.read_entire_file_from_filename(str.concatenate({"models/", filename, ".glb"}))
+    binary_filename := str.concatenate({"models/", filename, ".glb"})
+    defer delete(binary_filename)
+    data, ok := os.read_entire_file_from_filename(binary_filename)
+    defer delete(data)
     if !ok {
         fmt.eprintln("failed to read file")
         return false
     }
-    defer delete(data)
 
     // initialize buffer
     buf : bytes.Buffer
@@ -58,13 +60,12 @@ load_blender_model :: proc(filename: string, gs: ^Game_State) -> bool {
 
     //// get byte offsets/lengths of mesh attributes from json
     json_obj := parsed_json.(json.Object)
-    //fmt.println(json_obj)
     buffer_views := json_obj["bufferViews"].(json.Array)
     sd := read_mesh_data_from_binary(buffer_views, bin_data, 0)
     gs.level_resources[filename] = sd
     if len(json_obj["scenes"].(json.Array)[0].(json.Object)["nodes"].(json.Array)) == 2 {
         coll := read_mesh_data_from_binary(buffer_views, bin_data, 1)   
-        gs.level_resources[str.concatenate({filename, "_collider"})] = coll
+        gs.level_colliders[filename] = coll
     }
     return true
 }

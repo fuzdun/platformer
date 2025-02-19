@@ -14,7 +14,6 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^RenderState, ss: ^
     clocks_per_second := i64(SDL.GetPerformanceFrequency())
     target_frame_clocks := clocks_per_second / TARGET_FRAME_RATE
     max_deviation := clocks_per_second / 5000
-    //fmt.println(max_deviation)
 
     snap_hz: i64 = 60
     current_display_mode: SDL.DisplayMode
