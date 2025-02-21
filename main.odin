@@ -4,6 +4,7 @@ import "base:runtime"
 import "core:fmt"
 import SDL "vendor:sdl2"
 import gl "vendor:OpenGL"
+import la "core:math/linalg"
 import "core:mem"
 import "core:os"
 

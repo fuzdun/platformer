@@ -16,6 +16,8 @@ Collision :: struct {
     id: int,
     pos: [3]f32,
     normal: [3]f32,
+    plane_dist: f32,
+    closest_pt: [3]f32,
     t: f32
 }
 
@@ -67,11 +69,8 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
     ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])
     player_sq_radius := f32(SPHERE_RADIUS * SPHERE_RADIUS)
-    best_ground_dist: f32 = 1000
-    best_ground_t := [3]f32{0, 0, 0}
-    best_ground_normal := [3]f32{0, 0, 0}
-    gs.player_state.on_ground = false
 
+    got_ground_ray_col := false
     for lg, id in gs.level_geometry {
         if filter <= lg.attributes {
             off := u16(len(ps.debug_render_queue.vertices))
@@ -100,6 +99,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             if py > aabby1 do total += (py - aabby1) * (py - aabby1)
             if pz < aabbz0 do total += (pz - aabbz0) * (pz - aabbz0)
             if pz > aabbz1 do total += (pz - aabbz1) * (pz - aabbz1)
+
             if gs.input_state.c_pressed {
                 // debug wireframe rendering
                 debug_vertices := aabb_vertices(aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1)
@@ -110,13 +110,11 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                 shader: ProgramName = total < player_sq_radius ? .RedOutline : .Outline
                 offset_indices(AABB_INDICES, off, &ps.debug_render_queue.indices[shader])
             }
+            
             if total < player_sq_radius {
+                // got player within bounding box
                 coll_indices := make([dynamic]u16); defer delete(coll_indices)
-                //for il in sd.indices_lists {
-                //    if il.shader == .Outline {
-                        append(&coll_indices, ..coll.indices)
-                //    }
-                //}
+                append(&coll_indices, ..coll.indices)
                 l := len(coll_indices)
                 for i := 0; i <= l - 3; i += 3 {
                     off := u16(len(ps.debug_render_queue.vertices))
@@ -127,51 +125,66 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                     velocity_normal := la.normalize(gs.player_state.velocity)
                     velocity_len := la.length(gs.player_state.velocity * delta_time)
                     closest_pt, normal, plane_dist := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, ppos32)
-                    if la.dot(normal, velocity_normal) > 0 do continue
-                    if sphere_t, sphere_q, sphere_ok := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); sphere_ok {
-                        if sphere_t = sphere_t / velocity_len; sphere_t <= 1 {
-                            coll : Collision
-                            coll.id = id
-                            coll.pos = sphere_q
-                            coll.normal = normal
-                            coll.t = sphere_t
-                            append(&ps.collisions, coll)
+                    if la.dot(normal, velocity_normal) < 0 {
+                        if sphere_t, sphere_q, sphere_ok := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); sphere_ok {
+                            if sphere_t = sphere_t / velocity_len; sphere_t <= 1 {
+                                // got collision with triangle
+                                coll : Collision
+                                coll.id = id
+                                coll.pos = sphere_q
+                                coll.normal = normal
+                                coll.closest_pt = closest_pt
+                                coll.plane_dist = plane_dist
+                                coll.t = sphere_t
+                                append(&ps.collisions, coll)
+                            }
                         }
                     }
-                    plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, GROUND_RAY, normal, plane_dist);
-                    if plane_ok {
-                        dist2 := la.length2(closest_pt - plane_q)
-                        if dist2 < GROUNDED_RADIUS2 && dist2 < best_ground_dist {
-                            best_ground_dist = dist2
-                            best_ground_t = plane_t
-                            best_ground_normal = normal
+                    if gs.player_state.on_ground {
+                        plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, gs.player_state.ground_ray, normal, plane_dist);
+                        if plane_ok && la.length2(closest_pt - plane_q) < GROUNDED_RADIUS2 {
+                            got_ground_ray_col = true
                         }
                     }
                 }
-
             }
         }         
     }
-    if best_ground_dist < 1000 {
-        gs.player_state.on_ground = true
-        gs.player_state.left_ground = elapsed_time
-        //gs.player_state.velocity.y = 0
-        //gs.player_state.position += GROUND_RAY * best_ground_t + GROUND_VERTICAL_OFFSET
-        ground_x := [3]f32{1, 0, 0}
-        gs.player_state.ground_x = ground_x - la.dot(ground_x, best_ground_normal) * best_ground_normal
-        ground_z := [3]f32{0, 0, -1}
-        gs.player_state.ground_z = ground_z - la.dot(ground_z, best_ground_normal) * best_ground_normal
-        //if gs.input_state.c_pressed {
-        //    v0: Vertex = {{tri_vertex0[0], tri_vertex0[1], tri_vertex0[2], 1}, {1, 1}}
-        //    v1: Vertex = {{tri_vertex1[0], tri_vertex1[1], tri_vertex1[2], 1}, {1, 1}}
-        //    v2: Vertex = {{tri_vertex2[0], tri_vertex2[1], tri_vertex2[2], 1}, {1, 1}}
-        //    v3: Vertex = {{ppos32[0], ppos32[1], ppos32[2], 1}, {1, 1}}
-        //    x_end := ppos32 + gs.player_state.ground_x * 100
-        //    v4: Vertex = {{x_end[0], x_end[1], x_end[2], 1}, {1, 1}}
-        //    append(&ps.debug_render_queue.indices[.BlueOutline], off, off + 1, off + 1, off + 2, off + 2, off, off + 3, off + 4)
-        //    append(&ps.debug_render_queue.vertices, v0, v1, v2, v3, v4)
-        //}
-    } 
+    if gs.player_state.on_ground {
+        gs.player_state.on_ground = got_ground_ray_col
+    }
+
+    best_plane_normal: [3]f32 = {100, 100, 100}
+    most_horizontal_coll: Collision = {} 
+    best_plane_intersection: [3]f32 = {0, 0, 0}
+    for coll in ps.collisions {
+        ground_ray := -coll.normal * GROUND_RAY_LEN
+        plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, ground_ray, coll.normal, coll.plane_dist);
+        if plane_ok && la.length2(coll.closest_pt - plane_q) < GROUNDED_RADIUS2 {
+            // ground_ray close enough to surface
+            if abs(coll.normal.y) < best_plane_normal.y {
+                best_plane_normal = coll.normal
+                most_horizontal_coll = coll 
+                best_plane_intersection = plane_q
+            }
+        }
+    }
+    if best_plane_normal.y < 100.0 {
+        // the most horizontal surface
+        if best_plane_normal.y >= 0.707 {
+            if !gs.player_state.on_ground {
+                gs.player_state.crunch_pt = gs.player_state.position - {0, 0, 0.5}
+                gs.player_state.crunch_time = elapsed_time
+            }
+            gs.player_state.position = best_plane_intersection + best_plane_normal * GROUND_OFFSET 
+            ground_x := [3]f32{1, 0, 0}
+            ground_z := [3]f32{0, 0, -1}
+            gs.player_state.ground_x = ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal
+            gs.player_state.ground_z = ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal
+            gs.player_state.ground_ray = -best_plane_normal * GROUND_RAY_LEN
+            gs.player_state.on_ground = true
+        } 
+    }
 }
 
 ray_plane_intersection :: proc(start: [3]f32, offset: [3]f32, plane_n: [3]f32, plane_d: f32) -> (t: f32, q: [3]f32, ok: bool) {

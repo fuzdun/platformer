@@ -32,3 +32,12 @@ SLOPE
 - set “on_floor” flag
 - similar to ground but gravity pulls player down slope with some applied friction
 
+
+GROUND COLLISION
+- get all triangles that have been collided with
+- get the ray intersection from the sphere center to the triangle's plane along the surface normal
+- only keep triangles where the plane intersection T is between 0 and 1, and the distance from the intersection to the closest point on the triangle to the sphere center is less than some amount
+- out of these triangles, get the one with the most horizontal surface
+- if the surface normal is within the range of normals which can be considered ground, set on_ground to true and set the ground normal to the surface normal
+- while on_ground is true, also check for ray collisions using the above method, and set on_ground to false if the check fails
+- if a valid on_ground collision happens while on_ground, update on_ground normal to new surface normal

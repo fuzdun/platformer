@@ -8,15 +8,21 @@ out float time;
 out vec3 player_pos;
 out vec3 global_pos;
 out vec3[3] player_trail;
+out vec3 crunch_pt_out;
+out float crunch_time_frag;
 
 uniform float i_time;
 uniform mat4 projection;
 uniform vec3 player_pos_in;
 uniform vec3[3] player_trail_in;
+uniform vec3 crunch_pt;
+uniform float crunch_time;
 
 void main() {
     float dist = max(0, player_pos_in.z - 50 - aPos.z);
     gl_Position = projection * (aPos + vec4(dist * dist * 0.01, dist * dist * 0.01, -dist * dist * 0.01, 0));
+    crunch_pt_out = crunch_pt;
+    crunch_time_frag = crunch_time;
     uv = vertexUV;
     time = i_time;
     player_pos = player_pos_in;

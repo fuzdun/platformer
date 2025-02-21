@@ -22,6 +22,15 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
         append(&aos_level_data, lg)
     }
 
+    //rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
+    //shallow_angle: Level_Geometry
+    //shallow_angle.shape = "shallow_angle"
+    //shallow_angle.collider = "shallow_angle"
+    //shallow_angle.transform = {{0, 0, 0},{10, 10, 10}, rotation}
+    //shallow_angle.shaders = {.Trail, .RedOutline}
+    //shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+    //append(&aos_level_data, shallow_angle)
+
     bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC)
     defer delete(bin)
     os.write_entire_file("levels/test_level.bin", bin)

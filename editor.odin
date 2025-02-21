@@ -25,6 +25,12 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
     selected_obj := &lgs[es.selected_entity]
     rotating := is.r_pressed
     rot_x, rot_y, rot_z := la.euler_angles_xyz_from_quaternion(selected_obj.transform.rotation)
+    if is.spc_pressed && rotating {
+        rot_x = 0
+        rot_y = 0
+        rot_z = 0
+        selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
+    }
     if is.up_pressed {
         if rotating {
             rot_x -= OBJ_ROT_SPD * delta_time

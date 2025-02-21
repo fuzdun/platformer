@@ -6,7 +6,9 @@ in vec3 player_pos;
 in vec3[3] player_trail;
 in vec3 global_pos;
 in float time;
+in float crunch_time_frag;
 in vec2 uv;
+in vec3 crunch_pt_out;   
 
 #define TWOPI 6.2831853
 
@@ -41,6 +43,11 @@ float noise(vec2 p) {
                u.y);
 }
 
+
+float jaggy(float x)
+{
+    return abs(mod(x, 1) - .5) - .5;
+}
 
 void main()
 {
@@ -83,6 +90,22 @@ void main()
     col = res1[1] > 0.1 ?  mix( col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : col;
 
     col = mix(col, reactive_color, 0.5);
-	  fragColor = vec4( col, 1.0 );
-}
 
+
+    float crunch_dist = distance(global_pos, crunch_pt_out);    
+
+
+	fragColor = vec4( col, 1.0 );
+    float k = crunch_dist - (time - crunch_time_frag) * 40;
+    float angle = atan(global_pos.z - crunch_pt_out.z, global_pos.x - crunch_pt_out.x);
+    float w = crunch_dist + 13.7 * floor(angle / TWOPI * 12);
+    angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, 1.5) * 30;
+    float ripple_border = smoothstep(0, 6, k) - smoothstep(6, 12, k);
+    angle = mod(angle, TWOPI / 12);
+    if (0 <= angle && angle <= 2 / pow(crunch_dist, 2)) {
+        fragColor += vec4(1.0, 1.0, 1.0, 1.0) * ripple_border;
+    }
+    // if (crunch_time_frag == 0) {
+    // fragColor.r = 1 - (time - crunch_time_frag);
+    // }
+}

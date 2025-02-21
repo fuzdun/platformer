@@ -17,7 +17,7 @@ RenderState :: struct {
 }
 
 load_geometry_data :: proc(gs: ^Game_State) {
-    names: [1]string = {"cube"}
+    names := [?]string {"cube", "shallow_angle"}
     for name in names {
         if ok := load_blender_model(name, gs); ok {
             //fmt.println(gs.level_resources[name])
@@ -126,6 +126,7 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: 
 
     player_pos := glm.vec3({f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)})
     player_trail : [3]glm.vec3 = { gs.player_state.trail[16], gs.player_state.trail[32], gs.player_state.trail[49] }
+    crunch_pt : glm.vec3 = gs.player_state.crunch_pt 
 
     use_shader(ss, .BlueOutline)
     set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
@@ -151,6 +152,8 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: 
     use_shader(ss, .Trail)
     set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
     set_vec3_uniform(ss, "player_trail_in", 3, &player_trail[0])
+    set_vec3_uniform(ss, "crunch_pt", 1, &crunch_pt)
+    set_float_uniform(ss, "crunch_time", f32(gs.player_state.crunch_time) / 1000)
     set_float_uniform(ss, "i_time", f32(time) / 1000)
     set_matrix_uniform(ss, "projection", &proj_mat)
     shader_draw_triangles(rs, ss, .Trail)
