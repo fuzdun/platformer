@@ -46,7 +46,7 @@ transform_vertices_arr :: proc(vertices: []Vertex, transforms: []glm.mat4, trans
     for count, i in transform_counts {
         for _ in 0..<count {
             v := vertices[idx]
-            vertex: Vertex = { transforms[i] * v.pos, v.uv }
+            vertex: Vertex = { transforms[i] * v.pos, v.uv, v.b_uv}
             append(&out, vertex)
             idx += 1
         }
@@ -57,8 +57,8 @@ transform_vertices_arr :: proc(vertices: []Vertex, transforms: []glm.mat4, trans
 transform_vertices :: proc(vertices: []Vertex, position: Position, scale: Scale, rotation: Rotation, out: ^[dynamic]Vertex) {
     for v, idx in vertices {
         new_pos := v.pos
-        new_pos.xyz = la.quaternion128_mul_vector3(rotation, new_pos.xyz) * scale + position
-        new_v : Vertex = {new_pos, v.uv}
+        new_pos.xyz = la.quaternion128_mul_vector3(rotation, new_pos.xyz * scale) + position
+        new_v : Vertex = {new_pos, v.uv, v.b_uv}
         append(out, new_v)
     }
 }

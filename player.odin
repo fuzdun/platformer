@@ -35,7 +35,7 @@ GROUND_RAY_LEN ::  2.0
 GROUNDED_RADIUS: f32: 0.01 
 GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
 //GROUND_VERTICAL_OFFSET: [3]f32: {0, -0.55, 0}
-GROUND_OFFSET: f32 = 0.7
+GROUND_OFFSET: f32 = .5
 AIR_SPEED :: 0.8
 
 update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time: f64, delta_time: f32) {

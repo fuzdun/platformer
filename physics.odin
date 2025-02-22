@@ -25,15 +25,15 @@ AABB_INDICES :: []u16 {0, 1, 0, 3, 1, 2, 2, 3, 3, 7, 2, 6, 4, 5, 4, 7, 6, 7, 6, 
 
 aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1: f32, aabbz1: f32,) -> [8]Vertex {
     return {
-        {{aabbx0, aabby1, aabbz0, 1}, {0, 0}},
-        {{aabbx0, aabby0, aabbz0, 1}, {0, 1}},
-        {{aabbx1, aabby0, aabbz0, 1}, {1, 1}},
-        {{aabbx1, aabby1, aabbz0, 1}, {1, 0}},
+        {{aabbx0, aabby1, aabbz0, 1}, {0, 0}, {0, 0}},
+        {{aabbx0, aabby0, aabbz0, 1}, {0, 1}, {0, 0}},
+        {{aabbx1, aabby0, aabbz0, 1}, {1, 1}, {0, 0}},
+        {{aabbx1, aabby1, aabbz0, 1}, {1, 0}, {0, 0}},
 
-        {{aabbx0, aabby1, aabbz1, 1}, {1, 0}},
-        {{aabbx0, aabby0, aabbz1, 1}, {0, 0}},
-        {{aabbx1, aabby0, aabbz1, 1}, {0, 1}},
-        {{aabbx1, aabby1, aabbz1, 1}, {1, 1}},
+        {{aabbx0, aabby1, aabbz1, 1}, {1, 0}, {0, 0}},
+        {{aabbx0, aabby0, aabbz1, 1}, {0, 0}, {0, 0}},
+        {{aabbx1, aabby0, aabbz1, 1}, {0, 1}, {0, 0}},
+        {{aabbx1, aabby1, aabbz1, 1}, {1, 1}, {0, 0}},
     }
 }
 
@@ -144,6 +144,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                         plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, gs.player_state.ground_ray, normal, plane_dist);
                         if plane_ok && la.length2(closest_pt - plane_q) < GROUNDED_RADIUS2 {
                             got_ground_ray_col = true
+                            gs.player_state.position = plane_q + normal * GROUND_OFFSET 
                         }
                     }
                 }

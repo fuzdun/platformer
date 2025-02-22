@@ -1,4 +1,5 @@
 perlin noise
 lissajous noise
 radial blur
+color maps
 

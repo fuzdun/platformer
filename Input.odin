@@ -18,6 +18,7 @@ Input_State :: struct {
     pg_up_pressed: bool,
     pg_down_pressed: bool,
     tab_pressed: bool,
+    e_pressed: bool,
     r_pressed: bool,
     ent_pressed: bool,
     spc_pressed: bool,
@@ -83,6 +84,8 @@ process_input :: proc (is: ^Input_State, quit_handler: proc())
                 is.tab_pressed = true
             case .R:
                 is.r_pressed = true
+            case .E:
+                is.e_pressed = true
             case .RETURN:
                 is.ent_pressed = true
             case .c:
@@ -116,6 +119,8 @@ process_input :: proc (is: ^Input_State, quit_handler: proc())
                 is.tab_pressed = false
             case .R:
                 is.r_pressed = false
+            case .E:
+                is.e_pressed = false
             case .RETURN:
                 is.ent_pressed = false
             case .c:

@@ -8,10 +8,10 @@ import la "core:math/linalg"
 import "core:mem"
 import "core:os"
 
-//WIDTH :: 1920.0
-//HEIGHT :: 1080.0
-WIDTH :: 720
-HEIGHT :: 720
+WIDTH :: 1920.0
+HEIGHT :: 1080.0
+//WIDTH :: 720
+//HEIGHT :: 720
 TITLE :: "platformer"
 
 EDIT :: #config(EDIT, false)

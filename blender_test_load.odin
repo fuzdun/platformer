@@ -58,20 +58,28 @@ load_blender_model :: proc(filename: string, gs: ^Game_State) -> bool {
     // read up to binary data length
     bin_data := bytes.buffer_next(&buf, int(bin_len))
 
-    //// get byte offsets/lengths of mesh attributes from json
+    // get byte offsets/lengths of mesh attributes from json
     json_obj := parsed_json.(json.Object)
+    fmt.println(json_obj)
     buffer_views := json_obj["bufferViews"].(json.Array)
+
+    //fmt.println(filename)
+    //fmt.println("TEXCOORD_1" in attributes_json)
+
     sd := read_mesh_data_from_binary(buffer_views, bin_data, 0)
     gs.level_resources[filename] = sd
     if len(json_obj["scenes"].(json.Array)[0].(json.Object)["nodes"].(json.Array)) == 2 {
         coll := read_mesh_data_from_binary(buffer_views, bin_data, 1)   
         gs.level_colliders[filename] = coll
+    } else {
+        gs.level_colliders[filename] = sd
     }
     return true
 }
 
 read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, i: int) -> (sd: Shape_Data) {
     idx := i * 4
+
     pos_offset := int(buffer_views[idx].(json.Object)["byteOffset"].(json.Float))
     pos_len := int(buffer_views[idx].(json.Object)["byteLength"].(json.Float))
 
@@ -80,6 +88,9 @@ read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, 
 
     uv_offset := int(buffer_views[idx + 2].(json.Object)["byteOffset"].(json.Float))
     uv_len := int(buffer_views[idx + 2].(json.Object)["byteLength"].(json.Float))
+
+    //b_uv_offset := int(buffer_views[idx + 3].(json.Object)["byteOffset"].(json.Float))
+    //b_uv_len := int(buffer_views[idx + 3].(json.Object)["byteLength"].(json.Float))
 
     indices_offset := int(buffer_views[idx + 3].(json.Object)["byteOffset"].(json.Float))
     indices_len := int(buffer_views[idx + 3].(json.Object)["byteLength"].(json.Float))
@@ -95,6 +106,12 @@ read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, 
     uv_start_ptr: rawptr = &binary_data[uv_offset]
     uv_bytes_len := uv_len / size_of([2]f32)
     uv_data := (cast([^][2]f32)uv_start_ptr)[:uv_bytes_len]
+    fmt.println(uv_data)
+
+    //b_uv_start_ptr: rawptr = &binary_data[b_uv_offset]
+    //b_uv_bytes_len := b_uv_len / size_of([2]f32)
+    //b_uv_data := (cast([^][2]f32)uv_start_ptr)[:b_uv_bytes_len]
+    //fmt.println(b_uv_data)
 
     indices_start_ptr: rawptr = &binary_data[indices_offset]
     indices_bytes_len := indices_len / size_of(u16)
@@ -103,7 +120,7 @@ read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, 
     sd.vertices = make([]Vertex, len(pos_data))
     sd.indices = make([]u16, len(indices_data))
     for pos, i in pos_data {
-        sd.vertices[i] = {{pos[0], pos[1], pos[2], 1.0}, uv_data[i]}
+        sd.vertices[i] = {{pos[0], pos[1], pos[2], 1.0}, uv_data[i], uv_data[i]}
     }
     copy(sd.indices, indices_data)
     return

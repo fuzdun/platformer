@@ -17,9 +17,10 @@ RenderState :: struct {
 }
 
 load_geometry_data :: proc(gs: ^Game_State) {
-    names := [?]string {"cube", "shallow_angle"}
+    names := [?]string {"basic_cube"}
     for name in names {
         if ok := load_blender_model(name, gs); ok {
+            //fmt.println("loaded", name) 
             //fmt.println(gs.level_resources[name])
         }
     }
@@ -51,7 +52,7 @@ init_draw :: proc(rs: ^RenderState, ss: ^ShaderState) {
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.vbo)
 
     gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, uv))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, b_uv))
 
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)

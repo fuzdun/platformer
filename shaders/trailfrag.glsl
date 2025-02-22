@@ -12,6 +12,48 @@ in vec3 crunch_pt_out;
 
 #define TWOPI 6.2831853
 
+float colormap_red(float x) {
+    if (x < 0.0) {
+        return 167.0;
+    } else if (x < (2.54491177159840E+02 + 2.49117061281287E+02) / (1.94999353031535E+00 + 1.94987400471999E+00)) {
+        return -1.94987400471999E+00 * x + 2.54491177159840E+02;
+    } else if (x <= 255.0) {
+        return 1.94999353031535E+00 * x - 2.49117061281287E+02;
+    } else {
+        return 251.0;
+    }
+}
+
+float colormap_green(float x) {
+    if (x < 0.0) {
+        return 112.0;
+    } else if (x < (2.13852573128775E+02 + 1.42633630462899E+02) / (1.31530121382008E+00 + 1.39181683887691E+00)) {
+        return -1.39181683887691E+00 * x + 2.13852573128775E+02;
+    } else if (x <= 255.0) {
+        return 1.31530121382008E+00 * x - 1.42633630462899E+02;
+    } else {
+        return 195.0;
+    }
+}
+
+float colormap_blue(float x) {
+    if (x < 0.0) {
+        return 255.0;
+    } else if (x <= 255.0) {
+        return -9.84241021836929E-01 * x + 2.52502692064968E+02;
+    } else {
+        return 0.0;
+    }
+}
+
+vec4 colormap(float x) {
+    float t = x * 255.0;
+    float r = colormap_red(t) / 255.0;
+    float g = colormap_green(t) / 255.0;
+    float b = colormap_blue(t) / 255.0;
+    return vec4(r, g, b, 1.0);
+}
+
 //White Hole draw
 vec2 distanceToSegment( vec2 a, vec2 b, vec2 p )
 {
@@ -43,6 +85,26 @@ float noise(vec2 p) {
                u.y);
 }
 
+float fbm (vec2 p )
+{
+    float intv1 = sin(time / 10.0);
+    float intv2 = cos(time / 10.0);
+
+    mat2 mtx_off = mat2(intv1, 1.0, intv2, 1.0);
+    mat2 mtx = mat2(1.6, 1.2, -1.2, 1.6);
+    mtx = mtx_off * mtx;
+    float f = 0.0;
+    f += 0.25*noise( p + time * 1.5); p = mtx*p;
+    f += 0.25*noise( p ); p = mtx*p;
+    f += 0.25*noise( p ); p = mtx*p;
+    f += 0.25*noise( p );
+    return f;
+}
+
+float pattern( in vec2 p )
+{
+	return fbm(p + fbm(p + fbm(p)));
+}
 
 float jaggy(float x)
 {
@@ -59,53 +121,49 @@ void main()
     float absd = abs(uvd - d1);
     float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.0, 0.1, absd);
 
-    vec3 reactive_color = d1 < uvd ? vec3(.25, .15, max(1.0 - (d1 / uvd) * .5, 0.6)) : vec3(.25, .15, 0.6);
-    reactive_color += vec3(.5, 0, 0) * noise_border;
-    float BgIteration = int(time) + 12;
+    vec3 proximity_outline_col = vec3(1.0, .6, 1.0) * noise_border;
+    vec3 proximity_shadow_col = d1 < uvd ? vec3(.5, .15, max(1.0 - (d1 / uvd) * .5, 0.6)) : vec3(.25, .15, 0.6);
 
-    //Define edge noise
-    for (int i = 0; i < BgIteration; i++) {
-        float radiusNoise = noise(uv * 70.0 + float(i) + sin(time)) * 0.1;
-        float radius = float(i) / 5.2 - time / 5.2 + radiusNoise;
+	  float shade = pattern(uv);
+    vec3 pattern_col = vec3(colormap(shade).rgb) * 0.5;
 
-        if (length(uv) < radius) {
-            reactive_color.b -= i > BgIteration - 2 ? fract(time) * 0.05 : 0.05;
-        }
-    }
-
-	  vec3 col = vec3(0.0);
-
+	  vec3 trail_col = vec3(0.0, 0, 0);
     vec2 res1 = distanceToSegment(player_pos.xz, player_trail[0].xz, global_pos.xz);
     vec2 res2 = distanceToSegment(player_trail[0].xz, player_trail[1].xz, global_pos.xz);
     vec2 res3 = distanceToSegment(player_trail[1].xz, player_trail[2].xz, global_pos.xz);
     float d = min(res1[0], min(res2[0], res3[0]));
     float t = (d == res1[0] ? res1[1] : (d == res2[0] ? 1.0 + res2[1] : 2.0 + res3[1])) / 3.0;
     d += t * 0.69;
-
     float line_len = length(player_pos.xy - player_trail[0].xy) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
     float freq = 2.0 * line_len;
     float width =  sin(-time * 70.0 + t * TWOPI * freq) * 5.0 + 40.0;
     float border_d = 0.01 * width;
-    vec3 intColor = mix(vec3(1.0, 0.0, 0.0), vec3(0.5, 0.0, 0.5), t);
-    col = res1[1] > 0.1 ?  mix( col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : col;
+    vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.5, 0.0, 0.5), t);
+    trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
 
-    col = mix(col, reactive_color, 0.5);
-
-
+    vec3 impact_col = vec3(0.0);
     float crunch_dist = distance(global_pos, crunch_pt_out);    
-
-
-	fragColor = vec4( col, 1.0 );
     float k = crunch_dist - (time - crunch_time_frag) * 40;
     float angle = atan(global_pos.z - crunch_pt_out.z, global_pos.x - crunch_pt_out.x);
-    float w = crunch_dist + 13.7 * floor(angle / TWOPI * 12);
-    angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, 1.5) * 30;
+    float w = crunch_dist + 25.7 * floor(angle / TWOPI * 12);
+    angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, .5) * 30;
     float ripple_border = smoothstep(0, 6, k) - smoothstep(6, 12, k);
     angle = mod(angle, TWOPI / 12);
     if (0 <= angle && angle <= 2 / pow(crunch_dist, 2)) {
-        fragColor += vec4(1.0, 1.0, 1.0, 1.0) * ripple_border;
+        impact_col = vec3(0.75, 0.75, 0.5) * ripple_border;
     }
-    // if (crunch_time_frag == 0) {
-    // fragColor.r = 1 - (time - crunch_time_frag);
-    // }
+
+    float v_border = .02;
+    float h_border = .02;
+
+    // Time varying pixel color
+    float x_border_fact = smoothstep(1.0 - h_border, 1.0, uv.x) +
+                          1.0 - smoothstep(0.0, h_border, uv.x);
+    float y_border_fact = smoothstep(1.0 - v_border, 1.0, uv.y) +
+                          1.0 - smoothstep(0.0, v_border, uv.y);
+    float border_fact = max(x_border_fact, y_border_fact);
+    vec3 border_col = border_fact * vec3(1.0, 0.8, 1.0);
+    vec3 col = mix(pattern_col + border_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+    fragColor = vec4(col, 1.0);
 }
+

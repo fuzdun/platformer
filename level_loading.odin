@@ -21,13 +21,13 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     for lg in lgs {
         append(&aos_level_data, lg)
     }
-
+    //
     //rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
     //shallow_angle: Level_Geometry
-    //shallow_angle.shape = "shallow_angle"
-    //shallow_angle.collider = "shallow_angle"
+    //shallow_angle.shape = "basic_cube"
+    //shallow_angle.collider = "basic_cube"
     //shallow_angle.transform = {{0, 0, 0},{10, 10, 10}, rotation}
-    //shallow_angle.shaders = {.Trail, .RedOutline}
+    //shallow_angle.shaders = {.Trail}
     //shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
     //append(&aos_level_data, shallow_angle)
 
