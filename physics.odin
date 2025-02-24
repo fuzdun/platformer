@@ -9,7 +9,8 @@ Physics_State :: struct {
     debug_render_queue: struct {
         vertices: [dynamic]Vertex,
         indices: [ProgramName][dynamic]u16
-    }
+    },
+    //front_zs: [dynamic]f32
 }
 
 Collision :: struct {
@@ -39,6 +40,7 @@ aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1
 
 init_physics_state :: proc(ps: ^Physics_State) {
     ps.collisions = make([dynamic]Collision)
+    //ps.front_zs = make([dynamic]f32)
     ps.debug_render_queue.vertices = make([dynamic]Vertex)
     for pn in ProgramName {
         ps.debug_render_queue.indices[pn] = make([dynamic]u16)
@@ -47,6 +49,7 @@ init_physics_state :: proc(ps: ^Physics_State) {
 
 clear_physics_state :: proc(ps: ^Physics_State) {
     clear(&ps.collisions)
+    //clear(&ps.front_zs)
     clear(&ps.debug_render_queue.vertices)
     for &iq in ps.debug_render_queue.indices {
         clear(&iq)
@@ -56,15 +59,39 @@ clear_physics_state :: proc(ps: ^Physics_State) {
 free_physics_state :: proc(ps: ^Physics_State) {
     delete(ps.collisions)
     delete(ps.debug_render_queue.vertices)
+    //delete(ps.front_zs)
     for &iq in ps.debug_render_queue.indices {
         delete(iq)
+    }
+}
+
+get_front_zs :: proc(gs: ^Game_State, out: ^[]f32) {
+    filter: Level_Geometry_Attributes = {.Transform, .Shape}
+    idx := 0
+    for lg in gs.level_geometry {
+        min_z := max(f32)
+        max_z := min(f32)
+        if filter <= lg.attributes {
+            sd := gs.level_resources[lg.shape]
+            transformed_vertices := make([dynamic]Vertex)
+            defer delete(transformed_vertices)
+            transform_vertices(sd.vertices, lg.transform.position, lg.transform.scale, lg.transform.rotation, &transformed_vertices)
+            for v in transformed_vertices {
+                min_z = min(v.pos.z, min_z)
+                max_z = max(v.pos.z, max_z)
+            }
+            for i in 0..<len(sd.vertices) {
+                out[idx] = max_z - min_z
+                idx += 1
+            }
+        }
     }
 }
 
 get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, elapsed_time: f32) {
     clear_physics_state(ps)
 
-    filter: bit_set[Level_Geometry_Component_Name; u64] = { .Collider, .Transform, .Shape }
+    filter: bit_set[Level_Geometry_Component_Name; u64] = { .Collider, .Transform }
     ppos := gs.player_state.position
     ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])
@@ -78,8 +105,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
             aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
 
-            coll : Shape_Data
-            coll = gs.level_colliders[lg.collider] 
+            coll := gs.level_colliders[lg.collider] 
             vertices := make([dynamic][3]f32); defer delete(vertices)
             trns := lg.transform
             for v, idx in coll.vertices {
@@ -92,6 +118,9 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                 aabby1 = max(new_pos.y + 1, aabby1)
                 aabbz1 = max(new_pos.z + 1, aabbz1)
             }
+            //for i in 0..<len(coll.indices) {
+            //    append(&ps.front_zs, aabbz1)
+            //}
             total : f32 = 0
             if px < aabbx0 do total += (px - aabbx0) * (px - aabbx0)
             if px > aabbx1 do total += (px - aabbx1) * (px - aabbx1)

@@ -10,6 +10,7 @@ Input_State :: struct {
     d_pressed: bool,
     s_pressed: bool,
     w_pressed: bool,
+    q_pressed: bool,
     c_pressed: bool,
     left_pressed: bool,
     right_pressed: bool,
@@ -68,6 +69,8 @@ process_input :: proc (is: ^Input_State, quit_handler: proc())
                 is.d_pressed = true
             case .w:
                 is.w_pressed = true
+            case .q:
+                is.q_pressed = true
             case .LEFT:
                 is.left_pressed = true
             case .RIGHT:
@@ -103,6 +106,8 @@ process_input :: proc (is: ^Input_State, quit_handler: proc())
                 is.d_pressed = false
             case .w:
                 is.w_pressed = false
+            case .q:
+                is.q_pressed = false
             case .LEFT:
                 is.left_pressed = false
             case .RIGHT:

@@ -2,6 +2,9 @@
 
 layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec2 vertexUV;
+layout (binding = 0) buffer z_dist {
+    float z_dist_data[];
+}; 
 
 out vec2 uv;
 out float time;
@@ -19,7 +22,7 @@ uniform vec3 crunch_pt;
 uniform float crunch_time;
 
 void main() {
-    float dist = max(0, player_pos_in.z - 50 - aPos.z);
+    float dist = max(0, player_pos_in.z - z_dist_data[gl_VertexID] - aPos.z);
     gl_Position = projection * (aPos + vec4(dist * dist * 0.01, dist * dist * 0.01, -dist * dist * 0.01, 0));
     crunch_pt_out = crunch_pt;
     crunch_time_frag = crunch_time;

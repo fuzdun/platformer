@@ -11,6 +11,7 @@ import rnd "core:math/rand"
 I_MAT :: glm.mat4(1.0)
 
 RenderState :: struct {
+    z_dist_ssbo: u32,
     v_queue: [dynamic]Vertex,
     i_queue: [ProgramName][dynamic]u16,
     vbo: u32
@@ -32,6 +33,8 @@ init_render_buffers :: proc(gs: ^Game_State, rs: ^RenderState) {
         rs.i_queue[program] = make([dynamic]u16) 
     }
     rs.v_queue = make([dynamic]Vertex)
+    gl.GenBuffers(1, &rs.z_dist_ssbo)
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_dist_ssbo)
 }
 
 clear_indices_queues :: proc(rs: ^RenderState) {
@@ -109,7 +112,7 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: 
     get_vertices_update_indices(gs, rs, &transformed_vertices)
     queue_draw_player(gs^, rs, &transformed_vertices)
 
-    queue_draw_aabb(gs, rs, ps, &transformed_vertices)    
+    //queue_draw_aabb(gs, rs, ps, &transformed_vertices)    
 
     for name, program in ss.active_programs {
         indices := rs.i_queue[name]
@@ -122,12 +125,17 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: 
     c_pos := gs.camera_state.position
     p_pos := gs.player_state.position
 
-    
     proj_mat := construct_camera_matrix(&gs.camera_state)
 
     player_pos := glm.vec3({f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)})
     player_trail : [3]glm.vec3 = { gs.player_state.trail[16], gs.player_state.trail[32], gs.player_state.trail[49] }
     crunch_pt : glm.vec3 = gs.player_state.crunch_pt 
+
+    front_zs := make([]f32, len(transformed_vertices)); defer delete(front_zs)
+    get_front_zs(gs, &front_zs)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, len(front_zs), &front_zs[0], gl.DYNAMIC_READ)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.z_dist_ssbo)
+    //fmt.println(front_zs)
 
     use_shader(ss, .BlueOutline)
     set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
@@ -151,6 +159,9 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^RenderState, ss: ^ShaderState, ps: 
     shader_draw_triangles(rs, ss, .Reactive)
 
     use_shader(ss, .Trail)
+    //cstr_name := str.clone_to_cstring("front_zs"); defer delete(cstr_name)
+    //location := gl.GetUniformLocation(ss.loaded_program, cstr_name)
+    //gl.Uniform1fv(location, i32(len(front_zs)), &front_zs[0])
     set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
     set_vec3_uniform(ss, "player_trail_in", 3, &player_trail[0])
     set_vec3_uniform(ss, "crunch_pt", 1, &crunch_pt)

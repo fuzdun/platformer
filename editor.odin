@@ -9,7 +9,9 @@ OBJ_ROT_SPD :: 1.0
 
 Editor_State :: struct {
     selected_entity: int,
-    saved: bool
+    saved: bool,
+    can_add: bool,
+    can_switch: bool
 }
 
 editor_move_camera :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^Camera_State, delta_time: f32) {
@@ -25,7 +27,22 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
     selected_obj := &lgs[es.selected_entity]
     rotating := is.r_pressed
     scaling := is.e_pressed
+    
     rot_x, rot_y, rot_z := la.euler_angles_xyz_from_quaternion(selected_obj.transform.rotation)
+    if is.q_pressed && es.can_add {
+        rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
+        new_cube: Level_Geometry
+        new_cube.shape = "basic_cube"
+        new_cube.collider = "basic_cube"
+        new_cube.transform = {{0, 0, 0},{20, 20, 20}, rotation}
+        new_cube.shaders = {.Trail}
+        new_cube.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+        append(lgs, new_cube)
+        es.selected_entity = len(lgs) - 1
+    }
+
+    es.can_add = !is.q_pressed
+
     if is.spc_pressed {
         if rotating {
             rot_x = 0
@@ -96,9 +113,11 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
             selected_obj.transform.position.y -=  OBJ_MOVE_SPD * delta_time
         }
     }
-    if is.tab_pressed {
+    if is.tab_pressed && es.can_switch {
         es.selected_entity = (es.selected_entity + 1) % len(lgs)
     }
+
+    es.can_switch = !is.tab_pressed
 }
 
 editor_save_changes :: proc(lgs:^Level_Geometry_State, is: Input_State, es: ^Editor_State) {

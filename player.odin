@@ -88,8 +88,8 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
     remaining_vel := init_velocity_len * delta_time
     velocity_normal := la.normalize(pls.velocity)
 
+    get_collisions(gs, phs, delta_time, elapsed_time)
     if remaining_vel > 0 {
-        get_collisions(gs, phs, delta_time, elapsed_time)
         loops := 0
         for len(phs.collisions) > 0 {
             earliest_coll_t :f32 = 1.1

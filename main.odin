@@ -50,8 +50,8 @@ gamestate_free :: proc(gs: ^Game_State) {
     }
     delete(gs.level_resources)
     for _, sd in gs.level_colliders {
-        delete(sd.indices) 
-        delete(sd.vertices)
+        //delete(sd.indices) 
+        //delete(sd.vertices)
     }
     delete(gs.level_colliders)
 }

@@ -21,7 +21,7 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     for lg in lgs {
         append(&aos_level_data, lg)
     }
-    //
+
     //rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
     //shallow_angle: Level_Geometry
     //shallow_angle.shape = "basic_cube"
