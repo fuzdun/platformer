@@ -46,7 +46,7 @@ transform_vertices_arr :: proc(vertices: []Vertex, transforms: []glm.mat4, trans
     for count, i in transform_counts {
         for _ in 0..<count {
             v := vertices[idx]
-            vertex: Vertex = { transforms[i] * v.pos, v.uv, v.b_uv}
+            vertex: Vertex = { transforms[i] * v.pos, v.uv, v.b_uv, v.normal}
             append(&out, vertex)
             idx += 1
         }
@@ -54,12 +54,20 @@ transform_vertices_arr :: proc(vertices: []Vertex, transforms: []glm.mat4, trans
     return out[:]
 }
 
-transform_vertices :: proc(vertices: []Vertex, position: Position, scale: Scale, rotation: Rotation, out: ^[dynamic]Vertex) {
-    for v, idx in vertices {
-        new_pos := v.pos
-        new_pos.xyz = la.quaternion128_mul_vector3(rotation, new_pos.xyz * scale) + position
-        new_v : Vertex = {new_pos, v.uv, v.b_uv}
-        append(out, new_v)
-    }
+transformed_vertex_pos :: proc(vertex: Vertex, trns: Transform) -> [3]f32 {
+    return la.quaternion128_mul_vector3(trns.rotation, vertex.pos.xyz * trns.scale) + trns.position
 }
+
+transformed_vertex_normal :: proc(vertex: Vertex, trns: Transform) -> [3]f32 {
+    return la.quaternion128_mul_vector3(trns.rotation, vertex.normal)
+}
+
+//transform_vertices :: proc(vertices: []Vertex, position: Position, scale: Scale, rotation: Rotation, out: ^[dynamic]Vertex) {
+//    for v, idx in vertices {
+//        new_pos := v.pos
+//        new_pos.xyz = la.quaternion128_mul_vector3(rotation, new_pos.xyz * scale) + position
+//        new_v : Vertex = {new_pos, v.uv, v.b_uv}
+//        append(out, new_v)
+//    }
+//}
 

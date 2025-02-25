@@ -6,7 +6,8 @@ import "core:fmt"
 Vertex :: struct{
     pos: glm.vec4,
     uv: glm.vec2,
-    b_uv: glm.vec2
+    b_uv: glm.vec2,
+    normal: glm.vec3
 }
 
 Shape_Data :: struct{

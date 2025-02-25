@@ -30,7 +30,7 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     //shallow_angle.shaders = {.Trail}
     //shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
     //append(&aos_level_data, shallow_angle)
-
+    //
     bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC)
     defer delete(bin)
     os.write_entire_file("levels/test_level.bin", bin)

@@ -9,6 +9,7 @@ in float time;
 in float crunch_time_frag;
 in vec2 uv;
 in vec3 crunch_pt_out;   
+in vec3 normal_frag;
 
 #define TWOPI 6.2831853
 
@@ -55,9 +56,9 @@ vec4 colormap(float x) {
 }
 
 //White Hole draw
-vec2 distanceToSegment( vec2 a, vec2 b, vec2 p )
+vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
 {
-	vec2 pa = p - a, ba = b - a;
+	vec3 pa = p - a, ba = b - a;
 	float h = clamp( dot(pa,ba)/dot(ba,ba), .00, 1.00 );
 	return vec2(length( pa - ba*h ), h);
 }
@@ -113,10 +114,16 @@ float jaggy(float x)
 
 void main()
 {
+    float plane_off = dot(normal_frag, global_pos);
+    float dist = dot(normal_frag, player_pos) - plane_off;
+    vec3 proj_pt = player_pos - dist * normal_frag;
+
     vec3 diff = global_pos - player_pos;
     float a = atan(diff.x / diff.z) * 5;
-    float uvd = length(global_pos.y + 0.5 - player_pos.y);
-    float d1 = length(global_pos.xz - player_pos.xz) + noise(a + time * 100) * .3;
+    float uvd = length(global_pos - proj_pt);
+    float d1 = dist + noise(a + time * 100) * .3;
+    // float uvd = length(global_pos.y + 0.5 - player_pos.y);
+    // float d1 = length(global_pos.xz - player_pos.xz) + noise(a + time * 100) * .3;
     float dfrac = d1 / uvd;
     float absd = abs(uvd - d1);
     float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.0, 0.1, absd);
@@ -128,29 +135,29 @@ void main()
     vec3 pattern_col = vec3(colormap(shade).rgb) * 0.5;
 
 	  vec3 trail_col = vec3(0.0, 0, 0);
-    vec2 res1 = distanceToSegment(player_pos.xz, player_trail[0].xz, global_pos.xz);
-    vec2 res2 = distanceToSegment(player_trail[0].xz, player_trail[1].xz, global_pos.xz);
-    vec2 res3 = distanceToSegment(player_trail[1].xz, player_trail[2].xz, global_pos.xz);
+    vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);
+    vec2 res2 = distanceToSegment(player_trail[0], player_trail[1], global_pos);
+    vec2 res3 = distanceToSegment(player_trail[1], player_trail[2], global_pos);
     float d = min(res1[0], min(res2[0], res3[0]));
     float t = (d == res1[0] ? res1[1] : (d == res2[0] ? 1.0 + res2[1] : 2.0 + res3[1])) / 3.0;
     d += t * 0.69;
-    float line_len = length(player_pos.xy - player_trail[0].xy) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
+    float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
     float freq = 2.0 * line_len;
     float width =  sin(-time * 70.0 + t * TWOPI * freq) * 5.0 + 40.0;
-    float border_d = 0.01 * width;
+    float border_d = 0.025 * width;
     vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.5, 0.0, 0.5), t);
     trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
 
     vec3 impact_col = vec3(0.0);
     float crunch_dist = distance(global_pos, crunch_pt_out);    
-    float k = crunch_dist - (time - crunch_time_frag) * 40;
+    float k = crunch_dist - (time - crunch_time_frag) * 30;
     float angle = atan(global_pos.z - crunch_pt_out.z, global_pos.x - crunch_pt_out.x);
-    float w = crunch_dist + 25.7 * floor(angle / TWOPI * 12);
-    angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, .5) * 30;
+    float w = crunch_dist + 25.7 * floor(angle / TWOPI * 10);
+    angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, .5) * 20;
     float ripple_border = smoothstep(0, 6, k) - smoothstep(6, 12, k);
-    angle = mod(angle, TWOPI / 12);
-    if (0 <= angle && angle <= 2 / pow(crunch_dist, 2)) {
-        impact_col = vec3(0.75, 0.75, 0.5) * ripple_border;
+    angle = mod(angle, TWOPI / 10);
+    if (0 <= angle && angle <= 2 / pow(crunch_dist, 1)) {
+        impact_col = vec3(1.0, 0.0, 0.0) * ripple_border;
     }
 
     float v_border = .02;
@@ -164,6 +171,11 @@ void main()
     float border_fact = max(x_border_fact, y_border_fact);
     vec3 border_col = border_fact * vec3(1.0, 0.8, 1.0);
     vec3 col = mix(pattern_col + border_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+
+    // if (normal_frag.z == 0.0) {
+    // fragColor = vec4(normal_frag.x / 2.0 + 0.5, normal_frag.y / 2.0 + 0.5, normal_frag.z / 2.0 + 0.5, 1.0);
+    // }
     fragColor = vec4(col, 1.0);
+    // fragColor = vec4(normal_frag, 1.0);
 }
 

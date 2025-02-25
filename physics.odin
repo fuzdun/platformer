@@ -10,7 +10,6 @@ Physics_State :: struct {
         vertices: [dynamic]Vertex,
         indices: [ProgramName][dynamic]u16
     },
-    //front_zs: [dynamic]f32
 }
 
 Collision :: struct {
@@ -26,21 +25,20 @@ AABB_INDICES :: []u16 {0, 1, 0, 3, 1, 2, 2, 3, 3, 7, 2, 6, 4, 5, 4, 7, 6, 7, 6, 
 
 aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1: f32, aabbz1: f32,) -> [8]Vertex {
     return {
-        {{aabbx0, aabby1, aabbz0, 1}, {0, 0}, {0, 0}},
-        {{aabbx0, aabby0, aabbz0, 1}, {0, 1}, {0, 0}},
-        {{aabbx1, aabby0, aabbz0, 1}, {1, 1}, {0, 0}},
-        {{aabbx1, aabby1, aabbz0, 1}, {1, 0}, {0, 0}},
+        {{aabbx0, aabby1, aabbz0, 1}, {0, 0}, {0, 0}, {0, 0, 0}},
+        {{aabbx0, aabby0, aabbz0, 1}, {0, 1}, {0, 0}, {0, 0, 0}},
+        {{aabbx1, aabby0, aabbz0, 1}, {1, 1}, {0, 0}, {0, 0, 0}},
+        {{aabbx1, aabby1, aabbz0, 1}, {1, 0}, {0, 0}, {0, 0, 0}},
 
-        {{aabbx0, aabby1, aabbz1, 1}, {1, 0}, {0, 0}},
-        {{aabbx0, aabby0, aabbz1, 1}, {0, 0}, {0, 0}},
-        {{aabbx1, aabby0, aabbz1, 1}, {0, 1}, {0, 0}},
-        {{aabbx1, aabby1, aabbz1, 1}, {1, 1}, {0, 0}},
+        {{aabbx0, aabby1, aabbz1, 1}, {1, 0}, {0, 0}, {0, 0, 0}},
+        {{aabbx0, aabby0, aabbz1, 1}, {0, 0}, {0, 0}, {0, 0, 0}},
+        {{aabbx1, aabby0, aabbz1, 1}, {0, 1}, {0, 0}, {0, 0, 0}},
+        {{aabbx1, aabby1, aabbz1, 1}, {1, 1}, {0, 0}, {0, 0, 0}}
     }
 }
 
 init_physics_state :: proc(ps: ^Physics_State) {
     ps.collisions = make([dynamic]Collision)
-    //ps.front_zs = make([dynamic]f32)
     ps.debug_render_queue.vertices = make([dynamic]Vertex)
     for pn in ProgramName {
         ps.debug_render_queue.indices[pn] = make([dynamic]u16)
@@ -65,29 +63,6 @@ free_physics_state :: proc(ps: ^Physics_State) {
     }
 }
 
-get_front_zs :: proc(gs: ^Game_State, out: ^[]f32) {
-    filter: Level_Geometry_Attributes = {.Transform, .Shape}
-    idx := 0
-    for lg in gs.level_geometry {
-        min_z := max(f32)
-        max_z := min(f32)
-        if filter <= lg.attributes {
-            sd := gs.level_resources[lg.shape]
-            transformed_vertices := make([dynamic]Vertex)
-            defer delete(transformed_vertices)
-            transform_vertices(sd.vertices, lg.transform.position, lg.transform.scale, lg.transform.rotation, &transformed_vertices)
-            for v in transformed_vertices {
-                min_z = min(v.pos.z, min_z)
-                max_z = max(v.pos.z, max_z)
-            }
-            for i in 0..<len(sd.vertices) {
-                out[idx] = max_z - min_z
-                idx += 1
-            }
-        }
-    }
-}
-
 get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, elapsed_time: f32) {
     clear_physics_state(ps)
 
@@ -97,7 +72,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])
     player_sq_radius := f32(SPHERE_RADIUS * SPHERE_RADIUS)
 
-    got_ground_ray_col := false
+    got_contact_ray_col := false
     for lg, id in gs.level_geometry {
         if filter <= lg.attributes {
             off := u16(len(ps.debug_render_queue.vertices))
@@ -169,11 +144,13 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                             }
                         }
                     }
-                    if gs.player_state.on_ground {
-                        plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, gs.player_state.ground_ray, normal, plane_dist);
+                    if gs.player_state.on_ground || gs.player_state.on_wall {
+                        plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, gs.player_state.contact_ray, normal, plane_dist);
                         if plane_ok && la.length2(closest_pt - plane_q) < GROUNDED_RADIUS2 {
-                            got_ground_ray_col = true
-                            gs.player_state.position = plane_q + normal * GROUND_OFFSET 
+                            got_contact_ray_col = true
+                            if gs.player_state.on_ground {
+                                gs.player_state.position = plane_q + normal * GROUND_OFFSET 
+                            }
                         }
                     }
                 }
@@ -181,7 +158,10 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
         }         
     }
     if gs.player_state.on_ground {
-        gs.player_state.on_ground = got_ground_ray_col
+        gs.player_state.on_ground = got_contact_ray_col
+    }
+    if gs.player_state.on_wall {
+        gs.player_state.on_wall = got_contact_ray_col
     }
 
     best_plane_normal: [3]f32 = {100, 100, 100}
@@ -211,9 +191,13 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             ground_z := [3]f32{0, 0, -1}
             gs.player_state.ground_x = ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal
             gs.player_state.ground_z = ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal
-            gs.player_state.ground_ray = -best_plane_normal * GROUND_RAY_LEN
+            gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
             gs.player_state.on_ground = true
-        } 
+            gs.player_state.on_wall = false
+        } else if best_plane_normal.y < .2 && !gs.player_state.on_ground {
+            gs.player_state.on_wall = true
+            gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
+        }
     }
 }
 

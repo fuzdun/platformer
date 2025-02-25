@@ -115,7 +115,7 @@ main :: proc () {
     ss: ShaderState
     shader_state_init(&ss); defer shader_state_free(&ss)
 
-    rs: RenderState
+    rs: Render_State
     init_render_buffers(&gs, &rs); defer free_render_buffers(&rs)
 
     ps: Physics_State
@@ -125,9 +125,8 @@ main :: proc () {
     init_draw(&rs, &ss)
     SDL.GL_SetSwapInterval(1)
 
-    //encode_test_level_cbor()
     load_level_cbor(&gs, "test_level")
-    //fmt.println(gs.level_resources)
+    transform_vertices(&gs, &rs, &ps)
 
     // start frame loop
     frame_loop(window, &gs, &rs, &ss, &ps)

@@ -13,13 +13,15 @@ Player_Input_State :: struct {
 }
 
 Player_State :: struct {
+    can_jump: bool,
     position: [3]f32,
     velocity: [3]f32,
     trail: [dynamic]glm.vec3,
     crunch_pt: [3]f32,
     crunch_time: f32,
     on_ground: bool,
-    ground_ray: [3]f32,
+    on_wall: bool,
+    contact_ray: [3]f32,
     ground_x: [3]f32,
     ground_z: [3]f32,
     left_ground: f32
@@ -27,25 +29,24 @@ Player_State :: struct {
 
 GROUND_FRICTION :: 0.05
 MAX_PLAYER_SPEED: f32: 40.0
-P_JUMP_SPEED: f32: 25.0
+P_JUMP_SPEED: f32: 30.0
 P_ACCEL: f32: 75.0
-GRAV: f32: 30
+GRAV: f32: 40
+WALL_GRAV: f32: 15
+WALL_JUMP_FORCE :: 40
 TRAIL_SIZE :: 50 
 GROUND_RAY_LEN ::  2.0
 GROUNDED_RADIUS: f32: 0.01 
 GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
-//GROUND_VERTICAL_OFFSET: [3]f32: {0, -0.55, 0}
 GROUND_OFFSET: f32 = .5
-AIR_SPEED :: 0.8
+AIR_SPEED :: 0.75
 
 update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time: f64, delta_time: f32) {
-    
-    //fmt.println(f32(elapsed_time) - ps.left_ground)
     pop(&ps.trail)
     new_pt: [3]f32 = {f32(ps.position.x), f32(ps.position.y), f32(ps.position.z)}
     inject_at(&ps.trail, 0, new_pt)
-    right_vec := (ps.on_ground || ps.position.y == 0) ? ps.ground_x : ([3]f32{1, 0, 0} * AIR_SPEED)
-    fwd_vec := (ps.on_ground || ps.position.y == 0) ? ps.ground_z : ([3]f32{0, 0, -1} * AIR_SPEED)
+    right_vec := ps.on_ground ? ps.ground_x : ([3]f32{1, 0, 0} * AIR_SPEED)
+    fwd_vec := ps.on_ground ? ps.ground_z : ([3]f32{0, 0, -1} * AIR_SPEED)
     if is.a_pressed {
        ps.velocity -= P_ACCEL * delta_time * right_vec
     }
@@ -67,18 +68,24 @@ update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time:
     clamped_xz := la.clamp_length(ps.velocity.xz, MAX_PLAYER_SPEED)
     ps.velocity.xz = clamped_xz
     got_dir_input := is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
-    if (ps.on_ground || ps.position.y == 0) && !got_dir_input {
+    if ps.on_ground && !got_dir_input {
         ps.velocity *= math.pow(GROUND_FRICTION, delta_time)
-        //ps.velocity.xz *= GROUND_FRICTION
     }
     if !ps.on_ground {
-        ps.velocity.y -= GRAV * delta_time
+        ps.velocity.y -= (ps.on_wall ? WALL_GRAV : GRAV) * delta_time
     }
-    if is.spc_pressed && ((ps.on_ground || ps.position.y == 0) || (f32(elapsed_time) - ps.left_ground < 150)) {
+    if is.spc_pressed && ps.can_jump && (ps.on_ground || (f32(elapsed_time) - ps.left_ground < 150)) {
         ps.velocity.y = P_JUMP_SPEED
         ps.on_ground = false
     }
-    //fmt.println(is.hor_axis)
+    if is.spc_pressed && ps.on_wall && ps.can_jump {
+        ps.velocity.y = P_JUMP_SPEED
+        ps.velocity += -ps.contact_ray * WALL_JUMP_FORCE 
+        ps.on_wall = false
+        ps.crunch_pt = ps.position
+        ps.crunch_time = f32(elapsed_time)
+    }
+    ps.can_jump = !is.spc_pressed
 }
 
 move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, delta_time: f32) {
@@ -113,14 +120,6 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
         }
         pls.position += velocity_normal * remaining_vel
         pls.velocity = velocity_normal * init_velocity_len
-
-        pls.position.y = max(pls.position.y, 0)
-        if pls.position.y == 0 {
-            pls.velocity.y = 0
-        }
-        //if pls.on_ground {
-        //    pls.velocity.y = 0
-        //}
     }
 }
 

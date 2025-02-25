@@ -11,6 +11,7 @@ Editor_State :: struct {
     selected_entity: int,
     saved: bool,
     can_add: bool,
+    can_delete: bool,
     can_switch: bool
 }
 
@@ -40,8 +41,13 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
         append(lgs, new_cube)
         es.selected_entity = len(lgs) - 1
     }
-
     es.can_add = !is.q_pressed
+
+    if is.bck_pressed && es.can_delete {
+        ordered_remove_soa(lgs, es.selected_entity) 
+        es.selected_entity = min(len(lgs) - 1, es.selected_entity)
+    }
+    es.can_delete = !is.bck_pressed
 
     if is.spc_pressed {
         if rotating {

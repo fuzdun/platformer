@@ -125,12 +125,12 @@ use_shader :: proc(sh: ^ShaderState, name: ProgramName) {
     }
 }
 
-shader_draw_triangles :: proc(rs: ^RenderState, sh: ^ShaderState, name: ProgramName) {
+shader_draw_triangles :: proc(rs: ^Render_State, sh: ^ShaderState, name: ProgramName) {
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, sh.active_programs[name].ebo_id)
     gl.DrawElements(gl.TRIANGLES, i32(len(rs.i_queue[name])), gl.UNSIGNED_SHORT, nil)
 }
 
-shader_draw_lines :: proc(rs: ^RenderState, sh: ^ShaderState, name: ProgramName) {
+shader_draw_lines :: proc(rs: ^Render_State, sh: ^ShaderState, name: ProgramName) {
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, sh.active_programs[name].ebo_id)
     gl.DrawElements(gl.LINES, i32(len(rs.i_queue[name])), gl.UNSIGNED_SHORT, nil)
 }
