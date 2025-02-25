@@ -144,13 +144,11 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                             }
                         }
                     }
-                    if gs.player_state.on_ground || gs.player_state.on_wall {
-                        plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, gs.player_state.contact_ray, normal, plane_dist);
-                        if plane_ok && la.length2(closest_pt - plane_q) < GROUNDED_RADIUS2 {
-                            got_contact_ray_col = true
-                            if gs.player_state.on_ground {
-                                gs.player_state.position = plane_q + normal * GROUND_OFFSET 
-                            }
+                    plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, gs.player_state.contact_ray, normal, plane_dist);
+                    if plane_ok && la.length2(closest_pt - plane_q) < GROUNDED_RADIUS2 {
+                        got_contact_ray_col = true
+                        if gs.player_state.on_ground {
+                            gs.player_state.position = plane_q + normal * GROUND_OFFSET 
                         }
                     }
                 }
@@ -158,10 +156,15 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
         }         
     }
     if gs.player_state.on_ground {
+        gs.player_state.left_ground = elapsed_time
         gs.player_state.on_ground = got_contact_ray_col
     }
     if gs.player_state.on_wall {
         gs.player_state.on_wall = got_contact_ray_col
+    }
+    if gs.player_state.on_slope {
+        gs.player_state.left_slope = elapsed_time
+        gs.player_state.on_slope = got_contact_ray_col
     }
 
     best_plane_normal: [3]f32 = {100, 100, 100}
@@ -181,21 +184,36 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
     }
     if best_plane_normal.y < 100.0 {
         // the most horizontal surface
-        if best_plane_normal.y >= 0.707 {
+        ground_x := [3]f32{1, 0, 0}
+        ground_z := [3]f32{0, 0, -1}
+        if best_plane_normal.y >= 0.85{
             if !gs.player_state.on_ground {
                 gs.player_state.crunch_pt = gs.player_state.position - {0, 0, 0.5}
                 gs.player_state.crunch_time = elapsed_time
             }
             gs.player_state.position = best_plane_intersection + best_plane_normal * GROUND_OFFSET 
-            ground_x := [3]f32{1, 0, 0}
-            ground_z := [3]f32{0, 0, -1}
             gs.player_state.ground_x = ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal
             gs.player_state.ground_z = ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
             gs.player_state.on_ground = true
             gs.player_state.on_wall = false
+            gs.player_state.on_slope = false
+        } else if .2 <= best_plane_normal.y && best_plane_normal.y < .85 {
+            if !gs.player_state.on_slope {
+                gs.player_state.ground_x = ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal
+                gs.player_state.ground_z = ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal
+                gs.player_state.crunch_pt = gs.player_state.position - {0, 0, 0.5}
+                gs.player_state.crunch_time = elapsed_time
+                gs.player_state.on_slope = true
+                gs.player_state.on_wall = false
+                gs.player_state.on_ground = false
+            }
+            gs.player_state.on_slope = true
+            gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
         } else if best_plane_normal.y < .2 && !gs.player_state.on_ground {
             gs.player_state.on_wall = true
+            gs.player_state.on_ground = false
+            gs.player_state.on_slope = false
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
         }
     }

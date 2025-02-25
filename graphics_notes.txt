@@ -3,3 +3,5 @@ lissajous noise
 radial blur
 color maps
 
+
+instead of rendering surfaces all the time, maybe render particles that condense and expand as objects warp into existence and shrink when they are in a transparent state

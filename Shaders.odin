@@ -6,14 +6,10 @@ import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 
 ProgramName :: enum{
-    Pattern,
     Outline,
     RedOutline,
-    BlueOutline,
-    New,
-    Reactive,
     Player,
-    Trail,
+    Trail
 }
 
 Program :: struct{
@@ -29,13 +25,6 @@ ActiveProgram :: struct{
 }
 
 PROGRAM_CONFIGS := #partial[ProgramName]Program{
-    .Pattern = {
-        vertex_filename = "patternvertex",
-        frag_filename = "patternfrag",
-        init_proc = proc() {
-            gl.PolygonMode(gl.FRONT, gl.FILL)
-        }
-    },
     .Outline = {
         vertex_filename = "outlinevertex",
         frag_filename = "outlinefrag",
@@ -52,38 +41,16 @@ PROGRAM_CONFIGS := #partial[ProgramName]Program{
             gl.LineWidth(4)
         }
     },
-    .BlueOutline = {
-        vertex_filename = "outlinevertex",
-        frag_filename = "blueoutlinefrag",
-        init_proc = proc() {
-            gl.PolygonMode(gl.FRONT, gl.LINE)
-            gl.LineWidth(4)
-        }
-    },
-    .New = {
-        vertex_filename = "patternvertex",
-        frag_filename = "newfrag",
+    .Trail = {
+        vertex_filename = EDIT ? "trailvertex" : "thumpervertex",
+        frag_filename = EDIT ? "reactivefrag" : "trailfrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
         }
     },
     .Player = {
-        vertex_filename = "patternvertex",
+        vertex_filename = "playervertex",
         frag_filename = "playerfrag",
-        init_proc = proc() {
-            gl.PolygonMode(gl.FRONT, gl.FILL)
-        }
-    },
-    .Reactive = {
-        vertex_filename = "reactivevertex",
-        frag_filename = "reactivefrag",
-        init_proc = proc() {
-            gl.PolygonMode(gl.FRONT, gl.FILL)
-        }
-    },
-    .Trail = {
-        vertex_filename = EDIT ? "trailvertex" : "thumpervertex",
-        frag_filename = EDIT ? "reactivefrag" : "trailfrag",
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
         }

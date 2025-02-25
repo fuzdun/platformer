@@ -24,13 +24,14 @@ uniform vec3 crunch_pt;
 uniform float crunch_time;
 
 void main() {
-    float dist = max(0, player_pos_in.z - (z_dist_data[gl_VertexID] + 30) - aPos.z);
-    float dist_fact = dist * dist * 0.1;
+    float dist = max(0, player_pos_in.z - (z_dist_data[gl_VertexID] + 60) - aPos.z);
+    float dist_fact = dist * dist * 0.05;
     vec4 new_pos = aPos;
     vec4 projected = projection * new_pos;
     vec3 ndc = projected.xyz / projected.w;
     new_pos.xy += ndc.xy * dist_fact;
     gl_Position = projection * new_pos;
+    // gl_Position = projection * aPos;
 
     crunch_pt_out = crunch_pt;
     crunch_time_frag = crunch_time;

@@ -157,7 +157,7 @@ void main()
     float ripple_border = smoothstep(0, 6, k) - smoothstep(6, 12, k);
     angle = mod(angle, TWOPI / 10);
     if (0 <= angle && angle <= 2 / pow(crunch_dist, 1)) {
-        impact_col = vec3(1.0, 0.0, 0.0) * ripple_border;
+        impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
     }
 
     float v_border = .02;

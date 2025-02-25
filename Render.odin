@@ -66,8 +66,8 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) {
     gl.EnableVertexAttribArray(1)
     gl.EnableVertexAttribArray(2)
 
-    gl.Enable(gl.DEPTH_TEST)
     gl.Enable(gl.CULL_FACE)
+    gl.Enable(gl.DEPTH_TEST)
 
     gl.Enable(gl.BLEND)
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -156,12 +156,6 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, ss: ^ShaderState, ps:
     gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(front_zs[0]) * len(front_zs), &front_zs[0], gl.DYNAMIC_READ)
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.z_dist_ssbo)
 
-    //use_shader(ss, .BlueOutline)
-    //set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
-    //set_matrix_uniform(ss, "projection", &proj_mat)
-    //shader_draw_lines(rs, ss, .BlueOutline)
-    //
-
     use_shader(ss, .Outline)
     set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
     set_matrix_uniform(ss, "projection", &proj_mat)
@@ -177,16 +171,7 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, ss: ^ShaderState, ps:
     set_float_uniform(ss, "i_time", f32(time) / 1000)
     shader_draw_triangles(rs, ss, .Player)
 
-    //use_shader(ss, .Reactive)
-    //set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
-    //set_float_uniform(ss, "i_time", f32(time) / 1000)
-    //set_matrix_uniform(ss, "projection", &proj_mat)
-    //shader_draw_triangles(rs, ss, .Reactive)
-
     use_shader(ss, .Trail)
-    //cstr_name := str.clone_to_cstring("front_zs"); defer delete(cstr_name)
-    //location := gl.GetUniformLocation(ss.loaded_program, cstr_name)
-    //gl.Uniform1fv(location, i32(len(front_zs)), &front_zs[0])
     set_vec3_uniform(ss, "player_pos_in", 1, &player_pos)
     set_vec3_uniform(ss, "player_trail_in", 3, &player_trail[0])
     set_vec3_uniform(ss, "crunch_pt", 1, &crunch_pt)
@@ -194,16 +179,5 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, ss: ^ShaderState, ps:
     set_float_uniform(ss, "i_time", f32(time) / 1000)
     set_matrix_uniform(ss, "projection", &proj_mat)
     shader_draw_triangles(rs, ss, .Trail)
-
-    //use_shader(ss, .Pattern)
-    //set_matrix_uniform(ss, "projection", &proj_mat)
-    //set_float_uniform(ss, "i_time", f32(time) / 1000)
-    //shader_draw_triangles(rs, ss, .Pattern)
-    //
-    //use_shader(ss, .New)
-    //set_matrix_uniform(ss, "projection", &proj_mat)
-    //set_float_uniform(ss, "i_time", f32(time) / 1000)
-    //shader_draw_triangles(rs, ss, .New)
-
 }
 

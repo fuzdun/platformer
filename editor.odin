@@ -4,8 +4,9 @@ import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
 
-OBJ_MOVE_SPD :: 10.0
+OBJ_MOVE_SPD :: 30.0
 OBJ_ROT_SPD :: 1.0
+OBJ_SCALE_SPD :: 0.3
 
 Editor_State :: struct {
     selected_entity: int,
@@ -31,11 +32,12 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
     
     rot_x, rot_y, rot_z := la.euler_angles_xyz_from_quaternion(selected_obj.transform.rotation)
     if is.q_pressed && es.can_add {
-        rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
+        rotation: quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
+        position: Position = lgs[es.selected_entity].transform.position
         new_cube: Level_Geometry
         new_cube.shape = "basic_cube"
         new_cube.collider = "basic_cube"
-        new_cube.transform = {{0, 0, 0},{20, 20, 20}, rotation}
+        new_cube.transform = {position,{5, 5, 5}, rotation}
         new_cube.shaders = {.Trail}
         new_cube.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
         append(lgs, new_cube)
