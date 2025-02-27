@@ -20,7 +20,7 @@ Program :: struct{
 
 ActiveProgram :: struct{
     id: u32,
-    ebo_id: u32,
+    //ebo_id: u32,
     init_proc: proc()
 }
 
@@ -77,29 +77,32 @@ init_shaders :: proc(sh: ^ShaderState) -> bool {
             fmt.eprintln("Failed to compile glsl")
             return false
         }
-        buf_id: u32
-        gl.GenBuffers(1, &buf_id)
-        sh.active_programs[program] = { program_id, buf_id, config.init_proc }
+        //buf_id: u32
+        //gl.GenBuffers(1, &buf_id)
+        sh.active_programs[program] = { program_id, config.init_proc }
     }
     return true
 }
 
-use_shader :: proc(sh: ^ShaderState, name: ProgramName) {
+use_shader :: proc(sh: ^ShaderState, rs: ^Render_State, name: ProgramName) {
     if name in sh.active_programs {
         sh.loaded_program = sh.active_programs[name].id
         gl.UseProgram(sh.loaded_program)
         sh.active_programs[name].init_proc()
+        indices := rs.static_indices_queue[name]
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
+        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
     }
 }
 
-shader_draw_triangles :: proc(rs: ^Render_State, sh: ^ShaderState, name: ProgramName) {
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, sh.active_programs[name].ebo_id)
-    gl.DrawElements(gl.TRIANGLES, i32(len(rs.i_queue[name])), gl.UNSIGNED_SHORT, nil)
+shader_draw_triangles :: proc(rs: ^Render_State, sh: ^ShaderState, name: ProgramName, num: i32) {
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
+    gl.DrawElements(gl.TRIANGLES, num, gl.UNSIGNED_SHORT, nil)
 }
 
-shader_draw_lines :: proc(rs: ^Render_State, sh: ^ShaderState, name: ProgramName) {
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, sh.active_programs[name].ebo_id)
-    gl.DrawElements(gl.LINES, i32(len(rs.i_queue[name])), gl.UNSIGNED_SHORT, nil)
+shader_draw_lines :: proc(rs: ^Render_State, sh: ^ShaderState, name: ProgramName, num: i32) {
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
+    gl.DrawElements(gl.LINES, num, gl.UNSIGNED_SHORT, nil)
 }
 
 set_matrix_uniform :: proc(sh: ^ShaderState, name: string, data: ^glm.mat4) {

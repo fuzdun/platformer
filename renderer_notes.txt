@@ -1,0 +1,9 @@
+New render pipeline:
+
+- load level data into level_geometry array
+- load vertices into one array
+- load indices of static geometry into arrays per shader as before
+- for dynamic geometry, store indices in component 
+
+- draw all static geometry using static vertices + indices arrays
+- iterate through dynamic geometry, updating indices buffer per object, and setting transform uniform and shader before drawing

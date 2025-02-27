@@ -62,6 +62,12 @@ transformed_vertex_normal :: proc(vertex: Vertex, trns: Transform) -> [3]f32 {
     return la.quaternion128_mul_vector3(trns.rotation, vertex.normal)
 }
 
+transformed_vertex :: proc(vertex: Vertex, trns: Transform) -> Vertex {
+    pos := la.quaternion128_mul_vector3(trns.rotation, vertex.pos.xyz * trns.scale) + trns.position
+    norm := la.quaternion128_mul_vector3(trns.rotation, vertex.normal)
+    return {{pos[0], pos[1], pos[2], 1.0}, vertex.uv, vertex.b_uv, norm}
+}
+
 //transform_vertices :: proc(vertices: []Vertex, position: Position, scale: Scale, rotation: Rotation, out: ^[dynamic]Vertex) {
 //    for v, idx in vertices {
 //        new_pos := v.pos

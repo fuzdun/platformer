@@ -10,6 +10,11 @@ Vertex :: struct{
     normal: glm.vec3
 }
 
+Particle_Vertex :: struct{
+    pos: glm.vec4,
+    uv: glm.vec2
+}
+
 Shape_Data :: struct{
     vertices: []Vertex,
     indices: []u16

@@ -125,8 +125,9 @@ main :: proc () {
     init_draw(&rs, &ss)
     SDL.GL_SetSwapInterval(1)
 
-    load_level_cbor(&gs, "test_level")
-    transform_vertices(&gs, &rs, &ps)
+    load_level_geometry(&gs, "test_level")
+    init_level_render_data(&gs, &rs)
+    //transform_vertices(&gs, &rs, &ps)
 
     // start frame loop
     frame_loop(window, &gs, &rs, &ss, &ps)

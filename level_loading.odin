@@ -36,7 +36,7 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     os.write_entire_file("levels/test_level.bin", bin)
 }
 
-load_level_cbor :: proc(gs: ^Game_State, filename: string) {
+load_level_geometry :: proc(gs: ^Game_State, filename: string) {
     clear_soa(&gs.level_geometry)
     level_filename := str.concatenate({"levels/", filename, ".bin"})
     defer delete(level_filename)
@@ -54,5 +54,15 @@ load_level_cbor :: proc(gs: ^Game_State, filename: string) {
         lg.shaders = trim_bit_set(lg.shaders)
         append(&gs.level_geometry, lg)
     }
+    //for _ in 0..<1000 {
+    //    rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
+    //    shallow_angle: Level_Geometry
+    //    shallow_angle.shape = "basic_cube"
+    //    shallow_angle.collider = "basic_cube"
+    //    shallow_angle.transform = {{0, 0, 0},{10, 10, 10}, rotation}
+    //    shallow_angle.shaders = {.Trail}
+    //    shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+    //    append(&gs.level_geometry, shallow_angle)
+    //}
 }
 
