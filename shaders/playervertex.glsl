@@ -2,6 +2,7 @@
 
 layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec2 vertexUV;
+layout (location = 2) in vec3 normal_in;
 
 out vec2 uv;
 out float time;

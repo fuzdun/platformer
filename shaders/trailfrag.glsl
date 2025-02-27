@@ -161,7 +161,6 @@ void main()
 	   float v_border = .02;
 	   float h_border = .02;
 
-	   // Time varying pixel color
 	   float x_border_fact = smoothstep(1.0 - h_border, 1.0, uv.x) +
 	                         1.0 - smoothstep(0.0, h_border, uv.x);
 	   float y_border_fact = smoothstep(1.0 - v_border, 1.0, uv.y) +

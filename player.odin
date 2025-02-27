@@ -148,7 +148,7 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
 
 construct_player_matrix :: proc(ps: ^Player_State) -> matrix[4, 4]f32 {
     pos := ps.position
-    rot := I_MAT * glm.mat4Rotate({0, 0, 0}, 0)
+    rot := I_MAT
     offset := glm.mat4Translate({f32(pos.x), f32(pos.y), f32(pos.z)})
     return rot * offset
 }

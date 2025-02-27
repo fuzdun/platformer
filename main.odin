@@ -126,7 +126,9 @@ main :: proc () {
     SDL.GL_SetSwapInterval(1)
 
     load_level_geometry(&gs, "test_level")
-    init_level_render_data(&gs, &rs)
+    init_level_render_data(&gs, &ss, &rs)
+    init_player_render_data(&gs, &ss, &rs)
+    bind_vertices(&rs)
     //transform_vertices(&gs, &rs, &ps)
 
     // start frame loop

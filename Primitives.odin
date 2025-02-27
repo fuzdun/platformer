@@ -4,7 +4,7 @@ import "core:math"
 import "core:fmt"
 
 Vertex :: struct{
-    pos: glm.vec4,
+    pos: glm.vec3,
     uv: glm.vec2,
     b_uv: glm.vec2,
     normal: glm.vec3
@@ -23,8 +23,8 @@ Shape_Data :: struct{
 
 SPHERE_RADIUS :: 0.5
 SPHERE_SQ_RADIUS :: SPHERE_RADIUS * SPHERE_RADIUS
-SPHERE_SECTOR_COUNT :: 21
-SPHERE_STACK_COUNT :: 20 
+SPHERE_SECTOR_COUNT :: 10 
+SPHERE_STACK_COUNT :: 10 
 SPHERE_V_COUNT :: (SPHERE_STACK_COUNT + 1) * (SPHERE_SECTOR_COUNT + 1)
 SPHERE_I_COUNT :: (SPHERE_STACK_COUNT - 1) * SPHERE_SECTOR_COUNT * 6 
 
@@ -57,7 +57,7 @@ add_player_sphere_data :: proc(gs: ^Game_State) {
             horizontal_angle = f32(j) * horizontal_step 
             x = xz * math.cos(horizontal_angle)
             z = xz * math.sin(horizontal_angle)
-            v.pos = {x, y, z, 1.0}
+            v.pos = {x, y, z}
             uv: glm.vec2 = {f32(j) / f32(horizontal_count), f32(i) / f32(vertical_count)}
             v.uv = uv
             v.b_uv = uv

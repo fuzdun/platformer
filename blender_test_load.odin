@@ -116,7 +116,7 @@ read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, 
     sd.vertices = make([]Vertex, len(pos_data))
     sd.indices = make([]u16, len(indices_data))
     for pos, pi in pos_data {
-        sd.vertices[pi] = {{pos[0], pos[1], pos[2], 1.0}, uv_data[pi], uv_data[pi], norm_data[pi]}
+        sd.vertices[pi] = {{pos[0], pos[1], pos[2]}, uv_data[pi], uv_data[pi], norm_data[pi]}
     }
     copy(sd.indices, indices_data)
     return
