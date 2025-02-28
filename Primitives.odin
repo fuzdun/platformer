@@ -42,11 +42,6 @@ add_player_sphere_data :: proc(gs: ^Game_State) {
 
     gs.player_geometry.vertices = make([]Vertex, SPHERE_V_COUNT)
     vertices := &gs.player_geometry.vertices
-//        make([]Vertex, SPHERE_V_COUNT),
-//        {
-//            {
-//                .Player,
-//                make([]u16, SPHERE_I_COUNT)
     for i in 0..=vertical_count {
         vertical_angle = PI / 2.0 - f32(i) * vertical_step 
         xz := SPHERE_RADIUS * math.cos(vertical_angle)

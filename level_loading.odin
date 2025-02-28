@@ -45,24 +45,24 @@ load_level_geometry :: proc(gs: ^Game_State, filename: string) {
     decoded, decode_err := cbor.decode(string(level_bin))
     defer cbor.destroy(decoded)
 
-    for entry in decoded.(^cbor.Array) {
-        lg: Level_Geometry
-        entry_bin, _ := cbor.encode(entry)
-        defer delete(entry_bin)
-        cbor.unmarshal(string(entry_bin), &lg)
-        lg.attributes = trim_bit_set(lg.attributes)
-        lg.shaders = trim_bit_set(lg.shaders)
-        append(&gs.level_geometry, lg)
-    }
-    //for i in 0..<1000 {
-    //    rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
-    //    shallow_angle: Level_Geometry
-    //    shallow_angle.shape = "basic_cube"
-    //    shallow_angle.collider = "basic_cube"
-    //    shallow_angle.transform = {{f32(i), 0, 0},{10, 10, 10}, rotation}
-    //    shallow_angle.shaders = {.Trail}
-    //    shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-    //    append(&gs.level_geometry, shallow_angle)
+    //for entry in decoded.(^cbor.Array) {
+    //    lg: Level_Geometry
+    //    entry_bin, _ := cbor.encode(entry)
+    //    defer delete(entry_bin)
+    //    cbor.unmarshal(string(entry_bin), &lg)
+    //    lg.attributes = trim_bit_set(lg.attributes)
+    //    lg.shaders = trim_bit_set(lg.shaders)
+    //    append(&gs.level_geometry, lg)
     //}
+    for i in 0..<1000 {
+        rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
+        shallow_angle: Level_Geometry
+        shallow_angle.shape = "basic_cube"
+        shallow_angle.collider = "basic_cube"
+        shallow_angle.transform = {{0, -20, f32(i) * -25 + 50},{10, 10, 10}, rotation}
+        shallow_angle.shaders = {.Trail}
+        shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+        append(&gs.level_geometry, shallow_angle)
+    }
 }
 

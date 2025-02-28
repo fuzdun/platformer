@@ -13,14 +13,15 @@ I_MAT :: glm.mat4(1.0)
 
 Render_State :: struct {
     vertices: [dynamic]Vertex,
-    front_zs: [dynamic]f32,
-    z_dist_ssbo: u32,
+    //front_zs: [dynamic]f32,
+    static_z_width_ssbo: u32,
+    indices_ssbo: u32,
     particle_offsets_ssbo: u32,
     static_indices_queue: [ProgramName][dynamic]u16,
     standard_vao: u32,
     particle_vao: u32,
     standard_vbo: u32,
-    particle_vbo: u32
+    particle_vbo: u32,
 }
 
 load_geometry_data :: proc(gs: ^Game_State) {
@@ -34,7 +35,6 @@ load_geometry_data :: proc(gs: ^Game_State) {
 
 init_render_buffers :: proc(gs: ^Game_State, rs: ^Render_State) {
     add_player_sphere_data(gs)
-    rs.front_zs = make([dynamic]f32)
     rs.vertices = make([dynamic]Vertex)
     for program in ProgramName {
         rs.static_indices_queue[program] = make([dynamic]u16) 
@@ -42,7 +42,6 @@ init_render_buffers :: proc(gs: ^Game_State, rs: ^Render_State) {
 }
 
 clear_render_queues :: proc(rs: ^Render_State) {
-    clear(&rs.front_zs)
     clear(&rs.vertices)
     for &arr in rs.static_indices_queue {
         clear(&arr)
@@ -51,14 +50,14 @@ clear_render_queues :: proc(rs: ^Render_State) {
 
 free_render_buffers :: proc(rs: ^Render_State) {
     delete(rs.vertices)
-    delete(rs.front_zs)
     for iq in rs.static_indices_queue do delete(iq)
 }
 
 init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) {
     init_shaders(ss)
 
-    //gl.GenBuffers(1, &rs.z_dist_ssbo)
+    gl.GenBuffers(1, &rs.static_z_width_ssbo)
+    gl.GenBuffers(1, &rs.indices_ssbo)
 
     gl.GenVertexArrays(1, &rs.standard_vao)
     gl.GenBuffers(1, &rs.standard_vbo)
@@ -88,6 +87,7 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) {
 }
 
 init_level_render_data :: proc(gs: ^Game_State, shst: ^ShaderState, rs: ^Render_State) {
+    z_widths := make([dynamic]f32); defer delete(z_widths)
     for lg in gs.level_geometry {
         sd := gs.level_resources[lg.shape]
         if !(.Angular_Velocity in lg.attributes) {
@@ -97,9 +97,16 @@ init_level_render_data :: proc(gs: ^Game_State, shst: ^ShaderState, rs: ^Render_
                     append(&rs.static_indices_queue[shader], ind + indices_offset)
                 }
             }
+            min_z := max(f32)
+            max_z := min(f32)
             for v in sd.vertices {
-                append(&rs.vertices, transformed_vertex(v, lg.transform))
+                tv := transformed_vertex(v, lg.transform)
+                min_z = min(tv.pos.z, min_z) 
+                max_z = max(tv.pos.z, max_z)
+                append(&rs.vertices, tv)
             }
+            z_diff := max_z - min_z
+            append(&z_widths, z_diff, z_diff, z_diff)
         } 
     }
     for shader in ProgramName {
@@ -107,6 +114,9 @@ init_level_render_data :: proc(gs: ^Game_State, shst: ^ShaderState, rs: ^Render_
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, shst.active_programs[shader].ebo_id)
         gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
     }
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.static_z_width_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(z_widths[0]) * len(z_widths), raw_data(z_widths), gl.STATIC_READ)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.static_z_width_ssbo)
 }
 
 init_player_render_data :: proc(gs: ^Game_State, shst: ^ShaderState, rs: ^Render_State) {
@@ -128,55 +138,6 @@ bind_vertices :: proc(rs: ^Render_State) {
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(rs.vertices[0]) * len(rs.vertices), raw_data(rs.vertices), gl.STATIC_DRAW)
 }
- 
-//transform_vertices :: proc(gs: ^Game_State, rs: ^Render_State, ps: ^Physics_State) {
-    //fmt.println(size_of(packed_data))
-    //start_time := tm.now()
-    //clear_render_queues(rs)
-    //pd_arr := make([dynamic]packed_data); defer delete(pd_arr)
-    //for lg in gs.level_geometry {
-    //    if .Shape in lg.attributes {
-    //        sd := gs.level_resources[lg.shape]
-    //        indices_offset := u16(len(rs.transformed_vertices))
-    //        for shader in lg.shaders {
-    //            for ind in sd.indices {
-    //                append(&rs.i_queue[shader], ind + indices_offset)
-    //            }
-    //        }
-    //        min_z := max(f32)
-    //        max_z := min(f32)
-    //        for v in sd.vertices {
-                //append(&rs.transforms, lg.transform)
-                //pd: packed_data
-                //pd.transform = lg.transform
-                //pd.vertex_pos = v.pos.xyz
-                //pd.vertex_norm = v.normal
-                //append(&pd_arr, pd)
-                //new_pos := v.pos
-                //new_pos.xyz = transformed_vertex_pos(v, lg.transform)
-                //min_z = min(new_pos.z, min_z)
-                //max_z = max(new_pos.z, max_z)
-                //new_norm := transformed_vertex_normal(v, lg.transform)
-                //new_v: Vertex = {new_pos, v.uv, v.b_uv, new_norm}
-                //append(&rs.transformed_vertices, v)
-            //}
-            //z_diff := max_z - min_z
-            //for _ in 0..<len(sd.vertices) {
-            //    append(&rs.front_zs, z_diff)
-            //}
-        //}
-    //}
-    //fmt.println("transform vertices time:", tm.since(start_time))
-    //fmt.println("transform vertices time:")
-    //return
-//}
-
-//queue_draw_aabb :: proc(gs: ^Game_State, rs: ^Render_State, ps: ^Physics_State, out: ^[dynamic]Vertex) {
-//    for pn in ProgramName {
-//        offset_indices(ps.debug_render_queue.indices[pn][:], u16(len(out)), &rs.i_queue[pn])
-//    }
-//    append(out, ..ps.debug_render_queue.vertices[:])
-//}
 
 draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Physics_State, time: f64) {
     //queue_draw_aabb(gs, rs, ps, &rs.transformed_vertices)    
@@ -192,12 +153,6 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, p
     player_pos := glm.vec3({f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)})
     player_trail : [3]glm.vec3 = { gs.player_state.trail[16], gs.player_state.trail[32], gs.player_state.trail[49] }
     crunch_pt : glm.vec3 = gs.player_state.crunch_pt
-
-    //gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_dist_ssbo)
-    //gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(rs.front_zs[0]) * len(rs.front_zs), raw_data(rs.front_zs), gl.STATIC_READ)
-    //gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.z_dist_ssbo)
-    //
-    //gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transform_ssbo)
 
     use_shader(shst, rs, .Outline)
     set_matrix_uniform(shst, "projection", &proj_mat)
@@ -221,6 +176,5 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, p
     set_float_uniform(shst, "i_time", f32(time) / 1000)
     set_matrix_uniform(shst, "projection", &proj_mat)
     shader_draw_triangles(rs, shst, .Trail)
-
 }
 
