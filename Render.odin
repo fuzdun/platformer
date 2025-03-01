@@ -24,10 +24,10 @@ Render_State :: struct {
     particle_vbo: u32,
 }
 
-load_geometry_data :: proc(gs: ^Game_State) {
+load_geometry_data :: proc(gs: ^Game_State, ps: ^Physics_State) {
     names := [?]string {"basic_cube"}
     for name in names {
-        if ok := load_blender_model(name, gs); ok {
+        if ok := load_blender_model(name, gs, ps); ok {
             fmt.println("loaded", name) 
         }
     }
@@ -88,10 +88,12 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) {
 
 init_level_render_data :: proc(gs: ^Game_State, shst: ^ShaderState, rs: ^Render_State) {
     z_widths := make([dynamic]f32); defer delete(z_widths)
-    for lg in gs.level_geometry {
+    for &lg in gs.level_geometry {
         sd := gs.level_resources[lg.shape]
+        //fmt.println(len(sd.vertices))
         if !(.Angular_Velocity in lg.attributes) {
             indices_offset := u16(len(rs.vertices))
+            lg.gl_vertex_index = indices_offset
             for shader in lg.shaders {
                 for ind in sd.indices {
                     append(&rs.static_indices_queue[shader], ind + indices_offset)
@@ -137,6 +139,23 @@ bind_vertices :: proc(rs: ^Render_State) {
     gl.BindVertexArray(rs.standard_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(rs.vertices[0]) * len(rs.vertices), raw_data(rs.vertices), gl.STATIC_DRAW)
+}
+
+update_vertices :: proc(gs: ^Game_State, rs: ^Render_State) {
+    if len(gs.dirty_entities) > 0 {
+        for lg_idx in gs.dirty_entities {
+            lg := gs.level_geometry[lg_idx]
+            trns := lg.transform
+            for v, vi in gs.level_resources[lg.shape].vertices {
+                new_pos := la.quaternion128_mul_vector3(trns.rotation, trns.scale * v.pos) + trns.position
+                new_vertex: Vertex = {new_pos, v.uv, v.b_uv, v.normal}
+                rs.vertices[lg.gl_vertex_index + u16(vi)] = new_vertex
+            }
+        }
+        gl.BindVertexArray(rs.standard_vao)
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(rs.vertices[0]) * len(rs.vertices), raw_data(rs.vertices), gl.STATIC_DRAW)
+    }
 }
 
 draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Physics_State, time: f64) {

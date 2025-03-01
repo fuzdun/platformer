@@ -7,7 +7,7 @@ import "core:encoding/endian"
 import "core:bytes"
 import gl "vendor:OpenGL"
 
-load_blender_model :: proc(filename: string, gs: ^Game_State) -> bool {
+load_blender_model :: proc(filename: string, gs: ^Game_State, ps: ^Physics_State) -> bool {
 
     // read binary data
     binary_filename := str.concatenate({"models/", filename, ".glb"})
@@ -65,10 +65,11 @@ load_blender_model :: proc(filename: string, gs: ^Game_State) -> bool {
     sd := read_mesh_data_from_binary(buffer_views, bin_data, 0)
     gs.level_resources[filename] = sd
     if len(json_obj["scenes"].(json.Array)[0].(json.Object)["nodes"].(json.Array)) == 2 {
-        coll := read_mesh_data_from_binary(buffer_views, bin_data, 1)   
-        gs.level_colliders[filename] = coll
+        coll := read_coll_data_from_binary(buffer_views, bin_data, 1)   
+        ps.level_colliders[filename] = coll
     } else {
-        gs.level_colliders[filename] = sd
+        coll := read_coll_data_from_binary(buffer_views, bin_data, 0)
+        ps.level_colliders[filename] = coll
     }
     return true
 }
@@ -85,9 +86,6 @@ read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, 
     uv_offset := int(buffer_views[idx + 2].(json.Object)["byteOffset"].(json.Float))
     uv_len := int(buffer_views[idx + 2].(json.Object)["byteLength"].(json.Float))
 
-    //b_uv_offset := int(buffer_views[idx + 3].(json.Object)["byteOffset"].(json.Float))
-    //b_uv_len := int(buffer_views[idx + 3].(json.Object)["byteLength"].(json.Float))
-
     indices_offset := int(buffer_views[idx + 3].(json.Object)["byteOffset"].(json.Float))
     indices_len := int(buffer_views[idx + 3].(json.Object)["byteLength"].(json.Float))
 
@@ -99,15 +97,9 @@ read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, 
     norm_bytes_len := norm_len / size_of([3]f32)
     norm_data := (cast([^][3]f32)norm_start_ptr)[:norm_bytes_len]
 
-    //fmt.println(norm_data)
-
     uv_start_ptr: rawptr = &binary_data[uv_offset]
     uv_bytes_len := uv_len / size_of([2]f32)
     uv_data := (cast([^][2]f32)uv_start_ptr)[:uv_bytes_len]
-
-    //b_uv_start_ptr: rawptr = &binary_data[b_uv_offset]
-    //b_uv_bytes_len := b_uv_len / size_of([2]f32)
-    //b_uv_data := (cast([^][2]f32)uv_start_ptr)[:b_uv_bytes_len]
 
     indices_start_ptr: rawptr = &binary_data[indices_offset]
     indices_bytes_len := indices_len / size_of(u16)
@@ -122,6 +114,31 @@ read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, 
     return
 }
 
+read_coll_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, i: int) -> (coll: Collider_Data) {
+    idx := i * 4
+
+    pos_offset := int(buffer_views[idx].(json.Object)["byteOffset"].(json.Float))
+    pos_len := int(buffer_views[idx].(json.Object)["byteLength"].(json.Float))
+
+    indices_offset := int(buffer_views[idx + 3].(json.Object)["byteOffset"].(json.Float))
+    indices_len := int(buffer_views[idx + 3].(json.Object)["byteLength"].(json.Float))
+
+    pos_start_ptr: rawptr = &binary_data[pos_offset]
+    pos_bytes_len := pos_len / size_of([3]f32)
+    pos_data := (cast([^][3]f32)pos_start_ptr)[:pos_bytes_len]
+
+    indices_start_ptr: rawptr = &binary_data[indices_offset]
+    indices_bytes_len := indices_len / size_of(u16)
+    indices_data := (cast([^]u16)indices_start_ptr)[:indices_bytes_len]
+
+    coll.vertices = make([][3]f32, len(pos_data))
+    coll.indices = make([]u16, len(indices_data))
+    for pos, pi in pos_data {
+        coll.vertices[pi] = {pos[0], pos[1], pos[2]}
+    }
+    copy(coll.indices, indices_data)
+    return
+}
 
 
 

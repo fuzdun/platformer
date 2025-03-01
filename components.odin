@@ -54,7 +54,9 @@ Level_Geometry :: struct {
     shape: Shape,
     collider: Collider,
     shaders: Active_Shaders,
-    attributes: Level_Geometry_Attributes 
+    attributes: Level_Geometry_Attributes,
+    gl_vertex_index: u16,
+    aabb: AABB
 }
 
 // AOS -> SOA

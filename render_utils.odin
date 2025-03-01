@@ -63,7 +63,7 @@ rotate_transforms :: proc(time: f64, transforms: ^[dynamic]glm.mat4) {
 //}
 //
 transformed_vertex :: proc(vertex: Vertex, trns: Transform) -> Vertex {
-    pos := la.quaternion128_mul_vector3(trns.rotation, vertex.pos * trns.scale) + trns.position
+    pos := la.quaternion128_mul_vector3(trns.rotation, vertex.pos.xyz * trns.scale) + trns.position
     norm := la.quaternion128_mul_vector3(trns.rotation, vertex.normal)
     return {{pos[0], pos[1], pos[2]}, vertex.uv, vertex.b_uv, norm}
 }

@@ -3,23 +3,36 @@ import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 import "core:fmt"
 import "core:math"
+import "core:slice"
 import "core:sort"
+import "core:time"
 
-Physics_State :: struct {
+Physics_State :: struct{
     collisions: [dynamic]Collision,
     debug_render_queue: struct {
         vertices: [dynamic]Vertex,
         indices: [ProgramName][dynamic]u16
     },
+    level_colliders: map[string]Collider_Data,
+    static_collider_vertices: [dynamic][3]f32,
 }
 
-Collision :: struct {
+Collision :: struct{
     id: int,
     pos: [3]f32,
     normal: [3]f32,
     plane_dist: f32,
     closest_pt: [3]f32,
     t: f32
+}
+
+AABB :: struct{
+    x0: f32,
+    y0: f32,
+    z0: f32,
+    x1: f32,
+    y1: f32,
+    z1: f32
 }
 
 AABB_INDICES :: []u16 {0, 1, 0, 3, 1, 2, 2, 3, 3, 7, 2, 6, 4, 5, 4, 7, 6, 7, 6, 5, 4, 0, 5, 1}
@@ -41,6 +54,8 @@ aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1
 init_physics_state :: proc(ps: ^Physics_State) {
     ps.collisions = make([dynamic]Collision)
     ps.debug_render_queue.vertices = make([dynamic]Vertex)
+    ps.level_colliders = make(map[string]Collider_Data)
+    ps.static_collider_vertices = make([dynamic][3]f32)
     for pn in ProgramName {
         ps.debug_render_queue.indices[pn] = make([dynamic]u16)
     }
@@ -48,7 +63,6 @@ init_physics_state :: proc(ps: ^Physics_State) {
 
 clear_physics_state :: proc(ps: ^Physics_State) {
     clear(&ps.collisions)
-    //clear(&ps.front_zs)
     clear(&ps.debug_render_queue.vertices)
     for &iq in ps.debug_render_queue.indices {
         clear(&iq)
@@ -58,10 +72,25 @@ clear_physics_state :: proc(ps: ^Physics_State) {
 free_physics_state :: proc(ps: ^Physics_State) {
     delete(ps.collisions)
     delete(ps.debug_render_queue.vertices)
-    //delete(ps.front_zs)
     for &iq in ps.debug_render_queue.indices {
         delete(iq)
     }
+    delete(ps.level_colliders)
+    delete(ps.static_collider_vertices)
+}
+
+construct_aabb :: proc(vertices: [][3]f32) -> AABB {
+    aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
+    aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
+    for v in vertices {
+        aabbx0 = min(v.x - 1, aabbx0)
+        aabby0 = min(v.y - 1, aabby0)
+        aabbz0 = min(v.z - 1, aabbz0)
+        aabbx1 = max(v.x + 1, aabbx1)
+        aabby1 = max(v.y + 1, aabby1)
+        aabbz1 = max(v.z + 1, aabbz1)
+    }
+    return {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
 }
 
 get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, elapsed_time: f32) {
@@ -75,71 +104,23 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
 
     got_contact_ray_col := false
 
-    transformed_coll_vertices := make([dynamic][3]f32); defer delete(transformed_coll_vertices)
-
-    for lg, i in gs.level_geometry {
-        trns := lg.transform
-        for v, idx in gs.level_colliders[lg.collider].vertices {
-            append(&transformed_coll_vertices, la.quaternion128_mul_vector3(trns.rotation, trns.scale * v.pos.xyz) + trns.position)
-        }
-    }  
+    transformed_coll_vertices := ps.static_collider_vertices
 
     tv_offset := 0
-    //min_zs := make([]f32, len(gs.level_geometry))
-    //for lg, i in gs.level_geometry {
-    //    coll := gs.level_colliders[lg.collider] 
-    //    min_z := max(f32)
-    //    for idx in 0..<len(coll.vertices) {
-    //        v := transformed_coll_vertices[tv_offset + idx] 
-    //        min_z = min(min_z, v.z)
-    //    }
-    //    min_zs[i] = min_z
-    //}
-
-    //tv_offset = 0
 
     for lg, id in gs.level_geometry {
+        coll := ps.level_colliders[lg.collider] 
         if filter <= lg.attributes {
-            off := u16(len(ps.debug_render_queue.vertices))
-
-            aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
-            aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
-
-            coll := gs.level_colliders[lg.collider] 
-            vertices := make([dynamic][3]f32); defer delete(vertices)
-            trns := lg.transform
-            for idx in 0..<len(coll.vertices) {
-                new_pos := transformed_coll_vertices[tv_offset + idx] 
-                //new_pos := la.quaternion128_mul_vector3(trns.rotation, trns.scale * v.pos.xyz) + trns.position
-                //new_pos: [3]f32 = {0, 0, 0}
-                append(&vertices, new_pos)
-                aabbx0 = min(new_pos.x - 1, aabbx0)
-                aabby0 = min(new_pos.y - 1, aabby0)
-                aabbz0 = min(new_pos.z - 1, aabbz0)
-                aabbx1 = max(new_pos.x + 1, aabbx1)
-                aabby1 = max(new_pos.y + 1, aabby1)
-                aabbz1 = max(new_pos.z + 1, aabbz1)
-            }
-            tv_offset += len(coll.vertices)
+            vertices := transformed_coll_vertices[tv_offset:tv_offset + len(coll.vertices)] 
+            aabb := lg.aabb
 
             total : f32 = 0
-            if px < aabbx0 do total += (px - aabbx0) * (px - aabbx0)
-            if px > aabbx1 do total += (px - aabbx1) * (px - aabbx1)
-            if py < aabby0 do total += (py - aabby0) * (py - aabby0)
-            if py > aabby1 do total += (py - aabby1) * (py - aabby1)
-            if pz < aabbz0 do total += (pz - aabbz0) * (pz - aabbz0)
-            if pz > aabbz1 do total += (pz - aabbz1) * (pz - aabbz1)
-
-            if gs.input_state.c_pressed {
-                // debug wireframe rendering
-                debug_vertices := aabb_vertices(aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1)
-                append(&ps.debug_render_queue.vertices, ..debug_vertices[:])
-            }
-            if gs.input_state.c_pressed {
-                // debug wireframe rendering
-                shader: ProgramName = total < player_sq_radius ? .RedOutline : .Outline
-                offset_indices(AABB_INDICES, off, &ps.debug_render_queue.indices[shader])
-            }
+            if px < lg.aabb.x0 do total += (px - lg.aabb.x0) * (px - lg.aabb.x0)
+            if px > lg.aabb.x1 do total += (px - lg.aabb.x1) * (px - lg.aabb.x1)
+            if py < lg.aabb.y0 do total += (py - lg.aabb.y0) * (py - lg.aabb.y0)
+            if py > lg.aabb.y1 do total += (py - lg.aabb.y1) * (py - lg.aabb.y1)
+            if pz < lg.aabb.z0 do total += (pz - lg.aabb.z0) * (pz - lg.aabb.z0)
+            if pz > lg.aabb.z1 do total += (pz - lg.aabb.z1) * (pz - lg.aabb.z1)
 
             if total < player_sq_radius {
                 // got player within bounding box
@@ -147,7 +128,6 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                 append(&coll_indices, ..coll.indices)
                 l := len(coll_indices)
                 for i := 0; i <= l - 3; i += 3 {
-                    off := u16(len(ps.debug_render_queue.vertices))
                     tri_indices := coll_indices[i:i+3]
                     tri_vertex0 := vertices[tri_indices[0]]
                     tri_vertex1 := vertices[tri_indices[1]]
@@ -180,6 +160,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                 }
             }
         }         
+        tv_offset += len(coll.vertices)
     }
     if gs.player_state.on_ground {
         gs.player_state.left_ground = elapsed_time

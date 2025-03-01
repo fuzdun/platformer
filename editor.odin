@@ -18,7 +18,7 @@ Editor_State :: struct {
 
 editor_move_camera :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^Camera_State, delta_time: f32) {
     lg := lgs[es.selected_entity]
-    cs.target = lg.transform.position
+    cs.target = lg.transform.position.xyz
     tgt_y := lg.transform.position.y + 20
     tgt_z := lg.transform.position.z + 100 
     tgt : [3]f32 = {lg.transform.position.x, tgt_y, tgt_z}

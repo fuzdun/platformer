@@ -15,10 +15,18 @@ Particle_Vertex :: struct{
     uv: glm.vec2
 }
 
+
 Shape_Data :: struct{
     vertices: []Vertex,
     indices: []u16
 }
+
+
+Collider_Data :: struct{
+    vertices: [][3]f32,
+    indices: []u16
+}
+
 
 
 SPHERE_RADIUS :: 0.5

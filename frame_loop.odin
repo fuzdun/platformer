@@ -89,6 +89,7 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
         
         fmt.println("update time:", time.since(update_start))
         draw_start := time.now()
+        update_vertices(gs, rs)
         draw_triangles(gs, rs, ss, ps, elapsed_time)
         fmt.println("draw time:", time.since(draw_start))
         SDL.GL_SwapWindow(window)

@@ -29,8 +29,8 @@ void main() {
     vec4 new_pos = aPos;
     vec4 projected = projection * new_pos;
     vec3 ndc = projected.xyz / projected.w;
-    new_pos.xy += ndc.xy * dist_fact;
-    gl_Position = projection * new_pos;
+    projected.xy += ndc.xy * dist_fact;
+    gl_Position = projected;
     // gl_Position = projection * aPos;
 
     crunch_pt_out = crunch_pt;

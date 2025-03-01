@@ -19,24 +19,26 @@ EDIT :: #config(EDIT, false)
 Game_State :: struct {
     player_geometry: Shape_Data,
     level_resources: map[string]Shape_Data,
-    level_colliders: map[string]Shape_Data,
     level_geometry: Level_Geometry_State,
     player_state: Player_State,
     input_state: Input_State,
     camera_state: Camera_State,
-    editor_state: Editor_State
+    editor_state: Editor_State,
+    dirty_entities: [dynamic]int
 }
 
 gamestate_init :: proc(gs: ^Game_State) {
     gs.level_resources = make(map[string]Shape_Data)
-    gs.level_colliders = make(map[string]Shape_Data)
     gs.level_geometry = make(Level_Geometry_State)
     gs.player_state.trail = make([dynamic][3]f32)
+    gs.dirty_entities = make([dynamic]int)
+    append(&gs.dirty_entities, 0, 1, 2, 3)
     resize(&gs.player_state.trail, TRAIL_SIZE)
 }
 
 gamestate_free :: proc(gs: ^Game_State) {
     delete_soa(gs.level_geometry)
+    delete(gs.dirty_entities)
     for lg in gs.level_geometry {
         delete(lg.shape)
         delete(lg.collider)
@@ -49,11 +51,11 @@ gamestate_free :: proc(gs: ^Game_State) {
         delete(sd.vertices)
     }
     delete(gs.level_resources)
-    for _, sd in gs.level_colliders {
+    //for _, sd in gs.level_colliders {
         //delete(sd.indices) 
         //delete(sd.vertices)
-    }
-    delete(gs.level_colliders)
+    //}
+    //delete(gs.level_collider_vertices)
 }
 
 controller : ^SDL.GameController
@@ -110,7 +112,10 @@ main :: proc () {
     gs.player_state.ground_x = {1, 0, 0}
     gs.player_state.ground_z = {0, 0, -1}
 
-    load_geometry_data(&gs)
+    ps: Physics_State
+    init_physics_state(&ps); defer free_physics_state(&ps)
+
+    load_geometry_data(&gs, &ps)
 
     ss: ShaderState
     shader_state_init(&ss); defer shader_state_free(&ss)
@@ -118,14 +123,12 @@ main :: proc () {
     rs: Render_State
     init_render_buffers(&gs, &rs); defer free_render_buffers(&rs)
 
-    ps: Physics_State
-    init_physics_state(&ps); defer free_physics_state(&ps)
 
     // initialize OpenGL state
     init_draw(&rs, &ss)
     SDL.GL_SetSwapInterval(1)
 
-    load_level_geometry(&gs, "test_level")
+    load_level_geometry(&gs, &ps, "test_level")
     init_level_render_data(&gs, &ss, &rs)
     init_player_render_data(&gs, &ss, &rs)
     bind_vertices(&rs)
