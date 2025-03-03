@@ -32,7 +32,7 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.level_geometry = make(Level_Geometry_State)
     gs.player_state.trail = make([dynamic][3]f32)
     gs.dirty_entities = make([dynamic]int)
-    append(&gs.dirty_entities, 0, 1, 2, 3)
+    //append(&gs.dirty_entities, 0, 1, 2, 3)
     resize(&gs.player_state.trail, TRAIL_SIZE)
 }
 
@@ -40,8 +40,8 @@ gamestate_free :: proc(gs: ^Game_State) {
     delete_soa(gs.level_geometry)
     delete(gs.dirty_entities)
     for lg in gs.level_geometry {
-        delete(lg.shape)
-        delete(lg.collider)
+        //delete(lg.shape)
+        //delete(lg.collider)
     }
     delete(gs.player_state.trail)
     delete(gs.player_geometry.vertices)
@@ -51,11 +51,6 @@ gamestate_free :: proc(gs: ^Game_State) {
         delete(sd.vertices)
     }
     delete(gs.level_resources)
-    //for _, sd in gs.level_colliders {
-        //delete(sd.indices) 
-        //delete(sd.vertices)
-    //}
-    //delete(gs.level_collider_vertices)
 }
 
 controller : ^SDL.GameController
@@ -125,7 +120,10 @@ main :: proc () {
 
 
     // initialize OpenGL state
-    init_draw(&rs, &ss)
+    if !init_draw(&rs, &ss) {
+        fmt.eprintln("init draw failed")
+        return
+    }
     SDL.GL_SetSwapInterval(1)
 
     load_level_geometry(&gs, &ps, "test_level")

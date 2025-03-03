@@ -55,7 +55,7 @@ Level_Geometry :: struct {
     collider: Collider,
     shaders: Active_Shaders,
     attributes: Level_Geometry_Attributes,
-    gl_vertex_index: u16,
+    gl_vertex_index: u32,
     aabb: AABB
 }
 

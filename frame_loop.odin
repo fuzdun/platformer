@@ -34,7 +34,6 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
 
     for !quit_app {
         if quit_app do break
-
         update_start := time.now()
 
         elapsed_time := f64(SDL.GetTicks())
@@ -87,11 +86,11 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         
-        fmt.println("update time:", time.since(update_start))
+        //fmt.println("update time:", time.since(update_start))
         draw_start := time.now()
         update_vertices(gs, rs)
         draw_triangles(gs, rs, ss, ps, elapsed_time)
-        fmt.println("draw time:", time.since(draw_start))
+        //fmt.println("draw time:", time.since(draw_start))
         SDL.GL_SwapWindow(window)
     }
 }

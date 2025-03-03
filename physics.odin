@@ -75,6 +75,10 @@ free_physics_state :: proc(ps: ^Physics_State) {
     for &iq in ps.debug_render_queue.indices {
         delete(iq)
     }
+    for _, coll in ps.level_colliders {
+        delete(coll.indices) 
+        delete(coll.vertices)
+    }
     delete(ps.level_colliders)
     delete(ps.static_collider_vertices)
 }

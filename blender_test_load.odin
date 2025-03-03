@@ -47,7 +47,7 @@ load_blender_model :: proc(filename: string, gs: ^Game_State, ps: ^Physics_State
 
     // read 4 bytes indicating binary data length and cast to u32
     bin_len_bytes := bytes.buffer_next(&buf, 4)
-    bin_len, bin_len_ok := endian.get_u32(json_len_bytes, .Little)
+    bin_len, bin_len_ok := endian.get_u32(bin_len_bytes, .Little)
     if !bin_len_ok {
         fmt.eprintln("failed to convert bin_len to u32")
         return false
@@ -131,7 +131,7 @@ read_coll_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, 
     indices_bytes_len := indices_len / size_of(u16)
     indices_data := (cast([^]u16)indices_start_ptr)[:indices_bytes_len]
 
-    coll.vertices = make([][3]f32, len(pos_data))
+    coll.vertices = make([][3]f32, len(pos_data)) 
     coll.indices = make([]u16, len(indices_data))
     for pos, pi in pos_data {
         coll.vertices[pi] = {pos[0], pos[1], pos[2]}
