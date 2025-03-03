@@ -60,13 +60,13 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, filename: strin
     //    }
     //}
 
-    for i in 0..<10 {
+    for i in 0..<100 {
         rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
         shallow_angle: Level_Geometry
         shallow_angle.shape = "basic_cube2"
         shallow_angle.collider = "basic_cube"
         shallow_angle.transform = {{f32(i) * 4, -25, f32(i) * -20 + 50},{10, 10, 10}, rotation}
-        shallow_angle.shaders = {.Simple}
+        shallow_angle.shaders = {.Trail}
         shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
         vertices := ps.level_colliders[shallow_angle.collider].vertices
         trns := shallow_angle.transform

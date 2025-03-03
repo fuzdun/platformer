@@ -13,8 +13,8 @@ in VS_OUT {
     float crunch_time_frag;
     vec3 normal_frag;
     int v_index;
-    vec4 gl_Position;
-    // vec3 obj_pos;
+    // vec4 gl_Position;
+    vec3 obj_pos;
     // mat4 v_projection;
 } gs_in[];
 
@@ -31,7 +31,7 @@ uniform mat4 projection;
 
 void main() {
     for(int i=0; i < 3; i++) {
-        vec4 new_pos = gl_in[i].gl_Position;
+        // vec4 new_pos = gl_in[i].gl_Position;
         // vec3 obj_pos = obj_poss_data[gs_in[i].v_index];
         // if (i == 2) {
         // new_pos.y -= (obj_pos.z - new_pos.z) * 1;
@@ -41,7 +41,11 @@ void main() {
         // new_pos += vec4(off, 0.0) * .01;
         // vec4 off = vec4(gs_in[i].normal_frag * 1, 0.0);
         // gl_Position = gs_in[i].v_projection * new_pos;
-        gl_Position = projection * new_pos;   
+        vec4 new_pos = gl_in[i].gl_Position;   
+        // new_pos.y += (gs_in[i].obj_pos.z + gs_in[i].global_pos.z);
+        // new_pos.y -= gs_in[i].global_pos.z;
+        // new_pos.y -= gs_in[i].obj_pos.z * .1;
+        gl_Position = projection * new_pos;
         player_pos = gs_in[i].player_pos;
         player_trail = gs_in[i].player_trail;
         global_pos = gs_in[i].global_pos;

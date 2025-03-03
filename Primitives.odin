@@ -18,7 +18,7 @@ Particle_Vertex :: struct{
 
 Shape_Data :: struct{
     vertices: []Vertex,
-    indices: []u16
+    indices: []u32
 }
 
 
@@ -42,7 +42,7 @@ add_player_sphere_data :: proc(gs: ^Game_State) {
     x, y, z, xz: f32
     horizontal_angle, vertical_angle: f32
     s, t: f32
-    vr1, vr2: u16
+    vr1, vr2: u32
     PI := f32(math.PI)
 
     vertical_step := PI / f32(vertical_count)
@@ -69,11 +69,11 @@ add_player_sphere_data :: proc(gs: ^Game_State) {
     }
 
     ind := 0
-    gs.player_geometry.indices = make([]u16, SPHERE_I_COUNT)
+    gs.player_geometry.indices = make([]u32, SPHERE_I_COUNT)
     indices := &gs.player_geometry.indices
     for i in 0..<vertical_count {
-        vr1 = u16(i) * u16(horizontal_count + 1) 
-        vr2 = vr1 + u16(horizontal_count) + 1
+        vr1 = u32(i * horizontal_count + 1)
+        vr2 = vr1 + u32(horizontal_count + 1)
 
         for j := 0; j < horizontal_count; {
             if i != 0 {

@@ -6,7 +6,8 @@ layout (location = 2) in vec3 normal_in;
 layout (std430, binding = 0) buffer z_width {
     float z_width_data[];
 };
-layout (std430, binding = 1) buffer obj_poss {
+
+layout (std430, binding = 2) buffer obj_poss {
     vec3 obj_poss_data[];
 };
 
@@ -20,8 +21,8 @@ out VS_OUT {
     float crunch_time_frag;
     vec3 normal_frag;
     int v_index;
-    vec4 gl_Position;
-    // vec3 obj_pos;
+    // vec4 gl_Position;
+    vec3 obj_pos;
     // mat4 v_projection;
 } vs_out;
 
@@ -52,9 +53,9 @@ void main() {
     // projected.xy += ndc.xy * dist_fact;
     // gl_Position = projected;
     // gl_Position = projection * aPos;
-    vec4 off = aPos - vec4(obj_poss_data[gl_VertexID], 0.0);
-    gl_Position = aPos + off * 0.1;
-    vs_out.gl_Position = gl_Position;
+    // vec4 off = aPos - vec4(obj_poss_data[gl_VertexID], 0.0);
+    gl_Position = aPos;
+    // vs_out.gl_Position = gl_Position;
 
     vs_out.crunch_pt_out = crunch_pt;
     vs_out.crunch_time_frag = crunch_time;
@@ -65,7 +66,7 @@ void main() {
     vs_out.global_pos = vec3(aPos);
     vs_out.normal_frag = normal_in;
     vs_out.v_index = gl_VertexID;
-    // vs_out.obj_pos = obj_poss_data[gl_VertexID];
+    vs_out.obj_pos = obj_poss_data[gl_VertexID];
     // vs_out.v_projection = projection;
 
     // crunch_pt_out = crunch_pt;
