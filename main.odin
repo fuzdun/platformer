@@ -88,7 +88,6 @@ main :: proc () {
             controller = SDL.GameControllerOpen(i)
         }
     }
-
     window := SDL.CreateWindow(TITLE, SDL.WINDOWPOS_UNDEFINED, SDL.WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, {.OPENGL})
     if window == nil {
         fmt.eprintln("Failed to create window")
@@ -98,7 +97,7 @@ main :: proc () {
     // hook up OpenGL
     gl_context := SDL.GL_CreateContext(window)
     SDL.GL_MakeCurrent(window, gl_context)
-    gl.load_up_to(3, 3, SDL.gl_set_proc_address)
+    gl.load_up_to(4, 6, SDL.gl_set_proc_address)
 
     // allocate / defer deallocate state structs
     gs : Game_State
@@ -124,15 +123,16 @@ main :: proc () {
         fmt.eprintln("init draw failed")
         return
     }
-    SDL.GL_SetSwapInterval(1)
 
     load_level_geometry(&gs, &ps, "test_level")
+
     init_level_render_data(&gs, &ss, &rs)
     init_player_render_data(&gs, &ss, &rs)
     bind_vertices(&rs)
-    //transform_vertices(&gs, &rs, &ps)
+    
 
     // start frame loop
+    SDL.GL_SetSwapInterval(1)
     frame_loop(window, &gs, &rs, &ss, &ps)
 }
 
