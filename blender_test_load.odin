@@ -113,6 +113,7 @@ read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, 
     for ind, ind_i in indices_data {
         sd.indices[ind_i] = u32(ind)
     }
+    //fmt.println(len(sd.vertices))
     //copy(sd.indices, indices_data)
     return
 }

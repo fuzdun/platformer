@@ -53,14 +53,14 @@ PROGRAM_CONFIGS := [ProgramName]Program{
         geometry_filename = ""
     },
     .Trail = {
-        vertex_filename = EDIT ? "trailvertex" : "thumpervertex",
-        frag_filename = EDIT ? "reactivefrag" : "trailfrag",
+        vertex_filename = EDIT ? "simplevertex" : "thumpervertex",
+        frag_filename = EDIT ? "simplefrag" : "trailfrag",
         uniforms = {"player_trail_in", "player_pos_in", "crunch_time", "crunch_pt", "i_time", "projection"},
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
         },
         use_geometry_shader = true,
-        geometry_filename = "thumpergeometry"
+        geometry_filename = EDIT ? "simplegeometry" : "thumpergeometry"
     },
     .Player = {
         vertex_filename = "playervertex",

@@ -8,10 +8,10 @@ import la "core:math/linalg"
 import "core:mem"
 import "core:os"
 
-//WIDTH :: 1920.0
-//HEIGHT :: 1080.0
-WIDTH :: 720
-HEIGHT :: 720
+WIDTH :: 1920.0
+HEIGHT :: 1080.0
+//WIDTH :: 720
+//HEIGHT :: 720
 TITLE :: "platformer"
 
 EDIT :: #config(EDIT, false)
@@ -82,7 +82,7 @@ main :: proc () {
     if (SDL.Init({.VIDEO, .GAMECONTROLLER}) < 0) {
         fmt.println("SDL could not initialize")
     }
-
+    SDL.GL_SetSwapInterval(1)
     for i in 0..<SDL.NumJoysticks() {
         if (SDL.IsGameController(i)) {
             controller = SDL.GameControllerOpen(i)
@@ -125,14 +125,10 @@ main :: proc () {
     }
 
     load_level_geometry(&gs, &ps, "test_level")
-
     init_level_render_data(&gs, &ss, &rs)
-    init_player_render_data(&gs, &ss, &rs)
-    bind_vertices(&rs)
     
 
     // start frame loop
-    SDL.GL_SetSwapInterval(1)
     frame_loop(window, &gs, &rs, &ss, &ps)
 }
 
