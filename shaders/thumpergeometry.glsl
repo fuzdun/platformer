@@ -29,8 +29,8 @@ uniform mat4 projection;
 
 void main() {
     vec4 avg_pos = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
-    vec4 disp = (avg_pos - gs_in[0].obj_pos) * (mod(gs_in[0].v_id, 200) / 50) * gs_in[0].player_dist;
-    if (gs_in[0].player_dist > 1000) {
+    vec4 disp = (avg_pos - gs_in[0].obj_pos) * (mod(gs_in[0].v_id, 2000) / 50) * gs_in[0].player_dist;
+    if (gs_in[0].player_dist > 500) {
         EndPrimitive();
         return;  
     }
