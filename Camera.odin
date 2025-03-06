@@ -4,7 +4,7 @@ import "core:fmt"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 
-CAMERA_PLAYER_Y_OFFSET :: 10
+CAMERA_PLAYER_Y_OFFSET :: 20
 CAMERA_PLAYER_Z_OFFSET :: 100 
 CAMERA_PLAYER_X_OFFSET :: 0 
 

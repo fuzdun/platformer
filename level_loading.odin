@@ -4,6 +4,8 @@ import la "core:math/linalg"
 import "core:encoding/cbor"
 import "core:fmt"
 import "core:os"
+import "core:math"
+import rnd "core:math/rand"
 import str "core:strings"
 
 trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
@@ -61,11 +63,14 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, filename: strin
     //}
 
     for i in 0..<1000 {
-        rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
+        rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
+        //rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
         shallow_angle: Level_Geometry
         shallow_angle.shape = "basic_cube2"
         shallow_angle.collider = "basic_cube"
-        shallow_angle.transform = {{f32(i) * 4, -25, f32(i) * -20 + 50},{10, 10, 10}, rotation}
+        x := f32(i % 10)
+        y := math.floor(f32(i) / 10.0)
+        shallow_angle.transform = {{x * 20, rnd.float32() * 20 - 10, y * -50 + 50},{10, 10, 10}, rot}
         shallow_angle.shaders = {.Trail}
         shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
         vertices := ps.level_colliders[shallow_angle.collider].vertices

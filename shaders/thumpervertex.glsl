@@ -23,6 +23,7 @@ out VS_OUT {
     vec3 normal_frag;
     vec4 obj_pos;
     float player_dist;
+    int v_id;
 } vs_out;
 
 
@@ -37,7 +38,7 @@ void main() {
     mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
     vec4 new_pos = transform * aPos;
     float dist = max(0, player_pos_in.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 100 - new_pos.z);
-    vs_out.player_dist = dist * dist * 0.01;
+    vs_out.player_dist = dist * dist * 0.001;
     gl_Position = new_pos;
     // vec4 new_pos = aPos;
     // vec4 projected = projection * new_pos;
@@ -47,6 +48,7 @@ void main() {
     // gl_Position = projection * aPos;
     // vec4 off = aPos - vec4(obj_poss_data[gl_VertexID], 0.0);
 
+    vs_out.v_id = gl_VertexID;
     vs_out.obj_pos = vec4(transform[3][0], transform[3][1], transform[3][2], 1.0);
     vs_out.uv = vertexUV;
     vs_out.time = i_time;

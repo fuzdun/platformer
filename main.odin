@@ -31,6 +31,8 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.level_resources = make(map[string]Shape_Data)
     gs.level_geometry = make(Level_Geometry_State)
     gs.player_state.trail = make([dynamic][3]f32)
+    gs.player_state.position.z = -30
+    gs.player_state.position.y = 30
     gs.dirty_entities = make([dynamic]int)
     //append(&gs.dirty_entities, 0, 1, 2, 3)
     resize(&gs.player_state.trail, TRAIL_SIZE)

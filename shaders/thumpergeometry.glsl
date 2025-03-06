@@ -13,6 +13,7 @@ in VS_OUT {
     vec3 normal_frag;
     vec4 obj_pos;
     float player_dist;
+    int v_id;
 } gs_in[];
 
 out vec3 player_pos;
@@ -28,7 +29,7 @@ uniform mat4 projection;
 
 void main() {
     vec4 avg_pos = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
-    vec4 disp = (avg_pos - gs_in[0].obj_pos) * gs_in[0].player_dist;
+    vec4 disp = (avg_pos - gs_in[0].obj_pos) * (mod(gs_in[0].v_id, 200) / 50) * gs_in[0].player_dist;
     if (gs_in[0].player_dist > 1000) {
         EndPrimitive();
         return;  
@@ -52,7 +53,7 @@ void main() {
         vec4 new_pos = gl_in[i].gl_Position;
         vec4 new_avg = avg_pos + disp * .05;
         new_pos += disp * .05;   
-        new_pos += (new_avg - new_pos) * min(1, (gs_in[i].player_dist / 1000));
+        new_pos += (new_avg - new_pos) * min(1, (gs_in[i].player_dist / 500));
         // new_pos += normalize(avg_pos - new_pos) * disp * .1;
         gl_Position = projection * new_pos;
 
