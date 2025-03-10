@@ -46,42 +46,45 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, filename: strin
     defer delete(level_bin)
     decoded, decode_err := cbor.decode(string(level_bin))
     defer cbor.destroy(decoded)
-    //
-    //for entry in decoded.(^cbor.Array) {
-    //    lg: Level_Geometry
-    //    entry_bin, _ := cbor.encode(entry)
-    //    defer delete(entry_bin)
-    //    cbor.unmarshal(string(entry_bin), &lg)
-    //    lg.attributes = trim_bit_set(lg.attributes)
-    //    lg.shaders = trim_bit_set(lg.shaders)
-    //    append(&gs.level_geometry, lg)
-    //    vertices := ps.level_colliders[lg.collider].vertices
-    //    trns := lg.transform
-    //    for v in vertices {
-    //        append(&ps.static_collider_vertices, la.quaternion128_mul_vector3(trns.rotation, trns.scale * v) + trns.position)
-    //    }
-    //}
 
-    for i in 0..<100 {
-        rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
-        //rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
-        shallow_angle: Level_Geometry
-        shallow_angle.shape = "basic_cube2"
-        shallow_angle.collider = "basic_cube"
-        x := f32(i % 10)
-        y := math.floor(f32(i) / 10.0)
-        shallow_angle.transform = {{x * 20, rnd.float32() * 20 - 10, y * -50 + 50},{10, 10, 10}, rot}
-        shallow_angle.shaders = {.Trail}
-        shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-        vertices := ps.level_colliders[shallow_angle.collider].vertices
-        trns := shallow_angle.transform
-        transformed_vertices := make([][3]f32, len(vertices)); defer delete(transformed_vertices)
-        for v, vi in vertices {
-            transformed_vertices[vi] = la.quaternion128_mul_vector3(trns.rotation, trns.scale * v) + trns.position
+    for entry in decoded.(^cbor.Array) {
+        lg: Level_Geometry
+        entry_bin, _ := cbor.encode(entry)
+        defer delete(entry_bin)
+        cbor.unmarshal(string(entry_bin), &lg)
+        lg.attributes = trim_bit_set(lg.attributes)
+        lg.shaders = trim_bit_set(lg.shaders)
+        trns := lg.transform
+        coll_vertices := ps.level_colliders[lg.collider].vertices
+        transformed_coll_vertices := make([][3]f32, len(coll_vertices)); defer delete(transformed_coll_vertices)
+        for v, vi in coll_vertices {
+            transformed_coll_vertices[vi] = la.quaternion128_mul_vector3(trns.rotation, trns.scale * v) + trns.position
         }
-        append(&ps.static_collider_vertices, ..transformed_vertices[:])
-        shallow_angle.aabb = construct_aabb(transformed_vertices)
-        append(&gs.level_geometry, shallow_angle)
+        append(&ps.static_collider_vertices, ..transformed_coll_vertices[:])
+        lg.aabb = construct_aabb(transformed_coll_vertices)
+        append(&gs.level_geometry, lg)
     }
+
+    //for i in 0..<500 {
+    //    rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
+    //    //rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
+    //    shallow_angle: Level_Geometry
+    //    shallow_angle.shape = "basic_cube"
+    //    shallow_angle.collider = "basic_cube"
+    //    x := f32(i % 5)
+    //    y := math.floor(f32(i) / 5.0)
+    //    shallow_angle.transform = {{x * 20, y * -10 + rnd.float32() * 10 - 10, y * -20 + 50},{10, 10, 10}, rot}
+    //    shallow_angle.shaders = {.Trail}
+    //    shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+    //    vertices := ps.level_colliders[shallow_angle.collider].vertices
+    //    trns := shallow_angle.transform
+    //    transformed_vertices := make([][3]f32, len(vertices)); defer delete(transformed_vertices)
+    //    for v, vi in vertices {
+    //        transformed_vertices[vi] = la.quaternion128_mul_vector3(trns.rotation, trns.scale * v) + trns.position
+    //    }
+    //    append(&ps.static_collider_vertices, ..transformed_vertices[:])
+    //    shallow_angle.aabb = construct_aabb(transformed_vertices)
+    //    append(&gs.level_geometry, shallow_angle)
+    //}
 }
 

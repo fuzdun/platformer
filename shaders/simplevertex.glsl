@@ -8,15 +8,12 @@ layout (std430, binding = 0) buffer matrices {
     mat4 matrices_data[];
 };
 
-out VS_OUT {
-    vec4 obj_pos;
-    vec2 uv;
-} vs_out;
+uniform mat4 projection;
+out vec2 uv;
 
 void main() {
     mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
-    vs_out.obj_pos = vec4(transform[3][0], transform[3][1], transform[3][2], 0.0);
-    gl_Position = transform * aPos;
-    vs_out.uv = vertexUV;
+    gl_Position = projection * transform * aPos;
+    uv = vertexUV;
 }
 

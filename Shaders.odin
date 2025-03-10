@@ -6,20 +6,22 @@ import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 
 ProgramName :: enum{
-    Outline,
-    RedOutline,
+    //Outline,
+    //RedOutline,
     Player,
     Trail,
     Simple
 }
 
 Program :: struct{
-    vertex_filename: string,
-    frag_filename: string,
+    //vertex_filename: string,
+    //frag_filename: string,
+    pipeline: []string,
     uniforms: []string,
+    shader_types: []gl.Shader_Type,
     init_proc: proc(),
-    use_geometry_shader: bool,
-    geometry_filename: string
+    //use_geometry_shader: bool,
+    //geometry_filename: string,
 }
 
 ActiveProgram :: struct{
@@ -29,54 +31,48 @@ ActiveProgram :: struct{
     locations: map[string]i32
 }
 
-PROGRAM_CONFIGS := [ProgramName]Program{
-    .Outline = {
-        vertex_filename = "outlinevertex",
-        frag_filename = "outlinefrag",
-        uniforms = {"projection"},
-        init_proc = proc() {
-            gl.PolygonMode(gl.FRONT, gl.LINE)
-            gl.LineWidth(3)
-        },
-        use_geometry_shader = false,
-        geometry_filename = ""
-    },
-    .RedOutline = {
-        vertex_filename = EDIT ? "outlinevertex" : "outlinethumpervertex",
-        frag_filename = "redoutlinefrag",
-        uniforms = {"projection"},
-        init_proc = proc() {
-            gl.PolygonMode(gl.FRONT, gl.LINE)
-            gl.LineWidth(4)
-        },
-        use_geometry_shader = false,
-        geometry_filename = ""
-    },
+PROGRAM_CONFIGS := #partial[ProgramName]Program{
+    //.Outline = {
+    //    vertex_filename = "outlinevertex",
+    //    frag_filename = "outlinefrag",
+    //    uniforms = {"projection"},
+    //    init_proc = proc() {
+    //        gl.PolygonMode(gl.FRONT, gl.LINE)
+    //        gl.LineWidth(3)
+    //    },
+    //    use_geometry_shader = false,
+    //    geometry_filename = "",
+    //},
+    //.RedOutline = {
+    //    vertex_filename = EDIT ? "outlinevertex" : "outlinethumpervertex",
+    //    frag_filename = "redoutlinefrag",
+    //    uniforms = {"projection"},
+    //    init_proc = proc() {
+    //        gl.PolygonMode(gl.FRONT, gl.LINE)
+    //        gl.LineWidth(4)
+    //    },
+    //    use_geometry_shader = false,
+    //    geometry_filename = "",
+    //},
     .Trail = {
-        vertex_filename = EDIT ? "simplevertex" : "thumpervertex",
-        frag_filename = EDIT ? "simplefrag" : "trailfrag",
-        uniforms = {"player_trail_in", "player_pos_in", "crunch_time", "crunch_pt", "i_time", "projection"},
+        pipeline = EDIT ? {"simplevertex", "simplefrag"} : {"thumpervertex", "tessellationctrl", "tessellationeval", "thumpergeometry", "trailfrag"},
+        shader_types = EDIT ? {.VERTEX_SHADER, .FRAGMENT_SHADER} : {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
+        uniforms = EDIT ? {"projection"} : {"player_trail", "player_pos", "crunch_time", "crunch_pt", "time", "projection", "sonar_time"},
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
         },
-        use_geometry_shader = true,
-        geometry_filename = EDIT ? "simplegeometry" : "thumpergeometry"
     },
     .Player = {
-        vertex_filename = "playervertex",
-        frag_filename = "playerfrag",
+        pipeline = {"playervertex", "playerfrag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"transform", "i_time", "projection"},
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
         },
-        use_geometry_shader = false,
-        geometry_filename = ""
     },
     .Simple = {
-        vertex_filename = "simplevertex",
-        frag_filename = "simplefrag",
-        geometry_filename = "simplegeometry",
-        use_geometry_shader = true,
+        pipeline = {"simplevertex", "simplefrag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection"},
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
@@ -103,43 +99,21 @@ shader_state_free :: proc(shst: ^ShaderState) {
 
 init_shaders :: proc(sh: ^ShaderState) -> bool {
     for config, program in PROGRAM_CONFIGS {
-        vertex_id, vertex_ok := shader_program_from_file(config.vertex_filename, .VERTEX_SHADER)
-        if !vertex_ok {
-            fmt.eprintln("Failed to compile glsl")
+
+        shaders := make([]u32, len(config.pipeline))
+        for filename, shader_i in config.pipeline {
+            id, ok := shader_program_from_file(filename, config.shader_types[shader_i])
+            if !ok {
+                return false
+            }
+            shaders[shader_i] = id
+        }
+
+        program_id, program_ok := gl.create_and_link_program(shaders)
+        if !program_ok {
+            fmt.eprintln("program link failed:", program)
             return false
         }
-        geometry_id: u32 = 0
-        geometry_ok := false
-        if config.use_geometry_shader {
-            geometry_id, geometry_ok = shader_program_from_file(config.geometry_filename, .GEOMETRY_SHADER)
-            if !geometry_ok {
-                fmt.eprintln("Failed to compile glsl")
-                return false
-            }
-            //gl.AttachShader(program_id, geometry_id)
-        }
-        frag_id, frag_ok := shader_program_from_file(config.frag_filename, .FRAGMENT_SHADER)
-        if !frag_ok {
-            fmt.eprintln("Failed to compile glsl")
-            return false
-        }
-        program_id: u32 = 0
-        program_ok := false
-        if config.use_geometry_shader {
-            program_id, program_ok = gl.create_and_link_program({vertex_id, geometry_id, frag_id}) 
-            if !program_ok {
-                fmt.eprintln("program link failed:", program)
-                return false
-            }
-        } else {
-            program_id, program_ok = gl.create_and_link_program({vertex_id, frag_id})
-            if !program_ok {
-                fmt.eprintln("program link failed:", program)
-                return false
-            }
-        }
-        //buf_id: u32
-        //gl.GenBuffers(1, &buf_id)
         sh.active_programs[program] = {program_id, config.init_proc, make(map[string]i32)}
         prog := sh.active_programs[program]
         for uniform in config.uniforms {

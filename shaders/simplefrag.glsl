@@ -16,6 +16,7 @@ void main()
 	   vec3 border_col = border_fact * vec3(1.0, 0.8, 1.0);
 	   vec3 col = vec3(0.0, 0.0, 1.0) + border_col;
 	   fragColor = vec4(col, 1.0);
+	   // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
 
 

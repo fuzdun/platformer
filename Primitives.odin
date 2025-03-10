@@ -31,8 +31,8 @@ Collider_Data :: struct{
 
 SPHERE_RADIUS :: 0.5
 SPHERE_SQ_RADIUS :: SPHERE_RADIUS * SPHERE_RADIUS
-SPHERE_SECTOR_COUNT :: 10 
-SPHERE_STACK_COUNT :: 10 
+SPHERE_SECTOR_COUNT :: 20 
+SPHERE_STACK_COUNT :: 20 
 SPHERE_V_COUNT :: (SPHERE_STACK_COUNT + 1) * (SPHERE_SECTOR_COUNT + 1)
 SPHERE_I_COUNT :: (SPHERE_STACK_COUNT - 1) * SPHERE_SECTOR_COUNT * 6 
 
@@ -72,8 +72,8 @@ add_player_sphere_data :: proc(gs: ^Game_State) {
     gs.player_geometry.indices = make([]u32, SPHERE_I_COUNT)
     indices := &gs.player_geometry.indices
     for i in 0..<vertical_count {
-        vr1 = u32(i * horizontal_count + 1)
-        vr2 = vr1 + u32(horizontal_count + 1)
+        vr1 = u32(i * (horizontal_count + 1))
+        vr2 = vr1 + u32(horizontal_count) + 1
 
         for j := 0; j < horizontal_count; {
             if i != 0 {

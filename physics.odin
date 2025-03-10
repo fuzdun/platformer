@@ -203,8 +203,8 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                 gs.player_state.crunch_time = elapsed_time
             }
             gs.player_state.position = best_plane_intersection + best_plane_normal * GROUND_OFFSET 
-            gs.player_state.ground_x = ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal
-            gs.player_state.ground_z = ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal
+            gs.player_state.ground_x = la.normalize(ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal)
+            gs.player_state.ground_z = la.normalize(ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal)
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
             gs.player_state.on_ground = true
             gs.player_state.on_wall = false

@@ -2,14 +2,16 @@
 
 out vec4 fragColor;
 
-in vec3 player_pos;
-in vec3[3] player_trail;
 in vec3 global_pos;
-in float time;
-in float crunch_time_frag;
 in vec2 uv;
-in vec3 crunch_pt_out;   
 in vec3 normal_frag;
+in vec3 player_pos;
+
+uniform float sonar_time;
+uniform float time;
+uniform vec3[3] player_trail;
+uniform vec3 crunch_pt;
+uniform float crunch_time;
 
 #define TWOPI 6.2831853
 
@@ -114,61 +116,67 @@ float jaggy(float x)
 
 void main()
 {
-	   float plane_off = dot(normal_frag, global_pos);
-	   float dist = dot(normal_frag, player_pos) - plane_off;
-	   vec3 proj_pt = player_pos - dist * normal_frag;
+    float plane_off = dot(normal_frag, global_pos);
+    float dist = dot(normal_frag, player_pos) - plane_off;
+    vec3 proj_pt = player_pos - dist * normal_frag;
 
-	   vec3 diff = global_pos - player_pos;
-	   float a = atan(diff.x / diff.z) * 5;
-	   float uvd = length(global_pos - proj_pt);
-	   float d1 = dist + noise(a + time * 100) * .3;
-	   float dfrac = d1 / uvd;
-	   float absd = abs(uvd - d1);
-	   float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.0, 0.1, absd);
+    vec3 diff = global_pos - player_pos;
+    float a = atan(diff.x / diff.z) * 5;
+    float uvd = length(global_pos - proj_pt);
+    float d1 = dist + noise(a + time * 100) * .3;
+    float dfrac = d1 / uvd;
+    float absd = abs(uvd - d1);
+    float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.0, 0.1, absd);
 
-	   vec3 proximity_outline_col = vec3(1.0, .6, 1.0) * noise_border;
-	   vec3 proximity_shadow_col = d1 < uvd ? vec3(.5, .15, max(1.0 - (d1 / uvd) * .5, 0.6)) : vec3(.25, .15, 0.6);
+    vec3 proximity_outline_col = vec3(1.0, .6, 1.0) * noise_border;
+    vec3 proximity_shadow_col = d1 < uvd ? vec3(.5, .15, max(1.0 - (d1 / uvd) * .5, 0.6)) : vec3(.25, .15, 0.6);
 
-	  float shade = pattern(uv);
-	   vec3 pattern_col = vec3(colormap(shade).rgb) * 0.5;
+    float shade = pattern(uv);
+    vec3 pattern_col = vec3(colormap(shade).rgb) * 0.5;
 
-	  vec3 trail_col = vec3(0.0, 0, 0);
-	   vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);
-	   vec2 res2 = distanceToSegment(player_trail[0], player_trail[1], global_pos);
-	   vec2 res3 = distanceToSegment(player_trail[1], player_trail[2], global_pos);
-	   float d = min(res1[0], min(res2[0], res3[0]));
-	   float t = (d == res1[0] ? res1[1] : (d == res2[0] ? 1.0 + res2[1] : 2.0 + res3[1])) / 3.0;
-	   d += t * 0.69;
-	   float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
-	   float freq = 2.0 * line_len;
-	   float width =  sin(-time * 70.0 + t * TWOPI * freq) * 5.0 + 40.0;
-	   float border_d = 0.025 * width;
-	   vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.5, 0.0, 0.5), t);
-	   trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
+    vec3 trail_col = vec3(0.0, 0, 0);
+    vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);
+    vec2 res2 = distanceToSegment(player_trail[0], player_trail[1], global_pos);
+    vec2 res3 = distanceToSegment(player_trail[1], player_trail[2], global_pos);
+    float d = min(res1[0], min(res2[0], res3[0]));
+    float t = (d == res1[0] ? res1[1] : (d == res2[0] ? 1.0 + res2[1] : 2.0 + res3[1])) / 3.0;
+    d += t * 0.69;
+    float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
+    float freq = 2.0 * line_len;
+    float width =  sin(-time * 70.0 + t * TWOPI * freq) * 5.0 + 40.0;
+    float border_d = 0.025 * width;
+    vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.5, 0.0, 0.5), t);
+    trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
 
-	   vec3 impact_col = vec3(0.0);
-	   float crunch_dist = distance(global_pos, crunch_pt_out);    
-	   float k = crunch_dist - (time - crunch_time_frag) * 30;
-	   float angle = atan(global_pos.z - crunch_pt_out.z, global_pos.x - crunch_pt_out.x);
-	   float w = crunch_dist + 25.7 * floor(angle / TWOPI * 10);
-	   angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, .5) * 20;
-	   float ripple_border = smoothstep(0, 6, k) - smoothstep(6, 12, k);
-	   angle = mod(angle, TWOPI / 10);
-	   if (0 <= angle && angle <= 2 / pow(crunch_dist, 1)) {
-	       impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
-	   }
+    vec3 impact_col = vec3(0.0);
+    float crunch_dist = distance(global_pos, crunch_pt);    
+    float k = crunch_dist - (time - crunch_time) * 30;
+    float angle = atan(global_pos.z - crunch_pt.z, global_pos.x - crunch_pt.x);
+    float w = crunch_dist + 25.7 * floor(angle / TWOPI * 10);
+    angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, .5) * 20;
+    float ripple_border = smoothstep(0, 6, k) - smoothstep(6, 12, k);
+    angle = mod(angle, TWOPI / 10);
+    if (0 <= angle && angle <= 2 / pow(crunch_dist, 1)) {
+        impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
+    }
 
-	   float v_border = .02;
-	   float h_border = .02;
+    float v_border = .02;
+    float h_border = .02;
 
-	   float x_border_fact = smoothstep(1.0 - h_border, 1.0, uv.x) +
-	                         1.0 - smoothstep(0.0, h_border, uv.x);
-	   float y_border_fact = smoothstep(1.0 - v_border, 1.0, uv.y) +
-	                         1.0 - smoothstep(0.0, v_border, uv.y);
-	   float border_fact = max(x_border_fact, y_border_fact);
-	   vec3 border_col = border_fact * vec3(1.0, 0.8, 1.0);
-	   vec3 col = mix(pattern_col + border_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+    float x_border_fact = smoothstep(1.0 - h_border, 1.0, uv.x) +
+        1.0 - smoothstep(0.0, h_border, uv.x);
+    float y_border_fact = smoothstep(1.0 - v_border, 1.0, uv.y) +
+        1.0 - smoothstep(0.0, v_border, uv.y);
+    float border_fact = max(x_border_fact, y_border_fact);
+    vec3 border_col = border_fact * vec3(1.0, 0.8, 1.0);
+    vec3 col = mix(pattern_col + border_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
 
-	   fragColor = vec4(col, 1.0);
+    // float sonar_dist = distance(global_pos, player_pos);
+    // float sonar_target = (time - sonar_time) * 50.0;
+    // float sonar_transparency = smoothstep(sonar_target - 60, sonar_target, sonar_dist) - smoothstep(sonar_target, sonar_target + 1, sonar_dist);
+    // fragColor = vec4(col, sonar_transparency);
+
+    fragColor = vec4(col, 1.0);
+    // fragColor = vec4(0.0, 0.0, 1.0, 1.0);
 }
 

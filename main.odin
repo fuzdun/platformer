@@ -24,7 +24,8 @@ Game_State :: struct {
     input_state: Input_State,
     camera_state: Camera_State,
     editor_state: Editor_State,
-    dirty_entities: [dynamic]int
+    dirty_entities: [dynamic]int,
+    deleted_entity: int
 }
 
 gamestate_init :: proc(gs: ^Game_State) {
@@ -36,6 +37,7 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.dirty_entities = make([dynamic]int)
     //append(&gs.dirty_entities, 0, 1, 2, 3)
     resize(&gs.player_state.trail, TRAIL_SIZE)
+    gs.deleted_entity = -1
 }
 
 gamestate_free :: proc(gs: ^Game_State) {

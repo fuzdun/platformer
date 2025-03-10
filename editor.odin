@@ -25,7 +25,8 @@ editor_move_camera :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^C
     cs.position = math.lerp(cs.position, tgt, f32(0.075))
 }
 
-editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: Input_State, delta_time: f32) {
+editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, delta_time: f32) {
+    lgs := &gs.level_geometry
     selected_obj := &lgs[es.selected_entity]
     rotating := is.r_pressed
     scaling := is.e_pressed
@@ -35,18 +36,20 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
         rotation: quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
         position: Position = lgs[es.selected_entity].transform.position
         new_cube: Level_Geometry
-        new_cube.shape = "basic_cube"
-        new_cube.collider = "basic_cube"
+        new_cube.shape = "weird"
+        new_cube.collider = "weird"
         new_cube.transform = {position,{5, 5, 5}, rotation}
         new_cube.shaders = {.Trail}
         new_cube.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
         append(lgs, new_cube)
         es.selected_entity = len(lgs) - 1
+        append(&gs.dirty_entities, es.selected_entity)
     }
     es.can_add = !is.q_pressed
 
     if is.bck_pressed && es.can_delete {
         ordered_remove_soa(lgs, es.selected_entity) 
+        gs.deleted_entity = es.selected_entity
         es.selected_entity = min(len(lgs) - 1, es.selected_entity)
     }
     es.can_delete = !is.bck_pressed
@@ -60,6 +63,7 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
         } else if scaling {
             selected_obj.transform.scale = {20, 20, 20}
         }
+        append(&gs.dirty_entities, es.selected_entity)
     }
     if is.up_pressed {
         if rotating {
@@ -70,6 +74,7 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
         } else {
             selected_obj.transform.position.z -=  OBJ_MOVE_SPD * delta_time
         }
+        append(&gs.dirty_entities, es.selected_entity)
     }
     if is.down_pressed {
         if rotating {
@@ -80,6 +85,7 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
         } else {
             selected_obj.transform.position.z +=  OBJ_MOVE_SPD * delta_time
         }
+        append(&gs.dirty_entities, es.selected_entity)
     }
     if is.left_pressed {
         if rotating {
@@ -90,6 +96,7 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
         } else {
             selected_obj.transform.position.x -=  OBJ_MOVE_SPD * delta_time
         }
+        append(&gs.dirty_entities, es.selected_entity)
     }
     if is.right_pressed {
         if rotating {
@@ -100,6 +107,7 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
         } else {
             selected_obj.transform.position.x +=  OBJ_MOVE_SPD * delta_time
         }
+        append(&gs.dirty_entities, es.selected_entity)
     }
     if is.pg_up_pressed {
         if rotating {
@@ -110,6 +118,7 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
         } else {
             selected_obj.transform.position.y +=  OBJ_MOVE_SPD * delta_time
         }
+        append(&gs.dirty_entities, es.selected_entity)
     }
     if is.pg_down_pressed {
         if rotating {
@@ -120,6 +129,7 @@ editor_move_object :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, is: In
         } else {
             selected_obj.transform.position.y -=  OBJ_MOVE_SPD * delta_time
         }
+        append(&gs.dirty_entities, es.selected_entity)
     }
     if is.tab_pressed && es.can_switch {
         es.selected_entity = (es.selected_entity + 1) % len(lgs)

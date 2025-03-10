@@ -10,7 +10,7 @@ import rnd "core:math/rand"
 import tm "core:time"
 
 I_MAT :: glm.mat4(1.0)
-SHAPE_NAMES :: [?]string {"basic_cube", "basic_cube2", "optimized_cube"}
+SHAPE_NAMES :: [?]string {"basic_cube", "basic_cube2", "optimized_cube", "weird"}
 
 Render_State :: struct {
     standard_vao: u32,
@@ -131,7 +131,7 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, b_uv))
     gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, normal))
-
+    gl.PatchParameteri(gl.PATCH_VERTICES, 3);
     //gl.BindBuffer(gl.ARRAY_BUFFER, rs.draw_id_buffer)
     //gl.EnableVertexAttribArray(3)
     //gl.VertexAttribPointer(3, 1, gl.UNSIGNED_INT, false, size_of(u32), uintptr(0))
@@ -176,7 +176,7 @@ update_vertices :: proc(gs: ^Game_State, rs: ^Render_State) {
                 max_z = max(new_pos.z, max_z)
                 min_z = min(new_pos.z, min_z)
             }
-            if lg_idx > len(rs.static_transforms) {
+            if lg_idx > len(rs.static_transforms) - 1 {
                 append(&rs.static_transforms, trans_mat) 
                 append(&rs.z_widths, max_z - min_z)
             } else {
@@ -185,13 +185,16 @@ update_vertices :: proc(gs: ^Game_State, rs: ^Render_State) {
             }
         }
     }
+    if gs.deleted_entity != -1 {
+        ordered_remove(&rs.static_transforms, gs.deleted_entity)
+        gs.deleted_entity = -1
+    }
     clear(&gs.dirty_entities)
 }
 
-draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Physics_State, time: f64) {
+draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Physics_State, time: f64, interp_t: f64) {
     clear_render_queues(rs)
 
-    data_transform_start := tm.now()
     // organize level geometry by shader -> shape
     for lg, lg_idx in gs.level_geometry {
         for shader in lg.shaders {
@@ -226,7 +229,7 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, p
     }
 
     // add player to render queue
-    player_mat := construct_player_matrix(&gs.player_state)
+    player_mat := interpolated_player_matrix(&gs.player_state, f32(interp_t))
     player_rq := rs.shader_render_queues[.Player]
     append(&player_rq.transforms, player_mat)
     append(&player_rq.vertices, ..gs.player_geometry.vertices[:])
@@ -241,34 +244,43 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, p
     // execute draw queues
     gl.BindVertexArray(rs.standard_vao)
 
-    proj_mat := construct_camera_matrix(&gs.camera_state)
+    proj_mat: glm.mat4
+    if EDIT {
+        proj_mat = construct_camera_matrix(&gs.camera_state)
+    } else {
+        proj_mat = interpolated_camera_matrix(&gs.camera_state, f32(interp_t))
+    }
 
-    use_shader(shst, rs, .Simple)
-    set_matrix_uniform(shst, "projection", &proj_mat)
-    draw_shader_render_queue(rs, shst)
 
     use_shader(shst, rs, .Player)
     set_matrix_uniform(shst, "projection", &proj_mat)
     set_float_uniform(shst, "i_time", f32(time) / 1000)
-    draw_shader_render_queue(rs, shst)
+    draw_shader_render_queue(rs, shst, gl.TRIANGLES)
 
+    if EDIT {
+        use_shader(shst, rs, .Trail)
+        set_matrix_uniform(shst, "projection", &proj_mat)
+        draw_shader_render_queue(rs, shst, gl.TRIANGLES)
+    } else {
+        use_shader(shst, rs, .Trail)
+        p_pos := gs.player_state.position
+        crunch_pt : glm.vec3 = gs.player_state.crunch_pt
+        player_pos := gs.player_state.position
+        player_trail := interpolated_trail(&gs.player_state, f32(interp_t))
+        set_vec3_uniform(shst, "player_trail", 3, &player_trail[0])
+        set_vec3_uniform(shst, "player_pos", 1, &player_pos)
+        set_vec3_uniform(shst, "crunch_pt", 1, &crunch_pt)
+        set_float_uniform(shst, "crunch_time", f32(gs.player_state.crunch_time) / 1000)
+        set_float_uniform(shst, "time", f32(time) / 1000)
+        set_float_uniform(shst, "sonar_time", f32(gs.player_state.sonar_time) / 1000)
+        set_matrix_uniform(shst, "projection", &proj_mat)
+        draw_shader_render_queue(rs, shst, gl.PATCHES)
 
-    trail_draw_start := tm.now()
-    use_shader(shst, rs, .Trail)
-    p_pos := gs.player_state.position
-    crunch_pt : glm.vec3 = gs.player_state.crunch_pt
-    player_pos := glm.vec3({f32(p_pos.x), f32(p_pos.y), f32(p_pos.z)})
-    player_trail : [3]glm.vec3 = { gs.player_state.trail[16], gs.player_state.trail[32], gs.player_state.trail[49] }
-    set_vec3_uniform(shst, "player_trail_in", 3, &player_trail[0])
-    set_vec3_uniform(shst, "player_pos_in", 1, &player_pos)
-    set_vec3_uniform(shst, "crunch_pt", 1, &crunch_pt)
-    set_float_uniform(shst, "crunch_time", f32(gs.player_state.crunch_time) / 1000)
-    set_float_uniform(shst, "i_time", f32(time) / 1000)
-    set_matrix_uniform(shst, "projection", &proj_mat)
-    draw_shader_render_queue(rs, shst)
+    }
+
 }
 
-draw_shader_render_queue :: proc(rs: ^Render_State, shst: ^ShaderState) {
+draw_shader_render_queue :: proc(rs: ^Render_State, shst: ^ShaderState, mode: u32) {
     queue := rs.shader_render_queues[shst.loaded_program_name]
     if len(queue.commands) > 0 {
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
@@ -283,7 +295,7 @@ draw_shader_render_queue :: proc(rs: ^Render_State, shst: ^ShaderState) {
         gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
         gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(queue.z_widths[0]) * len(queue.z_widths), raw_data(queue.z_widths), gl.DYNAMIC_DRAW)
         gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
-        gl.MultiDrawElementsIndirect(gl.TRIANGLES, gl.UNSIGNED_INT, nil, i32(len(queue.commands)), 0)
+        gl.MultiDrawElementsIndirect(mode, gl.UNSIGNED_INT, nil, i32(len(queue.commands)), 0)
     }
 }
 

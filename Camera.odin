@@ -4,25 +4,38 @@ import "core:fmt"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 
-CAMERA_PLAYER_Y_OFFSET :: 20
+CAMERA_PLAYER_Y_OFFSET :: 30
 CAMERA_PLAYER_Z_OFFSET :: 100 
 CAMERA_PLAYER_X_OFFSET :: 0 
 
 Camera_State :: struct {
     position: [3]f32,
-    target: [3]f32
+    target: [3]f32,
+    prev_target: [3]f32,
+    prev_position: [3]f32,
 }
 
 move_camera :: proc(ps: Player_State, cs: ^Camera_State, elapsed_time: f64, delta_time: f32) {
+    cs.prev_position = cs.position
+    cs.prev_target = cs.target
     tgt_y := ps.position.y + CAMERA_PLAYER_Y_OFFSET
     tgt_z := ps.position.z + CAMERA_PLAYER_Z_OFFSET
     tgt_x := ps.position.x + CAMERA_PLAYER_X_OFFSET
     tgt : [3]f32 = {tgt_x, tgt_y, tgt_z}
     cs.position = math.lerp(cs.position, tgt, f32(0.075))
-    cs.target = ps.position
+    cs.target = ps.position + [3]f32{0, 5, 0} 
 }
 
-construct_camera_matrix :: proc(cs: ^Camera_State) -> matrix[4, 4]f32 {
+interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4{
+    tgt := math.lerp(cs.prev_target, cs.target, t)
+    c_pos := math.lerp(cs.prev_position, cs.position, t)
+    rot := glm.mat4LookAt({0, 0, 0}, {f32(tgt.x - c_pos.x), f32(tgt.y - c_pos.y), f32(tgt.z - c_pos.z)}, {0, 1, 0})
+    proj := glm.mat4Perspective(.4, WIDTH / HEIGHT, 0.1, 1000)
+    offset := glm.mat4Translate({f32(-c_pos.x), f32(-c_pos.y), f32(-c_pos.z)})
+    return proj * rot * offset
+}
+
+construct_camera_matrix :: proc(cs: ^Camera_State) -> glm.mat4 {
     tgt := cs.target
     c_pos := cs.position
     rot := glm.mat4LookAt({0, 0, 0}, {f32(tgt.x - c_pos.x), f32(tgt.y - c_pos.y), f32(tgt.z - c_pos.z)}, {0, 1, 0})
@@ -30,4 +43,5 @@ construct_camera_matrix :: proc(cs: ^Camera_State) -> matrix[4, 4]f32 {
     offset := glm.mat4Translate({f32(-c_pos.x), f32(-c_pos.y), f32(-c_pos.z)})
     return proj * rot * offset
 }
+
 

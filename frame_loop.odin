@@ -10,7 +10,7 @@ quit_app := false
 
 frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: ^ShaderState, ps: ^Physics_State) {
     //TARGET_FRAME_RATE :: 240.0
-    TARGET_FRAME_RATE :: 240.0
+    TARGET_FRAME_RATE :: 60.0
     FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
     clocks_per_second := i64(SDL.GetPerformanceFrequency())
     target_frame_clocks := clocks_per_second / TARGET_FRAME_RATE
@@ -76,11 +76,11 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
         // Handle input
         process_input(&gs.input_state, quit_handler)
 
-        //fmt.println("=========")
+        fmt.println("=========")
         for accumulator >= target_frame_clocks {
             // Fixed update
-            //fmt.println("update")
-            game_update(gs, ps, elapsed_time, FIXED_DELTA_TIME)
+            fmt.println("update")
+            game_update(gs, ps, rs, elapsed_time, FIXED_DELTA_TIME)
             accumulator -= target_frame_clocks 
         }
 
@@ -90,9 +90,9 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         
         //fmt.println("update time:", time.since(update_start))
-        draw_start := time.now()
+        //draw_start := time.now()
         update_vertices(gs, rs)
-        draw_triangles(gs, rs, ss, ps, elapsed_time)
+        draw_triangles(gs, rs, ss, ps, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
 
         //swap_start := time.now()
         SDL.GL_SwapWindow(window)

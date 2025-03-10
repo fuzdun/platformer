@@ -26,7 +26,13 @@ Player_State :: struct {
     ground_x: [3]f32,
     ground_z: [3]f32,
     left_ground: f32,
-    left_slope: f32
+    left_slope: f32,
+    sonar_time: f32,
+    prev_position: [3]f32,
+    trail_sample: [3]glm.vec3,
+    prev_trail_sample: [3]glm.vec3
+    //cur_mat: glm.mat4,
+    //prev_mat: glm.mat4
 }
 
 GROUND_FRICTION :: 0.05
@@ -48,9 +54,14 @@ AIR_SPEED :: 35.0
 SLOPE_SPEED :: 25.0 
 
 update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time: f64, delta_time: f32) {
+    if is.q_pressed {
+        ps.sonar_time = f32(elapsed_time)
+    }
     pop(&ps.trail)
     new_pt: [3]f32 = {f32(ps.position.x), f32(ps.position.y), f32(ps.position.z)}
     inject_at(&ps.trail, 0, new_pt)
+    ps.prev_trail_sample = ps.trail_sample
+    ps.trail_sample = {ps.trail[2], ps.trail[4], ps.trail[8]}
     move_spd := P_ACCEL
     if ps.on_slope {
         move_spd = SLOPE_SPEED 
@@ -116,6 +127,7 @@ update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time:
 
 move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, delta_time: f32) {
     pls := &gs.player_state
+    pls.prev_position = pls.position
 
     init_velocity_len := la.length(pls.velocity)
     remaining_vel := init_velocity_len * delta_time
@@ -125,7 +137,7 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
     if remaining_vel > 0 {
         loops := 0
         for len(phs.collisions) > 0 {
-            earliest_coll_t :f32 = 1.1
+            earliest_coll_t :f32 = 1.0
             earliest_coll_idx := -1
             for coll, idx in phs.collisions {
                 if coll.t < earliest_coll_t {
@@ -134,7 +146,7 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
                 }
             }
             earliest_coll := phs.collisions[earliest_coll_idx]
-            move_amt := remaining_vel * earliest_coll_t * velocity_normal + earliest_coll.normal * .01
+            move_amt := remaining_vel * earliest_coll_t * velocity_normal + earliest_coll.normal * .1
             pls.position += move_amt
             remaining_vel *= 1 - earliest_coll_t
             velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
@@ -144,12 +156,29 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
         pls.position += velocity_normal * remaining_vel
         pls.velocity = velocity_normal * init_velocity_len
     }
+    //pls.prev_mat = pls.cur_mat
+    //pls.cur_mat = construct_player_matrix(pls)
 }
 
-construct_player_matrix :: proc(ps: ^Player_State) -> matrix[4, 4]f32 {
-    pos := ps.position
+interpolated_player_pos :: proc(ps: ^Player_State, t: f32) -> [3]f32 {
+    return math.lerp(ps.prev_position, ps.position, t) 
+}
+
+interpolated_trail :: proc(ps: ^Player_State, t: f32) -> [3]glm.vec3 {
+    return math.lerp(ps.prev_trail_sample, ps.trail_sample, t)
+}
+
+interpolated_player_matrix :: proc(ps: ^Player_State, t: f32) -> matrix[4, 4]f32 {
+    i_pos := math.lerp(ps.prev_position, ps.position, t) 
     rot := I_MAT
-    offset := glm.mat4Translate({f32(pos.x), f32(pos.y), f32(pos.z)})
+    offset := glm.mat4Translate({f32(i_pos.x), f32(i_pos.y), f32(i_pos.z)})
     return rot * offset
 }
+
+//construct_player_matrix :: proc(ps: ^Player_State) -> matrix[4, 4]f32 {
+//    pos := ps.position
+//    rot := I_MAT
+//    offset := glm.mat4Translate({f32(pos.x), f32(pos.y), f32(pos.z)})
+//    return rot * offset
+//}
 
