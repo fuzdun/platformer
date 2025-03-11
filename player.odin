@@ -207,8 +207,7 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
             fmt.println("coll normal:", earliest_coll.normal)
             move_amt := (remaining_vel - .01) * earliest_coll_t * velocity_normal
             pls.position += move_amt
-            remaining_vel *= 1 - earliest_coll_t
-            //remaining_vel = 0
+            remaining_vel *= 1.0 - earliest_coll_t
             velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
             fmt.println("new normal:", velocity_normal)
             pls.velocity = velocity_normal * (remaining_vel + .01)

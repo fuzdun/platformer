@@ -34,6 +34,7 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.player_state.trail = make([dynamic][3]f32)
     gs.player_state.position = {10, 40, 250}
     gs.player_state.can_dash = true
+    gs.camera_state.position = {10, 60, 300}
     gs.dirty_entities = make([dynamic]int)
     //append(&gs.dirty_entities, 0, 1, 2, 3)
     resize(&gs.player_state.trail, TRAIL_SIZE)
