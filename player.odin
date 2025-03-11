@@ -191,8 +191,11 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
     get_collisions(gs, phs, delta_time, elapsed_time)
     if remaining_vel > 0 {
         loops := 0
+        if len(phs.collisions) > 0 {
+            fmt.println("collisions:", len(phs.collisions))
+        }
         for len(phs.collisions) > 0 {
-            earliest_coll_t :f32 = 2.0
+            earliest_coll_t: f32 = 1.1
             earliest_coll_idx := -1
             for coll, idx in phs.collisions {
                 if coll.t < earliest_coll_t {
@@ -201,11 +204,14 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
                 }
             }
             earliest_coll := phs.collisions[earliest_coll_idx]
-            move_amt := remaining_vel * earliest_coll_t * velocity_normal + earliest_coll.normal * .01
+            fmt.println("coll normal:", earliest_coll.normal)
+            move_amt := (remaining_vel - .01) * earliest_coll_t * velocity_normal
             pls.position += move_amt
             remaining_vel *= 1 - earliest_coll_t
+            //remaining_vel = 0
             velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
-            pls.velocity = velocity_normal * remaining_vel
+            fmt.println("new normal:", velocity_normal)
+            pls.velocity = velocity_normal * (remaining_vel + .01)
             get_collisions(gs, phs, delta_time, elapsed_time)
         }
         pls.position += velocity_normal * remaining_vel

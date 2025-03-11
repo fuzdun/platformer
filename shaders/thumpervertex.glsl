@@ -42,7 +42,7 @@ void main() {
     vs_out.player_pos = player_pos;
     vs_out.player_dist = dist;
     // vs_out.player_dist = dist;
-    vs_out.tess_amt = dist > 0 ? 30 : 1;
+    vs_out.tess_amt = dist > 0 ? 20 : 1;
     vs_out.projection = projection;
     // vs_out.tess_amt = dist > 0 ? 1 : 1;
 }
