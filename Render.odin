@@ -10,7 +10,7 @@ import rnd "core:math/rand"
 import tm "core:time"
 
 I_MAT :: glm.mat4(1.0)
-SHAPE_NAMES :: [?]string {"basic_cube", "basic_cube2", "optimized_cube", "weird"}
+SHAPE_NAMES :: [?]string {"basic_cube", "basic_cube2", "optimized_cube", "weird", "triangle"}
 
 Render_State :: struct {
     standard_vao: u32,

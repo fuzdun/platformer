@@ -19,10 +19,11 @@ Physics_State :: struct{
 
 Collision :: struct{
     id: int,
-    pos: [3]f32,
     normal: [3]f32,
-    plane_dist: f32,
-    closest_pt: [3]f32,
+    //plane_dist: f32,
+    //closest_pt: [3]f32,
+    //plane_intersection: [3]f32,
+    contact_dist: f32,
     t: f32
 }
 
@@ -87,12 +88,12 @@ construct_aabb :: proc(vertices: [][3]f32) -> AABB {
     aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
     aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
     for v in vertices {
-        aabbx0 = min(v.x - 1, aabbx0)
-        aabby0 = min(v.y - 1, aabby0)
-        aabbz0 = min(v.z - 1, aabbz0)
-        aabbx1 = max(v.x + 1, aabbx1)
-        aabby1 = max(v.y + 1, aabby1)
-        aabbz1 = max(v.z + 1, aabbz1)
+        aabbx0 = min(v.x - 100, aabbx0)
+        aabby0 = min(v.y - 100, aabby0)
+        aabbz0 = min(v.z - 100, aabbz0)
+        aabbx1 = max(v.x + 100, aabbx1)
+        aabby1 = max(v.y + 100, aabby1)
+        aabbz1 = max(v.z + 100, aabbz1)
     }
     return {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
 }
@@ -105,6 +106,8 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
     ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])
     player_sq_radius := f32(SPHERE_RADIUS * SPHERE_RADIUS)
+    player_velocity := gs.player_state.velocity * delta_time
+    player_velocity_len := la.length(player_velocity)
 
     got_contact_ray_col := false
 
@@ -126,6 +129,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             if pz < lg.aabb.z0 do total += (pz - lg.aabb.z0) * (pz - lg.aabb.z0)
             if pz > lg.aabb.z1 do total += (pz - lg.aabb.z1) * (pz - lg.aabb.z1)
 
+
             if total < player_sq_radius {
                 // got player within bounding box
                 coll_indices := make([dynamic]u16); defer delete(coll_indices)
@@ -137,28 +141,46 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                     tri_vertex1 := vertices[tri_indices[1]]
                     tri_vertex2 := vertices[tri_indices[2]]
                     velocity_normal := la.normalize(gs.player_state.velocity)
-                    velocity_len := la.length(gs.player_state.velocity * delta_time)
-                    closest_pt, normal, plane_dist := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, ppos32)
+                    normal, plane_dist := triangle_normal_dist(tri_vertex0, tri_vertex1, tri_vertex2)
                     if la.dot(normal, velocity_normal) < 0 {
-                        if sphere_t, sphere_q, sphere_ok := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); sphere_ok {
-                            if sphere_t = sphere_t / velocity_len; sphere_t <= 1 {
-                                // got collision with triangle
-                                coll : Collision
-                                coll.id = id
-                                coll.pos = sphere_q
-                                coll.normal = normal
-                                coll.closest_pt = closest_pt
-                                coll.plane_dist = plane_dist
-                                coll.t = sphere_t
-                                append(&ps.collisions, coll)
+                        sphere_contact_pt := ppos32 - normal * SPHERE_RADIUS
+                        intercept_t, intercept_pt, did_intercept := ray_plane_intersection(sphere_contact_pt, player_velocity, normal, plane_dist);
+                        if did_intercept {
+                            if pt_inside_triangle(tri_vertex0, tri_vertex1, tri_vertex2, intercept_pt) {
+                                append(&ps.collisions, Collision{
+                                    id = id,
+                                    normal = normal,
+                                    //contact_pt = intercept_pt,
+                                    //plane_intersection = intercept_pt,
+                                    contact_dist = 0,
+                                    //plane_dist = plane_dist,
+                                    t = intercept_t
+                                }) 
+                            } else {
+                                closest_pt := closest_triangle_edge_pt(tri_vertex0, tri_vertex1, tri_vertex2, intercept_pt)
+                                if sphere_t, sphere_q, sphere_hit := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); sphere_hit {
+                                    if sphere_t = sphere_t / player_velocity_len; sphere_t <= 1 {
+                                        append(&ps.collisions, Collision{
+                                            id = id,
+                                            normal = normal,
+                                            //closest_pt = closest_pt,
+                                            //plane_intersection = intercept_pt,
+                                            contact_dist = la.length2(closest_pt - intercept_pt),
+                                            //plane_dist = plane_dist,
+                                            t = sphere_t
+                                        })
+                                    }
+                                }
                             }
                         }
                     }
-                    plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, gs.player_state.contact_ray, normal, plane_dist);
-                    if plane_ok && la.length2(closest_pt - plane_q) < GROUNDED_RADIUS2 {
-                        got_contact_ray_col = true
-                        if gs.player_state.on_ground {
-                            gs.player_state.position = plane_q + normal * GROUND_OFFSET 
+                    if plane_t, plane_q, plane_hit := ray_plane_intersection(ppos32, gs.player_state.contact_ray, normal, plane_dist); plane_hit {
+                        closest_pt := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, plane_q)
+                        if la.length2(closest_pt - plane_q) < GROUNDED_RADIUS2 {
+                            got_contact_ray_col = true
+                            if gs.player_state.on_ground {
+                                gs.player_state.position = plane_q + normal * GROUND_OFFSET 
+                            }
                         }
                     }
                 }
@@ -180,16 +202,17 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
 
     best_plane_normal: [3]f32 = {100, 100, 100}
     most_horizontal_coll: Collision = {} 
-    best_plane_intersection: [3]f32 = {0, 0, 0}
+    //best_plane_intersection: [3]f32 = {0, 0, 0}
     for coll in ps.collisions {
-        ground_ray := -coll.normal * GROUND_RAY_LEN
-        plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, ground_ray, coll.normal, coll.plane_dist);
-        if plane_ok && la.length2(coll.closest_pt - plane_q) < GROUNDED_RADIUS2 {
+        contact_ray := -coll.normal * player_velocity_len
+        //plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, contact_ray, coll.normal, coll.plane_dist);
+        //if plane_ok && la.length2(coll.closest_pt - plane_q) < GROUNDED_RADIUS2 {
+        if coll.contact_dist < GROUNDED_RADIUS2 {
             // ground_ray close enough to surface
             if abs(coll.normal.y) < best_plane_normal.y {
                 best_plane_normal = coll.normal
                 most_horizontal_coll = coll 
-                best_plane_intersection = plane_q
+                //best_plane_intersection = plane_q
             }
         }
     }
@@ -199,10 +222,10 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
         ground_z := [3]f32{0, 0, -1}
         if best_plane_normal.y >= 0.85{
             if !gs.player_state.on_ground {
-                gs.player_state.crunch_pt = gs.player_state.position - {0, 0, 0.5}
-                gs.player_state.crunch_time = elapsed_time
+                gs.player_state.touch_pt = gs.player_state.position - {0, 0, 0.5}
+                gs.player_state.touch_time = elapsed_time
             }
-            gs.player_state.position = best_plane_intersection + best_plane_normal * GROUND_OFFSET 
+            //gs.player_state.position = best_plane_intersection + best_plane_normal * GROUND_OFFSET 
             gs.player_state.ground_x = la.normalize(ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal)
             gs.player_state.ground_z = la.normalize(ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal)
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
@@ -241,41 +264,52 @@ ray_plane_intersection :: proc(start: [3]f32, offset: [3]f32, plane_n: [3]f32, p
     return
 }
 
-// returns closest pt, plane normal and plane distance from origin (scalar)
-closest_triangle_pt :: proc(t0: [3]f32, t1: [3]f32, t2: [3]f32, p: [3]f32) -> ([3]f32, [3]f32, f32)  {
-    // get plane
-    plane_n := la.normalize(la.cross(t1 - t0, t2 - t0)) // normal
-    plane_dist := la.dot(plane_n, t0)
-    // closest point on plane
-    dist := la.dot(plane_n, p) - plane_dist
-    proj_pt := p - dist * plane_n
-    // check if projected point is in triangle
-    a, b, c := t0, t1, t2
-    a -= proj_pt 
-    b -= proj_pt
-    c -= proj_pt
+triangle_normal_dist :: proc(t0: [3]f32, t1: [3]f32, t2: [3]f32) -> (plane_normal: [3]f32, plane_dist: f32) {
+    plane_normal = la.normalize(la.cross(t1 - t0, t2 - t0)) // normal
+    plane_dist = la.dot(plane_normal, t0)
+    return
+}
+
+pt_inside_triangle :: proc(t0: [3]f32, t1: [3]f32, t2: [3]f32, p: [3]f32) -> bool {
+    a, b, c := t0 - p, t1 - p, t2 - p
     u, v, w := la.cross(b, c), la.cross(c, a), la.cross(a, b)
     if la.dot(u, v) >= 0 && la.dot(u, w) >= 0 {
-        return proj_pt, plane_n, plane_dist 
+        return true
     }
-    // otherwise, get closest point in triangle edge line segments
-    t01_pt := closest_line_pt(t0, t1, proj_pt)
-    t12_pt := closest_line_pt(t1, t2, proj_pt)
-    t20_pt := closest_line_pt(t2, t0, proj_pt)
-    t01_len2 := la.length2(t01_pt - proj_pt)
-    t12_len2 := la.length2(t12_pt - proj_pt)
-    t20_len2 := la.length2(t20_pt - proj_pt)
+    return false
+}
+
+closest_triangle_edge_pt :: proc(t0: [3]f32, t1: [3]f32, t2: [3]f32, p: [3]f32) -> [3]f32 {
+    t01_pt := closest_line_pt(t0, t1, p)
+    t12_pt := closest_line_pt(t1, t2, p)
+    t20_pt := closest_line_pt(t2, t0, p)
+    t01_len2 := la.length2(t01_pt - p)
+    t12_len2 := la.length2(t12_pt - p)
+    t20_len2 := la.length2(t20_pt - p)
     min := min(t01_len2, t12_len2, t20_len2)
     if min == t01_len2 {
-        return t01_pt, plane_n, plane_dist
+        return t01_pt
     }
     if min == t12_len2 {
-        return t12_pt, plane_n, plane_dist
+        return t12_pt
     }
     if min == t20_len2 {
-        return t20_pt, plane_n, plane_dist
+        return t20_pt
     }
-    return {0, 0, 0}, plane_n, plane_dist
+    return {0, 0, 0}
+}
+
+// returns closest pt, plane normal and plane distance from origin (scalar)
+closest_triangle_pt :: proc(t0: [3]f32, t1: [3]f32, t2: [3]f32, p: [3]f32) -> [3]f32  {
+    a, b, c := t0, t1, t2
+    a -= p 
+    b -= p
+    c -= p
+    u, v, w := la.cross(b, c), la.cross(c, a), la.cross(a, b)
+    if la.dot(u, v) >= 0 && la.dot(u, w) >= 0 {
+        return p
+    }
+    return closest_triangle_edge_pt(t0, t1, t2, p)
 }
 
 closest_line_pt :: proc(l0: [3]f32, l1: [3]f32, p: [3]f32) -> [3]f32{

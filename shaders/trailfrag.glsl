@@ -90,8 +90,8 @@ float noise(vec2 p) {
 
 float fbm (vec2 p )
 {
-    float intv1 = sin(time / 10.0);
-    float intv2 = cos(time / 10.0);
+    float intv1 = sin((time + 12.0) / 10.0);
+    float intv2 = cos((time + 12.0) / 10.0);
 
     mat2 mtx_off = mat2(intv1, 1.0, intv2, 1.0);
     mat2 mtx = mat2(1.6, 1.2, -1.2, 1.6);

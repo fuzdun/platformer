@@ -35,7 +35,7 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
 
     for !quit_app {
         if quit_app do break
-        update_start := time.now()
+        //update_start := time.now()
 
         elapsed_time := f64(SDL.GetTicks())
 
@@ -76,10 +76,9 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
         // Handle input
         process_input(&gs.input_state, quit_handler)
 
-        fmt.println("=========")
         for accumulator >= target_frame_clocks {
             // Fixed update
-            fmt.println("update")
+            //fmt.println("update")
             game_update(gs, ps, rs, elapsed_time, FIXED_DELTA_TIME)
             accumulator -= target_frame_clocks 
         }
@@ -98,7 +97,7 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
         SDL.GL_SwapWindow(window)
         //fmt.println("draw time:", time.since(draw_start))
         //fmt.println("swap time", time.since(swap_start))
-        fmt.println("frame time", time.since(update_start))
+        //fmt.println("frame time", time.since(update_start))
     }
 }
 

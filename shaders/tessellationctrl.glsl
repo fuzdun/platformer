@@ -10,6 +10,8 @@ in VS_OUT {
     vec3 player_pos;
     int v_id;
     int tess_amt;
+    // make this a patch
+    mat4 projection;
 } vs_out[];
 
 out TC_OUT {
@@ -19,6 +21,7 @@ out TC_OUT {
     float player_dist;
     vec3 player_pos;
     int v_id;
+    mat4 projection;
 } tc_out[];
 
 void main() {
@@ -28,6 +31,8 @@ void main() {
     tc_out[gl_InvocationID].player_dist = vs_out[gl_InvocationID].player_dist;
     tc_out[gl_InvocationID].player_pos = vs_out[gl_InvocationID].player_pos;
     tc_out[gl_InvocationID].v_id = vs_out[gl_InvocationID].v_id;
+    tc_out[gl_InvocationID].projection = vs_out[gl_InvocationID].projection;
+  
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
     if (gl_InvocationID == 0) {
@@ -35,7 +40,7 @@ void main() {
         gl_TessLevelOuter[1] = vs_out[0].tess_amt;
         gl_TessLevelOuter[2] = vs_out[0].tess_amt;
 
-        gl_TessLevelInner[0] = vs_out[0].tess_amt - 1;
+        gl_TessLevelInner[0] = vs_out[0].tess_amt == 1 ? 1 : vs_out[0].tess_amt;
     }
 }
 

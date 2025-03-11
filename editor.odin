@@ -36,8 +36,8 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
         rotation: quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
         position: Position = lgs[es.selected_entity].transform.position
         new_cube: Level_Geometry
-        new_cube.shape = "weird"
-        new_cube.collider = "weird"
+        new_cube.shape = "basic_cube"
+        new_cube.collider = "basic_cube"
         new_cube.transform = {position,{5, 5, 5}, rotation}
         new_cube.shaders = {.Trail}
         new_cube.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}

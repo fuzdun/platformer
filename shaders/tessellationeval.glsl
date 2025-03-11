@@ -9,6 +9,7 @@ in TC_OUT {
     float player_dist;
     vec3 player_pos;
     int v_id;
+    mat4 projection;
 } tc_out[];
 
 out TE_OUT {
@@ -18,6 +19,7 @@ out TE_OUT {
     float player_dist;
     vec3 player_pos;
     int v_id;
+    mat4 projection;
 } te_out;
 
 void main() {
@@ -32,12 +34,13 @@ void main() {
     vec2 uv = t0 + t1 + t2;
     te_out.uv = uv;
 
-    int v_id = tc_out[0].v_id + tc_out[1].v_id + tc_out[2].v_id + int(uv.x * 10) + int(uv.y * 10);
+    int v_id = int(uv.x * 10) + int(uv.y * 10);
     te_out.v_id = v_id;
 
     te_out.normal_frag = tc_out[0].normal_frag;
     te_out.obj_pos = tc_out[0].obj_pos;
     te_out.player_dist = tc_out[0].player_dist;
     te_out.player_pos = tc_out[0].player_pos;
+    te_out.projection = tc_out[0].projection;
 }
 
