@@ -52,7 +52,8 @@ DASH_SPD: f32: 75.0
 DASH_LEN: f32: 150 
 BUNNY_WINDOW: f32: 100
 BUNNY_DEBOUNCE: f32: 400
-GROUND_BUNNY_ACCEL: f32: 30
+GROUND_BUNNY_V_SPEED: f32: 35
+GROUND_BUNNY_H_SPEED: f32: 30
 GRAV: f32: 80
 WALL_GRAV: f32: 30 
 SLOPE_GRAV: f32: 10 
@@ -133,8 +134,10 @@ update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time:
     }
     if ps.on_ground && ps.touch_pt != 0 && math.abs(ps.touch_time - ps.jump_pressed_time) < BUNNY_WINDOW && f32(elapsed_time) - ps.last_dash > BUNNY_DEBOUNCE {
         ps.on_ground = false
-        ps.velocity.y = P_JUMP_SPEED
-        ps.velocity.xz += la.normalize(ps.velocity.xz) * GROUND_BUNNY_ACCEL
+        ps.velocity.y = GROUND_BUNNY_V_SPEED
+        if la.length(ps.velocity.xz) > 0.1 {
+            ps.velocity.xz += la.normalize(ps.velocity.xz) * GROUND_BUNNY_H_SPEED
+        }
         ps.crunch_pt = ps.position - {0, 0, 0.5}
         ps.crunch_time = f32(elapsed_time)
         ps.last_dash = f32(elapsed_time)
@@ -143,10 +146,8 @@ update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time:
         ps.velocity.y = P_JUMP_SPEED
         ps.on_ground = false
     } else if is.z_pressed && ps.can_jump && (ps.on_slope || (f32(elapsed_time) - ps.left_slope < 150)) {
-        // add surface dir to jump but set y component to P_JUMP_SPEED
         ps.velocity += -la.normalize(ps.contact_ray) * SLOPE_JUMP_FORCE
         ps.velocity.y = SLOPE_V_JUMP_FORCE
-        //ps.velocity += -la.normalize(ps.contact_ray) * P_JUMP_SPEED 
         ps.on_slope = false
     }
     if is.z_pressed && ps.on_wall && ps.can_jump {
@@ -160,7 +161,6 @@ update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time:
     }
 
     if is.x_pressed && ps.can_dash && ps.velocity != 0{
-        //fmt.println("start dash")
         ps.can_dash = false
         ps.dashing = true
         dash_dir := input_dir != 0 ? input_dir : la.normalize(ps.velocity.xz)
@@ -170,7 +170,6 @@ update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time:
     }
     if ps.dashing && f32(elapsed_time) > ps.dash_time + DASH_LEN {
         ps.dashing = false
-        //fmt.println("end dash")
     }
     
     ps.can_jump = !is.z_pressed
@@ -191,9 +190,6 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
     get_collisions(gs, phs, delta_time, elapsed_time)
     if remaining_vel > 0 {
         loops := 0
-        if len(phs.collisions) > 0 {
-            fmt.println("collisions:", len(phs.collisions))
-        }
         for len(phs.collisions) > 0 {
             earliest_coll_t: f32 = 1.1
             earliest_coll_idx := -1
@@ -204,20 +200,16 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
                 }
             }
             earliest_coll := phs.collisions[earliest_coll_idx]
-            fmt.println("coll normal:", earliest_coll.normal)
-            move_amt := (remaining_vel - .01) * earliest_coll_t * velocity_normal
+            move_amt := (remaining_vel * (earliest_coll_t) - .01) * velocity_normal
             pls.position += move_amt
             remaining_vel *= 1.0 - earliest_coll_t
             velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
-            fmt.println("new normal:", velocity_normal)
-            pls.velocity = velocity_normal * (remaining_vel + .01)
+            pls.velocity = (velocity_normal * (remaining_vel)) / delta_time
             get_collisions(gs, phs, delta_time, elapsed_time)
         }
         pls.position += velocity_normal * remaining_vel
         pls.velocity = velocity_normal * init_velocity_len
     }
-    //pls.prev_mat = pls.cur_mat
-    //pls.cur_mat = construct_player_matrix(pls)
 }
 
 interpolated_player_pos :: proc(ps: ^Player_State, t: f32) -> [3]f32 {
@@ -234,11 +226,4 @@ interpolated_player_matrix :: proc(ps: ^Player_State, t: f32) -> matrix[4, 4]f32
     offset := glm.mat4Translate({f32(i_pos.x), f32(i_pos.y), f32(i_pos.z)})
     return rot * offset
 }
-
-//construct_player_matrix :: proc(ps: ^Player_State) -> matrix[4, 4]f32 {
-//    pos := ps.position
-//    rot := I_MAT
-//    offset := glm.mat4Translate({f32(pos.x), f32(pos.y), f32(pos.z)})
-//    return rot * offset
-//}
 

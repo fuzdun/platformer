@@ -30,10 +30,8 @@ out VS_OUT {
 void main() {
     mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
     vec4 new_pos = transform * aPos;
-    // float dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 50 - new_pos.z);
     float dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 30 - new_pos.z);
     new_pos.xyz += (projection * new_pos).xyz * dist * dist * .000006;
-    // float parab_player_dist = dist * dist * 0.0001;
     gl_Position = new_pos;
     vs_out.v_id = gl_VertexID;
     vs_out.obj_pos = vec4(transform[3][0], transform[3][1], transform[3][2], 1.0);
@@ -41,9 +39,7 @@ void main() {
     vs_out.normal_frag = normal_in;
     vs_out.player_pos = player_pos;
     vs_out.player_dist = dist;
-    // vs_out.player_dist = dist;
-    vs_out.tess_amt = dist > 0 ? 20 : 1;
+    vs_out.tess_amt = dist > 0 ? 30 : 1;
     vs_out.projection = projection;
-    // vs_out.tess_amt = dist > 0 ? 1 : 1;
 }
 

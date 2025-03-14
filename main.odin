@@ -32,10 +32,12 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.level_resources = make(map[string]Shape_Data)
     gs.level_geometry = make(Level_Geometry_State)
     gs.player_state.trail = make([dynamic][3]f32)
-    gs.player_state.position = {10, 40, 250}
+    gs.player_state.position = {10, 100, 250}
     gs.player_state.can_dash = true
     gs.camera_state.position = {10, 60, 300}
     gs.dirty_entities = make([dynamic]int)
+    gs.editor_state.y_rot = -.25
+    gs.editor_state.zoom = 200
     //append(&gs.dirty_entities, 0, 1, 2, 3)
     resize(&gs.player_state.trail, TRAIL_SIZE)
     gs.deleted_entity = -1

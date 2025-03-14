@@ -88,12 +88,12 @@ construct_aabb :: proc(vertices: [][3]f32) -> AABB {
     aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
     aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
     for v in vertices {
-        aabbx0 = min(v.x - 2, aabbx0)
-        aabby0 = min(v.y - 2, aabby0)
-        aabbz0 = min(v.z - 2, aabbz0)
-        aabbx1 = max(v.x + 2, aabbx1)
-        aabby1 = max(v.y + 2, aabby1)
-        aabbz1 = max(v.z + 2, aabbz1)
+        aabbx0 = min(v.x - 50, aabbx0)
+        aabby0 = min(v.y - 50, aabby0)
+        aabbz0 = min(v.z - 50, aabbz0)
+        aabbx1 = max(v.x + 50, aabbx1)
+        aabby1 = max(v.y + 50, aabby1)
+        aabbz1 = max(v.z + 50, aabbz1)
     }
     return {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
 }

@@ -13,15 +13,19 @@ Editor_State :: struct {
     saved: bool,
     can_add: bool,
     can_delete: bool,
-    can_switch: bool
+    can_switch: bool,
+    can_swap: bool,
+    x_rot: f32,
+    y_rot: f32,
+    zoom: f32
 }
 
 editor_move_camera :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^Camera_State, delta_time: f32) {
+    rot_mat := la.matrix4_from_euler_angles(es.x_rot, es.y_rot, 0, .YXZ)
+    selfie_stick := rot_mat * [4]f32{0, 0, es.zoom, 1}
     lg := lgs[es.selected_entity]
     cs.target = lg.transform.position.xyz
-    tgt_y := lg.transform.position.y + 20
-    tgt_z := lg.transform.position.z + 100 
-    tgt : [3]f32 = {lg.transform.position.x, tgt_y, tgt_z}
+    tgt := lg.transform.position + selfie_stick.xyz
     cs.position = math.lerp(cs.position, tgt, f32(0.075))
 }
 
@@ -46,6 +50,21 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
         append(&gs.dirty_entities, es.selected_entity)
     }
     es.can_add = !is.q_pressed
+
+    if (is.lt_pressed || is.gt_pressed)&& es.can_swap {
+        sn := SHAPE_NAMES
+        cur_shape_idx := 0
+        for name, idx in sn {
+            if name == selected_obj.shape {
+                cur_shape_idx = idx
+                break
+            }
+        }
+        nxt_shape_idx := math.abs((is.lt_pressed ? cur_shape_idx - 1 : cur_shape_idx + 1) % len(sn))
+        selected_obj.shape = sn[nxt_shape_idx]
+        selected_obj.collider = sn[nxt_shape_idx]
+    }
+    es.can_swap = !(is.lt_pressed || is.gt_pressed)
 
     if is.bck_pressed && es.can_delete {
         ordered_remove_soa(lgs, es.selected_entity) 
@@ -130,6 +149,24 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
             selected_obj.transform.position.y -=  OBJ_MOVE_SPD * delta_time
         }
         append(&gs.dirty_entities, es.selected_entity)
+    }
+    if is.a_pressed {
+        es.x_rot -= .01
+    }
+    if is.d_pressed {
+        es.x_rot += .01
+    }
+    if is.s_pressed {
+        es.y_rot += .01
+    }
+    if is.w_pressed {
+        es.y_rot -= .01
+    }
+    if is.z_pressed {
+        es.zoom = es.zoom + 5
+    }
+    if is.x_pressed {
+        es.zoom = max(0, es.zoom - 5)
     }
     if is.tab_pressed && es.can_switch {
         es.selected_entity = (es.selected_entity + 1) % len(lgs)

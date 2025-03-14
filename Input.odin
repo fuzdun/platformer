@@ -14,6 +14,8 @@ Input_State :: struct {
     c_pressed: bool,
     z_pressed: bool, 
     x_pressed: bool,
+    lt_pressed: bool, 
+    gt_pressed: bool,
     left_pressed: bool,
     right_pressed: bool,
     up_pressed : bool, 
@@ -78,6 +80,10 @@ process_input :: proc (is: ^Input_State, quit_handler: proc())
                 is.z_pressed = true
             case .x:
                 is.x_pressed = true
+            case .COMMA:
+                is.lt_pressed = true
+            case .PERIOD:
+                is.gt_pressed = true
             case .LEFT:
                 is.left_pressed = true
             case .RIGHT:
@@ -121,6 +127,10 @@ process_input :: proc (is: ^Input_State, quit_handler: proc())
                 is.x_pressed = false
             case .q:
                 is.q_pressed = false
+            case .COMMA:
+                is.lt_pressed = false
+            case .PERIOD:
+                is.gt_pressed = false
             case .LEFT:
                 is.left_pressed = false
             case .RIGHT:
