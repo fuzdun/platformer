@@ -55,12 +55,16 @@ process_input :: proc (is: ^Input_State, quit_handler: proc())
         case .CONTROLLERBUTTONDOWN:
             switch event.cbutton.button {
             case 1:
-                is.spc_pressed = true
+                is.z_pressed = true
+            case 3:
+                is.x_pressed = true
             }
         case .CONTROLLERBUTTONUP:
             switch event.cbutton.button {
             case 1:
-                is.spc_pressed = false
+                is.z_pressed = false
+            case 3:
+                is.x_pressed = false
             }
         case .KEYDOWN:
             #partial switch event.key.keysym.sym {

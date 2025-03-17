@@ -5,7 +5,7 @@ import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 
 CAMERA_PLAYER_Y_OFFSET :: 80
-CAMERA_PLAYER_Z_OFFSET :: 150 
+CAMERA_PLAYER_Z_OFFSET :: 180 
 CAMERA_PLAYER_X_OFFSET :: 0 
 
 Camera_State :: struct {
@@ -23,7 +23,8 @@ move_camera :: proc(ps: Player_State, cs: ^Camera_State, elapsed_time: f64, delt
     tgt_x := ps.position.x + CAMERA_PLAYER_X_OFFSET
     tgt : [3]f32 = {tgt_x, tgt_y, tgt_z}
     cs.position = math.lerp(cs.position, tgt, f32(0.075))
-    cs.target = ps.position + [3]f32{0, 10, 0} 
+    //cs.target = ps.position + [3]f32{0, 10, 0} 
+    cs.target = ps.position
 }
 
 interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4{

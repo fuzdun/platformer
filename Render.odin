@@ -10,7 +10,16 @@ import rnd "core:math/rand"
 import tm "core:time"
 
 I_MAT :: glm.mat4(1.0)
-SHAPE_NAMES :: [?]string {"basic_cube", "basic_cube2", "optimized_cube", "weird", "triangle"}
+SHAPE_NAMES :: [?]string {"basic_cube", "weird", "triangle"}
+
+BACKGROUND_QUAD_VERTICES :: [4]Vertex {
+    {pos={-1, -1, -1}, uv={0, 0}, b_uv={0, 0}, normal={0, 0, 1}},
+    {pos={-1, 1, -1}, uv={0, 1}, b_uv={0, 1}, normal={0, 0, 1}},
+    {pos={1, 1, -1}, uv={1, 1}, b_uv={1, 1}, normal={0, 0, 1}},
+    {pos={1, -1, -1}, uv={1, 0}, b_uv={1, 0}, normal={0, 0, 1}}
+}
+
+BACKGROUND_QUAD_INDICES :: [4]u32 {0, 1, 2, 3}
 
 Render_State :: struct {
     standard_vao: u32,
@@ -251,10 +260,25 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, p
         proj_mat = interpolated_camera_matrix(&gs.camera_state, f32(interp_t))
     }
 
+    gl.Disable(gl.DEPTH_TEST)
+    gl.Disable(gl.CULL_FACE)
+    bqv := BACKGROUND_QUAD_VERTICES
+    bqi := BACKGROUND_QUAD_INDICES
+    use_shader(shst, rs, .Background)
+    set_float_uniform(shst, "i_time", f32(time) / 1000)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(bqv[0]) * len(bqv), &bqv[0], gl.DYNAMIC_DRAW) 
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
+    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(bqi[0]) * len(bqi), &bqi[0], gl.DYNAMIC_DRAW)
+    gl.DrawElements(gl.QUADS, len(bqi), gl.UNSIGNED_INT, nil)
+    gl.Enable(gl.DEPTH_TEST)
+    gl.Enable(gl.CULL_FACE)
 
+    p_color: [3]f32 = gs.player_state.dashing ? {1.0, 1.0, 0} : {1.0, 0, 0}
     use_shader(shst, rs, .Player)
     set_matrix_uniform(shst, "projection", &proj_mat)
     set_float_uniform(shst, "i_time", f32(time) / 1000)
+    set_vec3_uniform(shst, "p_color", 1, &p_color)
     draw_shader_render_queue(rs, shst, gl.TRIANGLES)
 
     if EDIT {
@@ -275,9 +299,9 @@ draw_triangles :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, p
         set_float_uniform(shst, "sonar_time", f32(gs.player_state.sonar_time) / 1000)
         set_matrix_uniform(shst, "projection", &proj_mat)
         draw_shader_render_queue(rs, shst, gl.PATCHES)
-
     }
 
+    // draw background
 }
 
 draw_shader_render_queue :: proc(rs: ^Render_State, shst: ^ShaderState, mode: u32) {

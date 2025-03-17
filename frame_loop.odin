@@ -4,6 +4,7 @@ import SDL "vendor:sdl2"
 import gl "vendor:OpenGL"
 import "core:fmt"
 import "core:time"
+import "core:math"
 
 @(private="file")
 quit_app := false
@@ -80,9 +81,10 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
         for accumulator >= target_frame_clocks {
             // Fixed update
             //fmt.println("update")
-            game_update(gs, ps, rs, elapsed_time, FIXED_DELTA_TIME)
+            game_update(gs, ps, rs, elapsed_time, FIXED_DELTA_TIME * gs.time_mult)
             accumulator -= target_frame_clocks 
         }
+        //time_mult = f32(math.sin(elapsed_time / 100) + 2.0)
 
         // Render
         gl.Viewport(0, 0, WIDTH, HEIGHT)

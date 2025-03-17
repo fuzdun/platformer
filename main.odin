@@ -8,13 +8,15 @@ import la "core:math/linalg"
 import "core:mem"
 import "core:os"
 
-//WIDTH :: 1920.0
-//HEIGHT :: 1080.0
-WIDTH :: 720
-HEIGHT :: 720
+WIDTH :: 1920.0
+HEIGHT :: 1080.0
+//WIDTH :: 720
+//HEIGHT :: 720
 TITLE :: "platformer"
 
 EDIT :: #config(EDIT, false)
+
+INIT_PLAYER_POS :: [3]f32 { 10, 100, 250 }
 
 Game_State :: struct {
     player_geometry: Shape_Data,
@@ -25,7 +27,8 @@ Game_State :: struct {
     camera_state: Camera_State,
     editor_state: Editor_State,
     dirty_entities: [dynamic]int,
-    deleted_entity: int
+    deleted_entity: int,
+    time_mult: f32
 }
 
 gamestate_init :: proc(gs: ^Game_State) {
@@ -41,6 +44,7 @@ gamestate_init :: proc(gs: ^Game_State) {
     //append(&gs.dirty_entities, 0, 1, 2, 3)
     resize(&gs.player_state.trail, TRAIL_SIZE)
     gs.deleted_entity = -1
+    gs.time_mult = 1
 }
 
 gamestate_free :: proc(gs: ^Game_State) {

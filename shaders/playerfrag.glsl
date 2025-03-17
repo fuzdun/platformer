@@ -3,6 +3,8 @@
 in vec2 uv;
 in float time;
 
+uniform vec3 p_color;
+
 out vec4 fragColor;
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -20,18 +22,22 @@ float noise(vec2 p) {
 
 //White Hole draw
 void main() {
-    vec3 color = vec3(1.0, 0, 0);
-    int BgIteration = int(time) + 12;
+    vec3 color = p_color;
+    // if (color.g == 0) {
+        // vec3 color = vec3(1.0, 0, 0);
+     int BgIteration = int(time) + 12;
 
-    //Define edge noise
-    for (int i = 0; i < BgIteration; i++) {
-        float radiusNoise = noise(uv * 70.0 + float(i) + sin(time)) * 0.1;
-        float radius = float(i) / 15.2 - time / 15.2 + radiusNoise - 0.25;
+        //Define edge noise
+        for (int i = 0; i < BgIteration; i++) {
+            float radiusNoise = noise(uv * 70.0 + float(i) + sin(time)) * 0.1;
+            float radius = float(i) / 15.2 - time / 15.2 + radiusNoise - 0.25;
 
-        if (abs(uv.y - 0.5) < radius) {
-            color -= i > BgIteration - 2 ? vec3((fract(time)) * 0.1) : vec3(0.1);
+            if (abs(uv.y - 0.5) < radius) {
+                color -= i > BgIteration - 2 ? vec3((fract(time)) * 0.1) : vec3(0.1);
+            }
         }
-    }
+
+    // }
 
     fragColor = vec4(color, 1.0);
 }

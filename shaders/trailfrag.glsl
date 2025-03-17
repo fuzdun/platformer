@@ -129,7 +129,7 @@ void main()
     float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.0, 0.1, absd);
 
     vec3 proximity_outline_col = vec3(1.0, .6, 1.0) * noise_border;
-    vec3 proximity_shadow_col = d1 < uvd ? vec3(.5, .15, max(1.0 - (d1 / uvd) * .5, 0.6)) : vec3(.25, .15, 0.6);
+    vec3 proximity_shadow_col = d1 < uvd ? vec3(.5, .15, max(1.0 - (d1 / uvd) * .5, 0.6)) : vec3(.25, .45, 0.6);
 
     float shade = pattern(uv);
     vec3 pattern_col = vec3(colormap(shade).rgb) * 0.5;

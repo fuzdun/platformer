@@ -10,7 +10,8 @@ ProgramName :: enum{
     //RedOutline,
     Player,
     Trail,
-    Simple
+    Simple,
+    Background
 }
 
 Program :: struct{
@@ -65,7 +66,7 @@ PROGRAM_CONFIGS := #partial[ProgramName]Program{
     .Player = {
         pipeline = {"playervertex", "playerfrag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"transform", "i_time", "projection"},
+        uniforms = {"transform", "i_time", "projection", "p_color"},
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
         },
@@ -76,6 +77,15 @@ PROGRAM_CONFIGS := #partial[ProgramName]Program{
         uniforms = {"projection"},
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
+        }
+    },
+    .Background = {
+        pipeline = {"backgroundvertex", "backgroundfrag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"i_time"},
+        init_proc = proc(){
+            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+            //gl.PolygonMode(gl.FR, gl.FILL)
         }
     }
 }

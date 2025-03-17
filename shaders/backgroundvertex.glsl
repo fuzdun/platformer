@@ -9,9 +9,7 @@ uniform vec3 offset;
 out vec2 uv;
 
 void main() {
+    gl_Position = aPos;
     uv = uv_in;
-
-    float scale = 5.0;
-    gl_Position = projection * vec4(aPos.xyz * scale + offset, 1.0);
 }
 

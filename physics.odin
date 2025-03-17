@@ -147,6 +147,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                         intercept_t, intercept_pt, did_intercept := ray_plane_intersection(sphere_contact_pt, player_velocity, normal, plane_dist);
                         if did_intercept {
                             if pt_inside_triangle(tri_vertex0, tri_vertex1, tri_vertex2, intercept_pt) {
+                                gs.player_state.bunny_hop_y = max(f32)
                                 append(&ps.collisions, Collision{
                                     id = id,
                                     normal = normal,
@@ -160,6 +161,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                                 closest_pt := closest_triangle_edge_pt(tri_vertex0, tri_vertex1, tri_vertex2, intercept_pt)
                                 if sphere_t, sphere_q, sphere_hit := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); sphere_hit {
                                     if sphere_t = sphere_t / player_velocity_len; sphere_t <= 1 {
+                                        gs.player_state.bunny_hop_y = max(f32)
                                         append(&ps.collisions, Collision{
                                             id = id,
                                             normal = normal,

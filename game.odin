@@ -8,7 +8,7 @@ game_update :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_State, elap
         editor_move_object(gs, &gs.editor_state, gs.input_state, delta_time)
         editor_save_changes(&gs.level_geometry, gs.input_state, &gs.editor_state)
     } else {
-        update_player_velocity(gs.input_state, &gs.player_state, elapsed_time, delta_time)
+        update_player_velocity(gs, elapsed_time, delta_time)
         move_player(gs, ps, f32(elapsed_time), delta_time)
         move_camera(gs.player_state, &gs.camera_state, elapsed_time, delta_time)
     }

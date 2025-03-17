@@ -19,6 +19,7 @@ Player_State :: struct {
     touch_pt: [3]f32,
     touch_time: f32,
     crunch_pt: [3]f32,
+    bunny_hop_y: f32,
     crunch_time: f32,
     last_dash: f32,
     jump_pressed_time: f32,
@@ -46,15 +47,15 @@ Player_State :: struct {
 
 GROUND_FRICTION :: 0.05
 MAX_PLAYER_SPEED: f32: 50.0
-P_JUMP_SPEED: f32: 30.0
+P_JUMP_SPEED: f32: 60.0
 P_ACCEL: f32: 150.0
 DASH_SPD: f32: 75.0
 DASH_LEN: f32: 150 
 BUNNY_WINDOW: f32: 100
 BUNNY_DEBOUNCE: f32: 400
-GROUND_BUNNY_V_SPEED: f32: 35
+GROUND_BUNNY_V_SPEED: f32: 70
 GROUND_BUNNY_H_SPEED: f32: 30
-GRAV: f32: 80
+GRAV: f32: 135
 WALL_GRAV: f32: 30 
 SLOPE_GRAV: f32: 10 
 WALL_JUMP_FORCE :: 15 
@@ -64,11 +65,13 @@ TRAIL_SIZE :: 50
 GROUND_RAY_LEN ::  2.0
 GROUNDED_RADIUS: f32: 0.01 
 GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
-GROUND_OFFSET: f32 = .5
+GROUND_OFFSET: f32 = 1.0 
 AIR_SPEED :: 120.0
 SLOPE_SPEED :: 25.0 
 
-update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time: f64, delta_time: f32) {
+update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f32) {
+    ps := &gs.player_state
+    is := &gs.input_state
     if is.q_pressed {
         ps.sonar_time = f32(elapsed_time)
     }
@@ -111,6 +114,9 @@ update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time:
     if is.up_pressed do input_z -= 1
     if is.down_pressed do input_z += 1
     input_dir := la.normalize([2]f32{input_x, input_z})
+    if is.hor_axis !=0 || is.vert_axis != 0 {
+        input_dir = la.normalize([2]f32{is.hor_axis, -is.vert_axis})
+    }
 
     clamped_xz := la.clamp_length(ps.velocity.xz, MAX_PLAYER_SPEED)
     ps.velocity.xz = math.lerp(ps.velocity.xz, clamped_xz, f32(0.05))
@@ -133,6 +139,8 @@ update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time:
         ps.jump_pressed_time = f32(elapsed_time)
     }
     if ps.on_ground && ps.touch_pt != 0 && math.abs(ps.touch_time - ps.jump_pressed_time) < BUNNY_WINDOW && f32(elapsed_time) - ps.last_dash > BUNNY_DEBOUNCE {
+        ps.can_dash = true
+        ps.bunny_hop_y = ps.position.y
         ps.on_ground = false
         ps.velocity.y = GROUND_BUNNY_V_SPEED
         if la.length(ps.velocity.xz) > 0.1 {
@@ -173,6 +181,19 @@ update_player_velocity :: proc(is: Input_State, ps: ^Player_State, elapsed_time:
     }
     
     ps.can_jump = !is.z_pressed
+
+    time_since_bunny_hop := f32(elapsed_time) - ps.crunch_time
+    if ps.position.y > ps.bunny_hop_y {
+        fact := abs(ps.velocity.y) / GROUND_BUNNY_V_SPEED
+        gs.time_mult = clamp(fact * fact * 2.5, 1.25, 1.5)
+    } else {
+        gs.time_mult = f32(math.lerp(gs.time_mult, 1, f32(0.05)))
+    }
+
+    if is.r_pressed {
+        ps.position = INIT_PLAYER_POS
+        ps.velocity = [3]f32 {0, 0, 0}
+    }
 }
 
 move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, delta_time: f32) {
@@ -184,6 +205,7 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
     }
 
     init_velocity_len := la.length(pls.velocity)
+
     remaining_vel := init_velocity_len * delta_time
     velocity_normal := la.normalize(pls.velocity)
 
