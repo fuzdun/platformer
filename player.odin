@@ -56,18 +56,18 @@ BUNNY_DEBOUNCE: f32: 400
 GROUND_BUNNY_V_SPEED: f32: 70
 GROUND_BUNNY_H_SPEED: f32: 30
 GRAV: f32: 135
-WALL_GRAV: f32: 30 
-SLOPE_GRAV: f32: 10 
+WALL_GRAV: f32: 60 
+SLOPE_GRAV: f32: 60 
 WALL_JUMP_FORCE :: 15 
-SLOPE_V_JUMP_FORCE :: 30 
-SLOPE_JUMP_FORCE :: 20
+SLOPE_V_JUMP_FORCE :: 40 
+SLOPE_JUMP_FORCE :: 50
 TRAIL_SIZE :: 50 
 GROUND_RAY_LEN ::  2.0
 GROUNDED_RADIUS: f32: 0.01 
 GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
 GROUND_OFFSET: f32 = 1.0 
 AIR_SPEED :: 120.0
-SLOPE_SPEED :: 25.0 
+SLOPE_SPEED :: 80.0 
 
 update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f32) {
     ps := &gs.player_state
@@ -126,7 +126,7 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
     }
     if !ps.on_ground {
         down: [3]f32 = {0, -1, 0}
-        grav_vec := GRAV * down
+        grav_vec := (ps.on_slope ? SLOPE_GRAV : (ps.on_wall ? WALL_JUMP_FORCE : GRAV)) * down
         norm_contact := la.normalize(ps.contact_ray)
         if ps.on_wall {
             grav_vec -= la.dot(norm_contact, grav_vec) * norm_contact
@@ -182,10 +182,14 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
     
     ps.can_jump = !is.z_pressed
 
-    time_since_bunny_hop := f32(elapsed_time) - ps.crunch_time
-    if ps.position.y > ps.bunny_hop_y {
-        fact := abs(ps.velocity.y) / GROUND_BUNNY_V_SPEED
-        gs.time_mult = clamp(fact * fact * 2.5, 1.25, 1.5)
+    if f32(elapsed_time) - ps.crunch_time < 1000 {
+        if ps.position.y > ps.bunny_hop_y {
+            fact := abs(ps.velocity.y) / GROUND_BUNNY_V_SPEED
+            gs.time_mult = clamp(fact * fact * 4.5, 1.15, 1.5)
+        } else {
+            gs.time_mult = f32(math.lerp(gs.time_mult, 1, f32(0.05)))
+        }
+
     } else {
         gs.time_mult = f32(math.lerp(gs.time_mult, 1, f32(0.05)))
     }
@@ -212,7 +216,8 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
     get_collisions(gs, phs, delta_time, elapsed_time)
     if remaining_vel > 0 {
         loops := 0
-        for len(phs.collisions) > 0 {
+        for len(phs.collisions) > 0 && loops < 10 {
+            loops += 1
             earliest_coll_t: f32 = 1.1
             earliest_coll_idx := -1
             for coll, idx in phs.collisions {

@@ -27,9 +27,8 @@ Collider_Data :: struct{
     indices: []u16
 }
 
-
-
-SPHERE_RADIUS :: 1.0
+CORE_RADIUS :: 0.5
+SPHERE_RADIUS :: 1.5
 SPHERE_SQ_RADIUS :: SPHERE_RADIUS * SPHERE_RADIUS
 SPHERE_SECTOR_COUNT :: 20 
 SPHERE_STACK_COUNT :: 20 
@@ -52,8 +51,8 @@ add_player_sphere_data :: proc(gs: ^Game_State) {
     vertices := &gs.player_geometry.vertices
     for i in 0..=vertical_count {
         vertical_angle = PI / 2.0 - f32(i) * vertical_step 
-        xz := SPHERE_RADIUS * math.cos(vertical_angle)
-        y = SPHERE_RADIUS * math.sin(vertical_angle)
+        xz := CORE_RADIUS * math.cos(vertical_angle)
+        y = CORE_RADIUS * math.sin(vertical_angle)
 
         for j in 0..=horizontal_count {
             v : Vertex

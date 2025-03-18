@@ -8,10 +8,10 @@ import la "core:math/linalg"
 import "core:mem"
 import "core:os"
 
-WIDTH :: 1920.0
-HEIGHT :: 1080.0
-//WIDTH :: 720
-//HEIGHT :: 720
+//WIDTH :: 1920.0
+//HEIGHT :: 1080.0
+WIDTH :: 720
+HEIGHT :: 720
 TITLE :: "platformer"
 
 EDIT :: #config(EDIT, false)
@@ -36,6 +36,7 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.level_geometry = make(Level_Geometry_State)
     gs.player_state.trail = make([dynamic][3]f32)
     gs.player_state.position = {10, 100, 250}
+    //gs.player_state.position = {-10, 0, -700}
     gs.player_state.can_dash = true
     gs.camera_state.position = {10, 60, 300}
     gs.dirty_entities = make([dynamic]int)

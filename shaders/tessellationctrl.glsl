@@ -40,7 +40,7 @@ void main() {
         gl_TessLevelOuter[1] = vs_out[0].tess_amt;
         gl_TessLevelOuter[2] = vs_out[0].tess_amt;
 
-        gl_TessLevelInner[0] = vs_out[0].tess_amt == 1 ? 1 : vs_out[0].tess_amt;
+        gl_TessLevelInner[0] = vs_out[0].tess_amt;
     }
 }
 

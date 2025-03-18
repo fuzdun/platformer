@@ -6,55 +6,27 @@ import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 
 ProgramName :: enum{
-    //Outline,
-    //RedOutline,
     Player,
     Trail,
     Simple,
-    Background
+    Background,
+    Player_Particle,
 }
 
 Program :: struct{
-    //vertex_filename: string,
-    //frag_filename: string,
     pipeline: []string,
     uniforms: []string,
     shader_types: []gl.Shader_Type,
     init_proc: proc(),
-    //use_geometry_shader: bool,
-    //geometry_filename: string,
 }
 
 ActiveProgram :: struct{
     id: u32,
-    //ebo_id: u32,
     init_proc: proc(),
     locations: map[string]i32
 }
 
 PROGRAM_CONFIGS := #partial[ProgramName]Program{
-    //.Outline = {
-    //    vertex_filename = "outlinevertex",
-    //    frag_filename = "outlinefrag",
-    //    uniforms = {"projection"},
-    //    init_proc = proc() {
-    //        gl.PolygonMode(gl.FRONT, gl.LINE)
-    //        gl.LineWidth(3)
-    //    },
-    //    use_geometry_shader = false,
-    //    geometry_filename = "",
-    //},
-    //.RedOutline = {
-    //    vertex_filename = EDIT ? "outlinevertex" : "outlinethumpervertex",
-    //    frag_filename = "redoutlinefrag",
-    //    uniforms = {"projection"},
-    //    init_proc = proc() {
-    //        gl.PolygonMode(gl.FRONT, gl.LINE)
-    //        gl.LineWidth(4)
-    //    },
-    //    use_geometry_shader = false,
-    //    geometry_filename = "",
-    //},
     .Trail = {
         pipeline = EDIT ? {"simplevertex", "simplefrag"} : {"thumpervertex", "tessellationctrl", "tessellationeval", "thumpergeometry", "trailfrag"},
         shader_types = EDIT ? {.VERTEX_SHADER, .FRAGMENT_SHADER} : {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
@@ -67,6 +39,14 @@ PROGRAM_CONFIGS := #partial[ProgramName]Program{
         pipeline = {"playervertex", "playerfrag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"transform", "i_time", "projection", "p_color"},
+        init_proc = proc() {
+            gl.PolygonMode(gl.FRONT, gl.FILL)
+        },
+    },
+    .Player_Particle = {
+        pipeline = {"particlevertex", "particlefrag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"projection", "player_pos"},
         init_proc = proc() {
             gl.PolygonMode(gl.FRONT, gl.FILL)
         },
@@ -85,7 +65,6 @@ PROGRAM_CONFIGS := #partial[ProgramName]Program{
         uniforms = {"i_time"},
         init_proc = proc(){
             gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
-            //gl.PolygonMode(gl.FR, gl.FILL)
         }
     }
 }
@@ -151,47 +130,8 @@ shader_program_from_file :: proc(filename: string, type: gl.Shader_Type) -> (u32
         fmt.eprintln("failed to compile shader:", filename)
         return 0, false
     }
-    //shader_cstr := cstring(raw_data(shader_string))
-    //gl.ShaderSource(shader_id, 1, &shader_cstr, nil)
-    //gl.CompileShader(shader_id)
     return shader_id, true
 }
-
-//shader_program_from_file :: proc(vertex_filename, fragment_filename: string) -> (u32, bool) {
-//    dir := "shaders/"
-//    ext := ".glsl"
-//    filename := str.concatenate({dir, vertex_filename, ext})
-//    defer delete(filename)
-//    vertex_string, vertex_ok := os.read_entire_file(filename)
-//    defer delete(vertex_string)
-//    if !vertex_ok {
-//        fmt.eprintln("failed to read vertex shader file:", vertex_string)
-//        return 0, false
-//    }
-//    filename2 := str.concatenate({dir, fragment_filename, ext})
-//    defer delete(filename2)
-//    fragment_string, fragment_ok := os.read_entire_file(filename2)
-//    defer delete(fragment_string)
-//    if !fragment_ok {
-//        fmt.eprintln("failed to read fragment shader file:", fragment_string)
-//        return 0, false
-//    }
-//    program_id := gl.CreateProgram()
-//    vertex_id := gl.CreateShader(gl.VERTEX_SHADER)
-//    fragment_id := gl.CreateShader(gl.FRAGMENT_SHADER)
-//
-//    vertex_cstr := cstring(raw_data(vertex_string))
-//    fragment_cstr := cstring(raw_data(fragment_string))
-//
-//    gl.ShaderSource(vertex_id, 1, &vertex_cstr, nil)
-//    gl.ShaderSource(fragment_id, 1, &fragment_cstr, nil)
-//    gl.CompileShader(vertex_id)
-//    gl.CompileShader(fragment_id)
-//    gl.AttachShader(program_id, vertex_id)
-//    gl.AttachShader(program_id, fragment_id)
-//    return program_id, true
-//}
-//
 
 use_shader :: proc(sh: ^ShaderState, rs: ^Render_State, name: ProgramName) {
     if name in sh.active_programs {
@@ -200,16 +140,7 @@ use_shader :: proc(sh: ^ShaderState, rs: ^Render_State, name: ProgramName) {
         sh.loaded_program_name = name
         gl.UseProgram(sh.loaded_program)
         sh.active_programs[name].init_proc()
-        //gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, sh.active_programs[name].ebo_id)
     }
-}
-
-shader_draw_triangles :: proc(rs: ^Render_State, sh: ^ShaderState, name: ProgramName) {
-    //gl.DrawElements(gl.TRIANGLES, i32(len(rs.static_indices_queue[name])), gl.UNSIGNED_INT, nil)
-}
-
-shader_draw_lines :: proc(rs: ^Render_State, sh: ^ShaderState, name: ProgramName) {
-    //gl.DrawElements(gl.LINES, i32(len(rs.static_indices_queue[name])), gl.UNSIGNED_INT, nil)
 }
 
 set_matrix_uniform :: proc(sh: ^ShaderState, name: string, data: ^glm.mat4) {

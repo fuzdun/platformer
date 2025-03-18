@@ -1,17 +1,12 @@
 #version 460 core
 
 layout (location = 0) in vec4 aPos;
-layout (location = 1) in vec2 uv_in;
+layout (location = 1) in vec4 offset;
 
 uniform mat4 projection;
-uniform vec3 offset;
-
-out vec2 uv;
+uniform vec3 player_pos;
 
 void main() {
-    uv = uv_in;
-
-    float scale = 5.0;
-    gl_Position = projection * vec4(aPos.xyz * scale + offset, 1.0);
+    gl_Position = projection * (aPos + offset + vec4(player_pos, 0.0) * 2);
 }
 

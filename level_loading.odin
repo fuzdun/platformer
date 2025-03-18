@@ -65,7 +65,7 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, filename: strin
         append(&gs.level_geometry, lg)
     }
 
-    //for i in 0..<500 {
+    //for i in 0..<1000 {
     //    rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
     //    //rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
     //    shallow_angle: Level_Geometry
