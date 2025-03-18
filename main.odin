@@ -8,10 +8,10 @@ import la "core:math/linalg"
 import "core:mem"
 import "core:os"
 
-//WIDTH :: 1920.0
-//HEIGHT :: 1080.0
-WIDTH :: 720
-HEIGHT :: 720
+WIDTH :: 1920.0
+HEIGHT :: 1080.0
+//WIDTH :: 720
+//HEIGHT :: 720
 TITLE :: "platformer"
 
 EDIT :: #config(EDIT, false)
@@ -36,13 +36,11 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.level_geometry = make(Level_Geometry_State)
     gs.player_state.trail = make([dynamic][3]f32)
     gs.player_state.position = {10, 100, 250}
-    //gs.player_state.position = {-10, 0, -700}
     gs.player_state.can_dash = true
     gs.camera_state.position = {10, 60, 300}
     gs.dirty_entities = make([dynamic]int)
     gs.editor_state.y_rot = -.25
     gs.editor_state.zoom = 200
-    //append(&gs.dirty_entities, 0, 1, 2, 3)
     resize(&gs.player_state.trail, TRAIL_SIZE)
     gs.deleted_entity = -1
     gs.time_mult = 1
@@ -51,10 +49,6 @@ gamestate_init :: proc(gs: ^Game_State) {
 gamestate_free :: proc(gs: ^Game_State) {
     delete_soa(gs.level_geometry)
     delete(gs.dirty_entities)
-    for lg in gs.level_geometry {
-        //delete(lg.shape)
-        //delete(lg.collider)
-    }
     delete(gs.player_state.trail)
     delete(gs.player_geometry.vertices)
     delete(gs.player_geometry.indices)

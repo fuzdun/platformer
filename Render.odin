@@ -309,7 +309,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     gl.Enable(gl.CULL_FACE)
 
     use_shader(shst, rs, .Player)
-    p_color: [3]f32 = gs.player_state.dashing ? {1.0, 1.0, 0} : {1.0, 0.0, 0.5}
+    p_color: [3]f32 = gs.player_state.dashing ? {0.0, 1.0, 0} : {1.0, 0.0, 0.5}
     set_matrix_uniform(shst, "projection", &proj_mat)
     set_float_uniform(shst, "i_time", f32(time) / 1000)
     set_vec3_uniform(shst, "p_color", 1, &p_color)

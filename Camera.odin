@@ -4,9 +4,9 @@ import "core:fmt"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 
-CAMERA_PLAYER_Y_OFFSET :: 80
+CAMERA_PLAYER_Y_OFFSET :: 70
 CAMERA_PLAYER_Y_OFFSET_2 :: 160 
-CAMERA_PLAYER_Z_OFFSET :: 180 
+CAMERA_PLAYER_Z_OFFSET :: 170 
 CAMERA_PLAYER_Z_OFFSET_2 :: 60 
 CAMERA_PLAYER_X_OFFSET :: 0 
 
@@ -18,7 +18,7 @@ Camera_State :: struct {
 }
 
 move_camera :: proc(ps: Player_State, cs: ^Camera_State, elapsed_time: f64, delta_time: f32) {
-    bef_thresh := ps.prev_position.z >= -750 
+    bef_thresh := ps.prev_position.z >= -750 || ps.prev_position.y < - 950
     cs.prev_position = cs.position
     cs.prev_target = cs.target
     tgt_y := ps.position.y + (bef_thresh ? CAMERA_PLAYER_Y_OFFSET : CAMERA_PLAYER_Y_OFFSET_2)

@@ -171,12 +171,6 @@ void main()
     vec3 border_col = border_fact * vec3(1.0, 0.8, 1.0);
     vec3 col = mix(pattern_col + border_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
 
-    // float sonar_dist = distance(global_pos, player_pos);
-    // float sonar_target = (time - sonar_time) * 50.0;
-    // float sonar_transparency = smoothstep(sonar_target - 60, sonar_target, sonar_dist) - smoothstep(sonar_target, sonar_target + 1, sonar_dist);
-    // fragColor = vec4(col, sonar_transparency);
-
     fragColor = vec4(col, 1.0);
-    // fragColor = vec4(0.0, 0.0, 1.0, 1.0);
 }
 
