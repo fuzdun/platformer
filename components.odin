@@ -42,8 +42,8 @@ Transform :: struct{
     rotation: Rotation
 }
 Angular_Velocity :: la.Vector3f32
-Shape:: string
-Collider :: string
+Shape :: SHAPES
+Collider :: SHAPES
 Active_Shaders :: bit_set[ProgramName; u64]
 Level_Geometry_Attributes :: bit_set[Level_Geometry_Component_Name; u64]
 
@@ -51,7 +51,7 @@ Level_Geometry_Attributes :: bit_set[Level_Geometry_Component_Name; u64]
 Level_Geometry :: struct {
     transform: Transform,
     angular_velocity: la.Vector3f32,
-    shape: Shape,
+    shape: SHAPES,
     collider: Collider,
     shaders: Active_Shaders,
     attributes: Level_Geometry_Attributes,

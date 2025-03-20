@@ -20,7 +20,7 @@ INIT_PLAYER_POS :: [3]f32 { 10, 100, 250 }
 
 Game_State :: struct {
     player_geometry: Shape_Data,
-    level_resources: map[string]Shape_Data,
+    level_resources: [SHAPES]Shape_Data,
     level_geometry: Level_Geometry_State,
     player_state: Player_State,
     input_state: Input_State,
@@ -32,7 +32,7 @@ Game_State :: struct {
 }
 
 gamestate_init :: proc(gs: ^Game_State) {
-    gs.level_resources = make(map[string]Shape_Data)
+    //gs.level_resources = [SHAPES]Shape_Data
     gs.level_geometry = make(Level_Geometry_State)
     gs.player_state.trail = make([dynamic][3]f32)
     gs.player_state.position = {10, 100, 250}
@@ -52,11 +52,11 @@ gamestate_free :: proc(gs: ^Game_State) {
     delete(gs.player_state.trail)
     delete(gs.player_geometry.vertices)
     delete(gs.player_geometry.indices)
-    for _, sd in gs.level_resources {
+    for sd in gs.level_resources {
         delete(sd.indices) 
         delete(sd.vertices)
     }
-    delete(gs.level_resources)
+    //delete(gs.level_resources)
 }
 
 controller : ^SDL.GameController
@@ -101,6 +101,8 @@ main :: proc () {
     defer SDL.DestroyWindow(window)
 
     // hook up OpenGL
+    SDL.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 4)
+    SDL.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 6)
     gl_context := SDL.GL_CreateContext(window)
     SDL.GL_MakeCurrent(window, gl_context)
     gl.load_up_to(4, 6, SDL.gl_set_proc_address)
@@ -129,7 +131,7 @@ main :: proc () {
         return
     }
 
-    load_level_geometry(&gs, &ps, "test_level")
+    load_level_geometry(&gs, &ps, &rs, "test_level")
     init_level_render_data(&gs, &ss, &rs)
     
 

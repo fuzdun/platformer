@@ -7,9 +7,10 @@ import "core:encoding/endian"
 import "core:bytes"
 import gl "vendor:OpenGL"
 
-load_blender_model :: proc(filename: string, gs: ^Game_State, ps: ^Physics_State) -> bool {
+load_blender_model :: proc(shape: SHAPES, gs: ^Game_State, ps: ^Physics_State) -> bool {
 
     // read binary data
+    filename := SHAPE_NAMES[shape]
     binary_filename := str.concatenate({"models/", filename, ".glb"})
     defer delete(binary_filename)
     data, ok := os.read_entire_file_from_filename(binary_filename)
@@ -63,13 +64,13 @@ load_blender_model :: proc(filename: string, gs: ^Game_State, ps: ^Physics_State
     buffer_views := json_obj["bufferViews"].(json.Array)
 
     sd := read_mesh_data_from_binary(buffer_views, bin_data, 0)
-    gs.level_resources[filename] = sd
+    gs.level_resources[shape] = sd
     if len(json_obj["scenes"].(json.Array)[0].(json.Object)["nodes"].(json.Array)) == 2 {
         coll := read_coll_data_from_binary(buffer_views, bin_data, 1)   
-        ps.level_colliders[filename] = coll
+        ps.level_colliders[shape] = coll
     } else {
         coll := read_coll_data_from_binary(buffer_views, bin_data, 0)
-        ps.level_colliders[filename] = coll
+        ps.level_colliders[shape] = coll
     }
     return true
 }

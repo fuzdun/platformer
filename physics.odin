@@ -13,7 +13,7 @@ Physics_State :: struct{
         vertices: [dynamic]Vertex,
         indices: [ProgramName][dynamic]u16
     },
-    level_colliders: map[string]Collider_Data,
+    level_colliders: [SHAPES]Collider_Data,
     static_collider_vertices: [dynamic][3]f32,
 }
 
@@ -53,7 +53,7 @@ aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1
 init_physics_state :: proc(ps: ^Physics_State) {
     ps.collisions = make([dynamic]Collision)
     ps.debug_render_queue.vertices = make([dynamic]Vertex)
-    ps.level_colliders = make(map[string]Collider_Data)
+    //ps.level_colliders = make(map[string]Collider_Data)
     ps.static_collider_vertices = make([dynamic][3]f32)
     for pn in ProgramName {
         ps.debug_render_queue.indices[pn] = make([dynamic]u16)
@@ -74,11 +74,11 @@ free_physics_state :: proc(ps: ^Physics_State) {
     for &iq in ps.debug_render_queue.indices {
         delete(iq)
     }
-    for _, coll in ps.level_colliders {
+    for coll in ps.level_colliders {
         delete(coll.indices) 
         delete(coll.vertices)
     }
-    delete(ps.level_colliders)
+    //delete(ps.level_colliders)
     delete(ps.static_collider_vertices)
 }
 

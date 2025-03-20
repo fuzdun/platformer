@@ -40,8 +40,8 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
         rotation: quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
         position: Position = lgs[es.selected_entity].transform.position
         new_cube: Level_Geometry
-        new_cube.shape = "basic_cube"
-        new_cube.collider = "basic_cube"
+        new_cube.shape = .CUBE
+        new_cube.collider = .CUBE 
         new_cube.transform = {position,{5, 5, 5}, rotation}
         new_cube.shaders = {.Trail}
         new_cube.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
@@ -52,17 +52,18 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
     es.can_add = !is.q_pressed
 
     if (is.lt_pressed || is.gt_pressed)&& es.can_swap {
-        sn := SHAPE_NAMES
+        //sn := SHAPES
         cur_shape_idx := 0
-        for name, idx in sn {
+        for name, idx in SHAPES {
             if name == selected_obj.shape {
-                cur_shape_idx = idx
+                cur_shape_idx = int(idx)
                 break
             }
         }
-        nxt_shape_idx := math.abs((is.lt_pressed ? cur_shape_idx - 1 : cur_shape_idx + 1) % len(sn))
-        selected_obj.shape = sn[nxt_shape_idx]
-        selected_obj.collider = sn[nxt_shape_idx]
+        nxt_shape := math.abs((is.lt_pressed ? cur_shape_idx - 1 : cur_shape_idx + 1) % len(SHAPES))
+        //selected_obj.shape = SHAPES[SHAPES(nxt_shape_idx)]
+        selected_obj.shape = SHAPES(nxt_shape)
+        selected_obj.collider = SHAPES(nxt_shape)
     }
     es.can_swap = !(is.lt_pressed || is.gt_pressed)
 
