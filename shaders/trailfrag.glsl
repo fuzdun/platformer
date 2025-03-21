@@ -121,6 +121,7 @@ void main()
     vec3 proj_pt = player_pos - dist * normal_frag;
 
     vec3 diff = global_pos - player_pos;
+
     float a = atan(diff.x / diff.z) * 5;
     float uvd = length(global_pos - proj_pt);
     float d1 = dist + noise(a + time * 100) * .3;
@@ -172,5 +173,6 @@ void main()
     vec3 col = mix(pattern_col + border_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
 
     fragColor = vec4(col, 1.0);
+    // fragColor = vec4(0.0, 0.0, 1.0, 1.0);
 }
 

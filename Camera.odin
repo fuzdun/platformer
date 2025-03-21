@@ -18,7 +18,8 @@ Camera_State :: struct {
 }
 
 move_camera :: proc(ps: Player_State, cs: ^Camera_State, elapsed_time: f64, delta_time: f32) {
-    bef_thresh := ps.prev_position.z >= -750 || ps.prev_position.y < - 950
+    //bef_thresh := ps.prev_position.z >= -750 || ps.prev_position.y < - 950
+    bef_thresh := true
     cs.prev_position = cs.position
     cs.prev_target = cs.target
     tgt_y := ps.position.y + (bef_thresh ? CAMERA_PLAYER_Y_OFFSET : CAMERA_PLAYER_Y_OFFSET_2)
@@ -35,7 +36,7 @@ interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4{
     tgt := math.lerp(cs.prev_target, cs.target, t)
     c_pos := math.lerp(cs.prev_position, cs.position, t)
     rot := glm.mat4LookAt({0, 0, 0}, {f32(tgt.x - c_pos.x), f32(tgt.y - c_pos.y), f32(tgt.z - c_pos.z)}, {0, 1, 0})
-    proj := glm.mat4Perspective(.4, WIDTH / HEIGHT, 0.1, 1000)
+    proj := glm.mat4Perspective(.4, WIDTH / HEIGHT, 0.1, 10000)
     offset := glm.mat4Translate({f32(-c_pos.x), f32(-c_pos.y), f32(-c_pos.z)})
     return proj * rot * offset
 }

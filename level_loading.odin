@@ -66,42 +66,48 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_Sta
     //}
     //fmt.println(rs.render_group_offsets)
 
-    for i in 0..<100 {
+    sorted_geometry := make([dynamic]Level_Geometry); defer delete(sorted_geometry)        
+    //for i in 0..<75000 {
+    for i in 0..<10000 {
+
         rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
-        //rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
+        //shape:SHAPES = .CUBE 
+        //shader: ProgramName = .Trail
         shape: SHAPES = i % 2 == 0 ? .CUBE : .WEIRD 
-        //shape_name := SHAPE_NAMES[shape]
         shader: ProgramName = i % 3 == 0 ? .Simple : .Trail
         shallow_angle: Level_Geometry
         shallow_angle.shape = shape
         shallow_angle.collider = shape
 
-        x := f32(i % 20)
-        y := math.floor(f32(i) / 10.0)
+        x := f32(i % 40)
+        y := math.floor(f32(i) / 40.0)
         shallow_angle.transform = {{x * 10, y * -2 -20, y * -10 + 300},{10, 10, 10}, rot}
         shallow_angle.shaders = {shader}
         shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-        vertices := ps.level_colliders[shape].vertices
-        trns := shallow_angle.transform
+        offset_idx := int(shader) * len(SHAPES) + int(shape)
+        group_offset := rs.render_group_offsets[offset_idx]
+        inject_at(&sorted_geometry, group_offset, shallow_angle)
+
+        for &g_offset, idx in rs.render_group_offsets {
+            if idx > offset_idx {
+                g_offset += 1 
+            }
+        }
+    }
+    append(&gs.level_geometry, ..sorted_geometry[:])
+    for &lg in gs.level_geometry {
+        vertices := ps.level_colliders[lg.shape].vertices
+        trns := lg.transform
         transformed_vertices := make([][3]f32, len(vertices)); defer delete(transformed_vertices)
         for v, vi in vertices {
             transformed_vertices[vi] = la.quaternion128_mul_vector3(trns.rotation, trns.scale * v) + trns.position
         }
-
-        //offset_idx := min(len(rs.render_group_offsets) - 1, int(shader) * len(ProgramName) + int(shape) + 1)
-        //inject_at(&ps.static_collider_vertices, offset_idx)
-        //inject_at(&gs.level_geometry, offset_idx)
-
-        append(&ps.static_collider_vertices, ..transformed_vertices[:])
-        shallow_angle.aabb = construct_aabb(transformed_vertices)
-        append(&gs.level_geometry, shallow_angle)
-
-
-        //for &offset, idx in rs.render_group_offsets {
-        //    if idx >= offset_idx {
-        //       offset += 1 
-        //    }
-        //}
+        lg.aabb = construct_aabb(transformed_vertices)
+        append(&ps.static_collider_vertices, ..transformed_vertices)
     }
+    //fmt.println(rs.render_group_offsets)
+    //for lg in gs.level_geometry {
+    //    fmt.println("shader:", lg.shaders, "shape:", lg.shape)
+    //}
 }
 
