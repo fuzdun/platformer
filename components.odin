@@ -55,7 +55,8 @@ Level_Geometry :: struct {
     collider: Collider,
     shaders: Active_Shaders,
     attributes: Level_Geometry_Attributes,
-    aabb: AABB
+    aabb: AABB,
+    ssbo_indexes: [ProgramName]int
 }
 
 // AOS -> SOA

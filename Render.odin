@@ -13,8 +13,8 @@ PLAYER_PARTICLE_COUNT :: 40
 I_MAT :: glm.mat4(1.0)
 
 SHAPES :: enum{
+    WEIRD,
     CUBE,
-    WEIRD
 }
 
 SHAPE_NAMES := [SHAPES]string {
@@ -22,14 +22,17 @@ SHAPE_NAMES := [SHAPES]string {
     .WEIRD = "weird"
 }
 
-QUAD_VERTICES :: [4]Vertex {
-    {pos={-1, -1, -1}, uv={0, 0}, b_uv={0, 0}, normal={0, 0, 1}},
-    {pos={-1, 1, -1}, uv={0, 1}, b_uv={0, 1}, normal={0, 0, 1}},
-    {pos={1, 1, -1}, uv={1, 1}, b_uv={1, 1}, normal={0, 0, 1}},
-    {pos={1, -1, -1}, uv={1, 0}, b_uv={1, 0}, normal={0, 0, 1}}
+Background_Vertex :: struct {
+    position: glm.vec3,
+    uv: glm.vec2
 }
 
-QUAD_INDICES :: [4]u32 {0, 1, 2, 3}
+BACKGROUND_VERTICES :: [4]Background_Vertex {
+    {{-1, -1, -1}, {0, 0}},
+    {{1, -1, -1}, {1, 0}},
+    {{-1, 1, -1}, {0, 1}},
+    {{1, 1, -1}, {1, 1}},
+}
 
 PARTICLE_VERTICES :: [4]glm.vec3 {
     {-0.3, -0.3, 0.0},
@@ -43,18 +46,25 @@ Index_Offsets :: [len(SHAPES)]u32
 
 Render_State :: struct {
     standard_vao: u32,
-    standard_ebo: u32,
-    standard_vbo: u32,
     particle_vao: u32,
+    background_vao: u32,
+
+    standard_ebo: u32,
+    background_ebo: u32,
+
+    standard_vbo: u32,
     particle_vbo: u32,
     particle_pos_vbo: u32,
+    background_vbo: u32,
+
     indirect_buffer: u32,
+
     transforms_ssbo: u32,
     z_widths_ssbo: u32,
+
     static_transforms: [dynamic]glm.mat4,
     player_particle_poss: [dynamic]glm.vec3,
     z_widths: [dynamic]f32,
-    //shader_queues: Shader_Queues,
     shader_render_queues: Shader_Render_Queues,
     player_particles: [PLAYER_PARTICLE_COUNT][3]f32,
     vertex_offsets: Vertex_Offsets,
@@ -64,25 +74,15 @@ Render_State :: struct {
     render_group_offsets: [len(ProgramName) * len(SHAPES)]u32
 }
 
-//Render_Queue :: struct{
-    //transforms: [dynamic]glm.mat4,
-    //vertices: [dynamic]Vertex,
-    //indices: [dynamic]u32,
-    //commands: [dynamic]gl.DrawElementsIndirectCommand,
-    //z_widths: [dynamic]f32
-//}
-
 Renderable :: struct{
     transform: glm.mat4,
     z_width: f32
 }
 
-//Shader_Queues :: [ProgramName][SHAPES][dynamic]Renderable
 Shader_Render_Queues :: [ProgramName][dynamic]gl.DrawElementsIndirectCommand
 
 load_geometry_data :: proc(gs: ^Game_State, ps: ^Physics_State) {
     for shape in SHAPES {
-        fmt.println(shape)
         if ok := load_blender_model(shape, gs, ps); ok {
             fmt.println("loaded", shape) 
         }
@@ -90,18 +90,8 @@ load_geometry_data :: proc(gs: ^Game_State, ps: ^Physics_State) {
 }
 
 init_render_buffers :: proc(gs: ^Game_State, rs: ^Render_State) {
-    //for shader in ProgramName {
-        //rs.shader_queues[shader] = make(map[string][dynamic]Renderable)
-        //for shape in SHAPES {
-        //    rs.shader_queues[shader][shape] = make([dynamic]Renderable)
-        //}
-    //}
     for shader in ProgramName {
         rs.shader_render_queues[shader] = make([dynamic]gl.DrawElementsIndirectCommand)
-        //rq := rs.shader_render_queues[shader]
-        //rq.transforms = make([dynamic]glm.mat4)
-        //rq.commands = make([dynamic]gl.DrawElementsIndirectCommand)
-        //rq.z_widths = make([dynamic]f32)
     }
     rs.static_transforms = make([dynamic]glm.mat4)
     rs.z_widths = make([dynamic]f32)
@@ -110,33 +100,14 @@ init_render_buffers :: proc(gs: ^Game_State, rs: ^Render_State) {
 }
 
 clear_render_queues :: proc(rs: ^Render_State) {
-    //for shader in ProgramName {
-    //    for shape in SHAPES {
-    //        clear(&rs.shader_queues[shader][shape])
-    //    }
-    //}
     for shader in ProgramName {
-        //rq := rs.shader_render_queues[shader]
         clear(&rs.shader_render_queues[shader])
-        //clear(&rq.transforms)
-        //clear(&rq.commands)
-        //clear(&rq.z_widths)
-        //rs.shader_render_queues[shader] = rq
     }
 }
 
 free_render_buffers :: proc(rs: ^Render_State) {
-    //for shader in ProgramName {
-        //for shape in SHAPES {
-        //    delete(rs.shader_queues[shader][shape])
-        //}
-    //}
     for shader in ProgramName {
         delete(rs.shader_render_queues[shader])
-        //rq := rs.shader_render_queues[shader]
-        //delete(rq.transforms)
-        //delete(rq.commands)
-        //delete(rq.z_widths)
     }
     delete(rs.static_transforms)
     delete(rs.z_widths)
@@ -155,8 +126,10 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.GenBuffers(1, &rs.z_widths_ssbo)
     gl.GenBuffers(1, &rs.particle_vbo)
     gl.GenBuffers(1, &rs.particle_pos_vbo)
+    gl.GenBuffers(1, &rs.background_vbo)
     gl.GenVertexArrays(1, &rs.standard_vao)
     gl.GenVertexArrays(1, &rs.particle_vao)
+    gl.GenVertexArrays(1, &rs.background_vao)
 
     gl.BindVertexArray(rs.standard_vao)
     gl.PatchParameteri(gl.PATCH_VERTICES, 3);
@@ -178,6 +151,15 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.VertexAttribDivisor(0, 0)
     gl.VertexAttribDivisor(1, 1)
 
+    bv := BACKGROUND_VERTICES
+    gl.BindVertexArray(rs.background_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(bv[0]) * len(bv), &bv[0], gl.STATIC_DRAW)
+    gl.EnableVertexAttribArray(0)
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Background_Vertex), offset_of(Background_Vertex, position))
+    gl.EnableVertexAttribArray(1)
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Background_Vertex), offset_of(Background_Vertex, uv))
+
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     gl.BindVertexArray(0)
 
@@ -192,29 +174,11 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
 init_level_render_data :: proc(gs: ^Game_State, shst: ^ShaderState, rs: ^Render_State) {
     vertices := make([dynamic]Vertex); defer delete(vertices)
     indices := make([dynamic]u32); defer delete(indices)
-    for lg in gs.level_geometry {
-        trans_mat := trans_to_mat4(lg.transform)
-        append(&rs.static_transforms, trans_mat)
-        max_z := min(f32)
-        min_z := max(f32)
-        shape := lg.shape
-        for v in gs.level_resources[shape].vertices {
-            new_pos := trans_mat * [4]f32{v.pos[0], v.pos[1], v.pos[2], 1.0}
-            max_z = max(new_pos.z, max_z)
-            min_z = min(new_pos.z, min_z)
-        }
-        append(&rs.z_widths, max_z - min_z)
-    }
     for shape in SHAPES {
         rs.vertex_offsets[int(shape)] = u32(len(vertices))
         rs.index_offsets[int(shape)] = u32(len(indices))
         sd := gs.level_resources[shape]
-        offset := u32(len(vertices))
-        offset_indices := make([]u32, len(sd.indices)); defer delete(offset_indices)
-        for i, idx in sd.indices {
-            offset_indices[idx] = i + offset
-        }
-        append(&indices, ..offset_indices)
+        append(&indices, ..sd.indices)
         append(&vertices, ..sd.vertices)
     }
     rs.player_vertex_offset = u32(len(vertices))
@@ -240,18 +204,20 @@ update_vertices :: proc(gs: ^Game_State, rs: ^Render_State) {
                 max_z = max(new_pos.z, max_z)
                 min_z = min(new_pos.z, min_z)
             }
-            if lg_idx > len(rs.static_transforms) - 1 {
-                append(&rs.static_transforms, trans_mat) 
-                append(&rs.z_widths, max_z - min_z)
-            } else {
-                rs.static_transforms[lg_idx] = trans_mat
-                rs.z_widths[lg_idx] = max_z - min_z
+
+            for offset, shader in lg.ssbo_indexes {
+                if offset != -1 {
+                    ssbo_idx := get_ssbo_idx(lg, shader, rs^)
+                    if ssbo_idx > len(rs.static_transforms) - 1 {
+                        append(&rs.static_transforms, trans_mat) 
+                        append(&rs.z_widths, max_z - min_z)
+                    } else {
+                        rs.static_transforms[ssbo_idx] = trans_mat
+                        rs.z_widths[ssbo_idx] = max_z - min_z
+                    }
+                }
             }
         }
-    }
-    if gs.deleted_entity != -1 {
-        ordered_remove(&rs.static_transforms, gs.deleted_entity)
-        gs.deleted_entity = -1
     }
     clear(&gs.dirty_entities)
 
@@ -270,32 +236,9 @@ update_player_particles :: proc(rs: ^Render_State, time: f32) {
 }
 
 render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Physics_State, time: f64, interp_t: f64) {
-    //fmt.println("=====")
     clear_render_queues(rs)
 
-    //start_sort := tm.now() 
-    //for lg, lg_idx in gs.level_geometry {
-    //    if lg.transform.position.z < -1000 {
-    //        a := gs.level_geometry[lg_idx + 1]
-    //        gs.level_geometry[lg_idx] = lg
-    //        gs.level_geometry[lg_idx] = a
-    //    }
-    //}
-
-    //fmt.println("sort middle:", tm.since(start_sort))
-
-    // organize level geometry by shader -> shape
-    //for lg, lg_idx in gs.level_geometry {
-    //    for shader in lg.shaders {
-    //        append(&rs.shader_queues[shader][lg.shape],
-    //            Renderable{rs.static_transforms[lg_idx], rs.z_widths[lg_idx]})
-    //    }
-    //}
-    //
-    
-    // add level geometry to render queues
-
-    //fmt.println(rs.render_group_offsets)
+    // add level geometry to command queues
     for g_off, idx in rs.render_group_offsets {
         next_off := idx == len(rs.render_group_offsets) - 1 ? u32(len(gs.level_geometry)) : rs.render_group_offsets[idx + 1]
         count := next_off - g_off
@@ -310,40 +253,10 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             rs.vertex_offsets[shape],
             g_off
         }
-        //render_queue := rs.shader_render_queues[shader]
         append(&rs.shader_render_queues[shader], command)
-        //rs.shader_render_queues[shader] = render_queue
     }
 
-    //for queue, shader in rs.shader_queues {
-    //    render_queue := rs.shader_render_queues[shader]
-    //    for renderables, shape in queue {
-    //
-    //        if len(renderables) == 0 do continue
-    //        sd := gs.level_resources[shape]
-    //        command: gl.DrawElementsIndirectCommand = {
-    //            u32(len(sd.indices)),
-    //            u32(len(renderables)),
-    //            rs.index_offsets[shape],
-    //            rs.vertex_offsets[shape],
-    //            u32(len(render_queue.transforms)),
-    //
-    //        }
-    //        //fmt.println(len(render_queue.transforms))
-    //        for r in renderables {
-    //            append(&render_queue.transforms, r.transform)
-    //            append(&render_queue.z_widths, r.z_width)
-    //        }
-    //        //append(&render_queue.vertices, ..sd.vertices)
-    //        //append(&render_queue.indices, ..sd.indices)
-    //        append(&render_queue.commands, command)
-    //    }
-    //    rs.shader_render_queues[shader] = render_queue
-    //}
-
-    //fmt.println("sort end:", tm.since(start_sort))
-
-    // add player to render queue
+    // add player to command queue
     player_mat := interpolated_player_matrix(&gs.player_state, f32(interp_t))
     player_rq := rs.shader_render_queues[.Player]
     //append(&player_rq.transforms, player_mat)
@@ -356,18 +269,25 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     })
     rs.shader_render_queues[.Player] = player_rq
 
-
-    // add player particles to render queue
-
-    //fmt.println("data transform time:", tm.since(data_transform_start))
-
     // execute draw queues
-
     proj_mat: glm.mat4
     if EDIT {
         proj_mat = construct_camera_matrix(&gs.camera_state)
     } else {
         proj_mat = interpolated_camera_matrix(&gs.camera_state, f32(interp_t))
+    }
+
+    if !EDIT {
+        gl.Disable(gl.DEPTH_TEST)
+        gl.Disable(gl.CULL_FACE)
+        bqv := BACKGROUND_VERTICES
+        gl.BindVertexArray(rs.background_vao)
+        use_shader(shst, rs, .Background)
+        set_float_uniform(shst, "i_time", f32(time) / 1000)
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
+        gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        gl.Enable(gl.DEPTH_TEST)
+        gl.Enable(gl.CULL_FACE)
     }
 
     gl.BindVertexArray(rs.standard_vao)
@@ -379,26 +299,16 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
     gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(rs.z_widths[0]) * len(rs.z_widths), raw_data(rs.z_widths), gl.DYNAMIC_DRAW)
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
-    //gl.Disable(gl.DEPTH_TEST)
-    //gl.Disable(gl.CULL_FACE)
-    //bqv := QUAD_VERTICES
-    //bqi := QUAD_INDICES
-    //use_shader(shst, rs, .Background)
-    //set_float_uniform(shst, "i_time", f32(time) / 1000)
-    //gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
-    //gl.BufferData(gl.ARRAY_BUFFER, size_of(bqv[0]) * len(bqv), &bqv[0], gl.DYNAMIC_DRAW) 
-    //gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
-    //gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(bqi[0]) * len(bqi), &bqi[0], gl.DYNAMIC_DRAW)
-    //gl.DrawElements(gl.QUADS, len(bqi), gl.UNSIGNED_INT, nil)
-    //gl.Enable(gl.DEPTH_TEST)
-    //gl.Enable(gl.CULL_FACE)
 
-    use_shader(shst, rs, .Player)
-    p_color: [3]f32 = gs.player_state.dashing ? {0.0, 1.0, 0} : {1.0, 0.0, 0.5}
-    set_matrix_uniform(shst, "projection", &proj_mat)
-    set_float_uniform(shst, "i_time", f32(time) / 1000)
-    set_vec3_uniform(shst, "p_color", 1, &p_color)
-    draw_shader_render_queue(rs, shst, gl.TRIANGLES)
+    if !EDIT {
+        use_shader(shst, rs, .Player)
+        p_color: [3]f32 = gs.player_state.dashing ? {0.0, 1.0, 0} : {1.0, 0.0, 0.5}
+        set_matrix_uniform(shst, "projection", &proj_mat)
+        set_matrix_uniform(shst, "transform", &player_mat)
+        set_float_uniform(shst, "i_time", f32(time) / 1000)
+        set_vec3_uniform(shst, "p_color", 1, &p_color)
+        draw_shader_render_queue(rs, shst, gl.TRIANGLES)
+    }
 
     use_shader(shst, rs, .Simple)
     set_matrix_uniform(shst, "projection", &proj_mat)
@@ -425,18 +335,20 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     }
 
     // PARTICLE DRAW TEST ZONE=========
-    use_shader(shst, rs, .Player_Particle)
-    gl.BindVertexArray(rs.particle_vao)
-    ppv := PARTICLE_VERTICES
-    ppp := rs.player_particles
-    i_ppos:[3]f32 = interpolated_player_pos(&gs.player_state, f32(interp_t))
-    set_matrix_uniform(shst, "projection", &proj_mat)
-    set_vec3_uniform(shst, "player_pos", 1, &i_ppos)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, size_of(ppv[0]) * len(ppv), &ppv[0], gl.DYNAMIC_DRAW) 
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, size_of(ppp[0]) * len(ppp), &ppp[0], gl.DYNAMIC_DRAW) 
-    gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
+    if !EDIT {
+        use_shader(shst, rs, .Player_Particle)
+        gl.BindVertexArray(rs.particle_vao)
+        ppv := PARTICLE_VERTICES
+        ppp := rs.player_particles
+        i_ppos:[3]f32 = interpolated_player_pos(&gs.player_state, f32(interp_t))
+        set_matrix_uniform(shst, "projection", &proj_mat)
+        set_vec3_uniform(shst, "player_pos", 1, &i_ppos)
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(ppv[0]) * len(ppv), &ppv[0], gl.DYNAMIC_DRAW) 
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(ppp[0]) * len(ppp), &ppp[0], gl.DYNAMIC_DRAW) 
+        gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
+    }
     // ================================
 }
 

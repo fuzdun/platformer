@@ -20,19 +20,20 @@ trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
 encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     aos_level_data := make([dynamic]Level_Geometry)
     defer delete(aos_level_data)
+
+    //rot := la.quaternion_from_euler_angles_f32(0, 0, 0, .XYZ)
+    //lg: Level_Geometry
+    //lg.shape = .CUBE
+    //lg.collider = .CUBE
+    //lg.shaders = {.Trail}
+    //lg.transform = {{0, 0, 0},{10, 10, 10}, rot}
+    //lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+    //append(&aos_level_data, lg)
+
     for lg in lgs {
         append(&aos_level_data, lg)
     }
 
-    //rotation : quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
-    //shallow_angle: Level_Geometry
-    //shallow_angle.shape = "basic_cube"
-    //shallow_angle.collider = "basic_cube"
-    //shallow_angle.transform = {{0, 0, 0},{10, 10, 10}, rotation}
-    //shallow_angle.shaders = {.Trail}
-    //shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-    //append(&aos_level_data, shallow_angle)
-    //
     bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC)
     defer delete(bin)
     os.write_entire_file("levels/test_level.bin", bin)
@@ -47,67 +48,82 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_Sta
     decoded, decode_err := cbor.decode(string(level_bin))
     defer cbor.destroy(decoded)
 
-    //for entry in decoded.(^cbor.Array) {
-    //    lg: Level_Geometry
-    //    entry_bin, _ := cbor.encode(entry)
-    //    defer delete(entry_bin)
-    //    cbor.unmarshal(string(entry_bin), &lg)
-    //    lg.attributes = trim_bit_set(lg.attributes)
-    //    lg.shaders = trim_bit_set(lg.shaders)
-    //    trns := lg.transform
-    //    coll_vertices := ps.level_colliders[SHAPE_NAMES[lg.collider]].vertices
-    //    transformed_coll_vertices := make([][3]f32, len(coll_vertices)); defer delete(transformed_coll_vertices)
-    //    for v, vi in coll_vertices {
-    //        transformed_coll_vertices[vi] = la.quaternion128_mul_vector3(trns.rotation, trns.scale * v) + trns.position
-    //    }
-    //    append(&ps.static_collider_vertices, ..transformed_coll_vertices[:])
-    //    lg.aabb = construct_aabb(transformed_coll_vertices)
-    //    append(&gs.level_geometry, lg)
-    //}
-    //fmt.println(rs.render_group_offsets)
+    for entry in decoded.(^cbor.Array) {
+        // decode level geometry struct
+        lg: Level_Geometry
+        entry_bin, _ := cbor.encode(entry)
+        defer delete(entry_bin)
+        cbor.unmarshal(string(entry_bin), &lg)
+        lg.attributes = trim_bit_set(lg.attributes)
+        lg.shaders = trim_bit_set(lg.shaders)
 
-    sorted_geometry := make([dynamic]Level_Geometry); defer delete(sorted_geometry)        
-    //for i in 0..<75000 {
-    for i in 0..<10000 {
-
-        rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
-        //shape:SHAPES = .CUBE 
-        //shader: ProgramName = .Trail
-        shape: SHAPES = i % 2 == 0 ? .CUBE : .WEIRD 
-        shader: ProgramName = i % 3 == 0 ? .Simple : .Trail
-        shallow_angle: Level_Geometry
-        shallow_angle.shape = shape
-        shallow_angle.collider = shape
-
-        x := f32(i % 40)
-        y := math.floor(f32(i) / 40.0)
-        shallow_angle.transform = {{x * 10, y * -2 -20, y * -10 + 300},{10, 10, 10}, rot}
-        shallow_angle.shaders = {shader}
-        shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-        offset_idx := int(shader) * len(SHAPES) + int(shape)
-        group_offset := rs.render_group_offsets[offset_idx]
-        inject_at(&sorted_geometry, group_offset, shallow_angle)
-
-        for &g_offset, idx in rs.render_group_offsets {
-            if idx > offset_idx {
-                g_offset += 1 
-            }
-        }
+        process_and_add_geometry(gs, rs, ps, lg)
     }
-    append(&gs.level_geometry, ..sorted_geometry[:])
-    for &lg in gs.level_geometry {
-        vertices := ps.level_colliders[lg.shape].vertices
-        trns := lg.transform
-        transformed_vertices := make([][3]f32, len(vertices)); defer delete(transformed_vertices)
-        for v, vi in vertices {
-            transformed_vertices[vi] = la.quaternion128_mul_vector3(trns.rotation, trns.scale * v) + trns.position
-        }
-        lg.aabb = construct_aabb(transformed_vertices)
-        append(&ps.static_collider_vertices, ..transformed_vertices)
-    }
-    //fmt.println(rs.render_group_offsets)
-    //for lg in gs.level_geometry {
-    //    fmt.println("shader:", lg.shaders, "shape:", lg.shape)
+    //for i in 0..<500 {
+    //
+    //    rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
+    //    //shape: SHAPES = rnd.choice([]SHAPES{.CUBE, .WEIRD})
+    //    //shader: ProgramName = rnd.choice([]ProgramName{.Trail, .Simple})
+    //    shape: SHAPES = .CUBE
+    //    shader: ProgramName = .Simple
+    //    shallow_angle: Level_Geometry
+    //    shallow_angle.shape = shape
+    //    shallow_angle.collider = shape
+    //
+    //    x := f32(i % 10)
+    //    y := math.floor(f32(i) / 10.0)
+    //    shallow_angle.transform = {{x * 20, y * -2 -20, y * -10 + 300},{10, 10, 10}, rot}
+    //    shallow_angle.shaders = {shader}
+    //    shallow_angle.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+    //
+    //    process_and_add_geometry(gs, rs, ps, &shallow_angle)
     //}
 }
+
+process_and_add_geometry :: proc(gs: ^Game_State, rs: ^Render_State, ps: ^Physics_State, lg_in: Level_Geometry) {
+    lg := lg_in
+    // reset ssbo_indexes
+    for &idx in lg.ssbo_indexes {
+        idx = -1 
+    }
+
+    // construct aabb and add transformed vertices to physics state
+    vertices := ps.level_colliders[lg.shape].vertices
+    transformed_vertices := make([][3]f32, len(vertices)); defer delete(transformed_vertices)
+    trns := lg.transform
+    trans_mat := trans_to_mat4(lg.transform)
+    max_z := min(f32)
+    min_z := max(f32)
+    for v, vi in vertices {
+        tv := trans_mat * [4]f32{v[0], v[1], v[2], 1.0}
+        max_z = max(tv.z, max_z)
+        min_z = min(tv.z, min_z)
+        transformed_vertices[vi] = tv.xyz
+    }
+    lg.aabb = construct_aabb(transformed_vertices)
+    append(&ps.static_collider_vertices, ..transformed_vertices)
+
+    // insert transform into render state
+    for shader in lg.shaders {
+        last_offsets_idx := len(rs.render_group_offsets) - 1
+        group_offsets_idx := int(int(shader) * len(SHAPES) + int(lg.shape))
+        in_last_group := group_offsets_idx == last_offsets_idx
+        nxt_group_start_idx := in_last_group ? u32(len(rs.static_transforms)) : rs.render_group_offsets[group_offsets_idx + 1]
+
+        inject_at(&rs.z_widths, nxt_group_start_idx, max_z - min_z)
+        inject_at(&rs.static_transforms, nxt_group_start_idx, trans_mat)
+
+        if EDIT {
+            append(&gs.editor_state.ssbo_registry[group_offsets_idx], len(gs.level_geometry))
+        }
+
+        lg.ssbo_indexes[shader] = int(nxt_group_start_idx)
+
+        for &g_offset, idx in rs.render_group_offsets[group_offsets_idx + 1:] {
+            g_offset += 1 
+        }
+    }
+    append(&gs.level_geometry, lg)
+}
+
 

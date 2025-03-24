@@ -3,10 +3,13 @@ package main
 import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
+import "core:slice"
 
 OBJ_MOVE_SPD :: 30.0
 OBJ_ROT_SPD :: 1.0
 OBJ_SCALE_SPD :: 0.3
+
+SSBO_Registry :: [len(SHAPES) * len(ProgramName)][dynamic]int
 
 Editor_State :: struct {
     selected_entity: int,
@@ -17,7 +20,8 @@ Editor_State :: struct {
     can_swap: bool,
     x_rot: f32,
     y_rot: f32,
-    zoom: f32
+    zoom: f32,
+    ssbo_registry: SSBO_Registry
 }
 
 editor_move_camera :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^Camera_State, delta_time: f32) {
@@ -29,7 +33,7 @@ editor_move_camera :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^C
     cs.position = math.lerp(cs.position, tgt, f32(0.075))
 }
 
-editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, delta_time: f32) {
+editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, rs: ^Render_State, delta_time: f32) {
     lgs := &gs.level_geometry
     selected_obj := &lgs[es.selected_entity]
     rotating := is.r_pressed
@@ -39,38 +43,39 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
     if is.q_pressed && es.can_add {
         rotation: quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
         position: Position = lgs[es.selected_entity].transform.position
-        new_cube: Level_Geometry
-        new_cube.shape = .CUBE
-        new_cube.collider = .CUBE 
-        new_cube.transform = {position,{5, 5, 5}, rotation}
-        new_cube.shaders = {.Trail}
-        new_cube.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-        append(lgs, new_cube)
-        es.selected_entity = len(lgs) - 1
-        append(&gs.dirty_entities, es.selected_entity)
+        new_lg: Level_Geometry
+        new_lg.shape = .CUBE
+        new_lg.collider = .CUBE 
+        new_lg.transform = {position,{5, 5, 5}, rotation}
+        new_lg.shaders = {.Trail}
+        new_lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+        for &idx in new_lg.ssbo_indexes {
+            idx = -1
+        }
+        add_geometry(gs, rs, es, new_lg)
     }
     es.can_add = !is.q_pressed
 
     if (is.lt_pressed || is.gt_pressed)&& es.can_swap {
+
+        // do shape swap
+
         //sn := SHAPES
-        cur_shape_idx := 0
-        for name, idx in SHAPES {
-            if name == selected_obj.shape {
-                cur_shape_idx = int(idx)
-                break
-            }
-        }
-        nxt_shape := math.abs((is.lt_pressed ? cur_shape_idx - 1 : cur_shape_idx + 1) % len(SHAPES))
-        //selected_obj.shape = SHAPES[SHAPES(nxt_shape_idx)]
-        selected_obj.shape = SHAPES(nxt_shape)
-        selected_obj.collider = SHAPES(nxt_shape)
+        //cur_shape_idx := 0
+        //for name, idx in SHAPES {
+        //    if name == selected_obj.shape {
+        //        cur_shape_idx = int(idx)
+        //        break
+        //    }
+        //}
+        //nxt_shape := math.abs((is.lt_pressed ? cur_shape_idx - 1 : cur_shape_idx + 1) % len(SHAPES))
+        //selected_obj.shape = SHAPES(nxt_shape)
+        //selected_obj.collider = SHAPES(nxt_shape)
     }
     es.can_swap = !(is.lt_pressed || is.gt_pressed)
 
     if is.bck_pressed && es.can_delete {
-        ordered_remove_soa(lgs, es.selected_entity) 
-        gs.deleted_entity = es.selected_entity
-        es.selected_entity = min(len(lgs) - 1, es.selected_entity)
+        remove_geometry(lgs, rs, es)
     }
     es.can_delete = !is.bck_pressed
 
@@ -185,5 +190,49 @@ editor_save_changes :: proc(lgs:^Level_Geometry_State, is: Input_State, es: ^Edi
     } else {
         es.saved = false
     }
+}
+
+remove_geometry :: proc(lgs: ^Level_Geometry_State, rs: ^Render_State, es: ^Editor_State) {
+    lg := lgs[es.selected_entity]
+    for shader in lg.shaders {
+        group_idx := int(shader) * len(SHAPES) + int(lg.shape)
+        registry := es.ssbo_registry[group_idx]
+        idx_in_render_group, found := slice.binary_search(registry[:], es.selected_entity)
+        if found {
+            for lg_idx in registry[idx_in_render_group + 1:] {
+                lgs[lg_idx].ssbo_indexes[shader] -= 1
+                
+            }
+            ssbo_idx := int(rs.render_group_offsets[group_idx]) + idx_in_render_group
+            ordered_remove(&rs.static_transforms, ssbo_idx)
+            ordered_remove(&rs.z_widths, ssbo_idx)
+            for &g_offset, idx in rs.render_group_offsets[group_idx + 1:] {
+                g_offset -= 1 
+            }
+        }
+    }
+    ordered_remove_soa(lgs, es.selected_entity) 
+    es.selected_entity = min(len(lgs) - 1, es.selected_entity)
+}
+
+add_geometry :: proc(gs: ^Game_State, rs: ^Render_State, es: ^Editor_State, lg_in: Level_Geometry) {
+    lg := lg_in
+    //lg_idx := len(gs.level_geometry)
+    es.selected_entity = len(gs.level_geometry)
+    for shader in lg.shaders {
+        last_group_idx := len(rs.render_group_offsets) - 1
+        group_idx := int(int(shader) * len(SHAPES) + int(lg.shape))
+        in_last_group := group_idx == last_group_idx
+        nxt_group_idx := in_last_group ? u32(len(rs.static_transforms)) : rs.render_group_offsets[group_idx + 1]
+
+        append(&es.ssbo_registry[group_idx], es.selected_entity)
+        lg.ssbo_indexes[shader] = int(nxt_group_idx)
+
+        for &g_offset, idx in rs.render_group_offsets[group_idx + 1:] {
+            g_offset += 1 
+        }
+    }
+    append(&gs.level_geometry, lg)
+    append(&gs.dirty_entities, es.selected_entity)
 }
 

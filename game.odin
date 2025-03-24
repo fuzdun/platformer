@@ -5,7 +5,7 @@ game_update :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_State, elap
     //fmt.println("============update===========")
     if EDIT {
         editor_move_camera(&gs.level_geometry, &gs.editor_state, &gs.camera_state, delta_time)
-        editor_move_object(gs, &gs.editor_state, gs.input_state, delta_time)
+        editor_move_object(gs, &gs.editor_state, gs.input_state, rs, delta_time)
         editor_save_changes(&gs.level_geometry, gs.input_state, &gs.editor_state)
     } else {
         update_player_velocity(gs, elapsed_time, delta_time)

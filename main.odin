@@ -8,15 +8,15 @@ import la "core:math/linalg"
 import "core:mem"
 import "core:os"
 
-WIDTH :: 1920.0
-HEIGHT :: 1080.0
-//WIDTH :: 720
-//HEIGHT :: 720
+//WIDTH :: 1920.0
+//HEIGHT :: 1080.0
+WIDTH :: 600
+HEIGHT :: 600
 TITLE :: "platformer"
 
 EDIT :: #config(EDIT, false)
 
-INIT_PLAYER_POS :: [3]f32 { 10, 100, 250 }
+INIT_PLAYER_POS :: [3]f32 { 0, 0, 0 }
 
 Game_State :: struct {
     player_geometry: Shape_Data,
@@ -27,22 +27,22 @@ Game_State :: struct {
     camera_state: Camera_State,
     editor_state: Editor_State,
     dirty_entities: [dynamic]int,
-    deleted_entity: int,
     time_mult: f32
 }
 
 gamestate_init :: proc(gs: ^Game_State) {
-    //gs.level_resources = [SHAPES]Shape_Data
     gs.level_geometry = make(Level_Geometry_State)
     gs.player_state.trail = make([dynamic][3]f32)
-    gs.player_state.position = {10, 100, 250}
+    gs.player_state.position = INIT_PLAYER_POS
     gs.player_state.can_dash = true
     gs.camera_state.position = {10, 60, 300}
     gs.dirty_entities = make([dynamic]int)
     gs.editor_state.y_rot = -.25
     gs.editor_state.zoom = 200
+    for &registry in gs.editor_state.ssbo_registry {
+        registry = make([dynamic]int)
+    }
     resize(&gs.player_state.trail, TRAIL_SIZE)
-    gs.deleted_entity = -1
     gs.time_mult = 1
 }
 
@@ -56,7 +56,9 @@ gamestate_free :: proc(gs: ^Game_State) {
         delete(sd.indices) 
         delete(sd.vertices)
     }
-    //delete(gs.level_resources)
+    for registry in gs.editor_state.ssbo_registry {
+        delete(registry)
+    }
 }
 
 controller : ^SDL.GameController
