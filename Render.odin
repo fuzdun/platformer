@@ -99,6 +99,14 @@ init_render_buffers :: proc(gs: ^Game_State, rs: ^Render_State) {
     add_player_sphere_data(gs)
 }
 
+clear_render_state :: proc(rs: ^Render_State) {
+    clear(&rs.static_transforms)
+    clear(&rs.z_widths)
+    for &off in rs.render_group_offsets {
+        off = 0
+    }
+}
+
 clear_render_queues :: proc(rs: ^Render_State) {
     for shader in ProgramName {
         clear(&rs.shader_render_queues[shader])

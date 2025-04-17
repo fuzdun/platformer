@@ -133,7 +133,7 @@ main :: proc () {
         return
     }
 
-    load_level_geometry(&gs, &ps, &rs, "test_level")
+    load_level_geometry(&gs, &ps, &rs, &ss, "test_level")
     init_level_render_data(&gs, &ss, &rs)
     
 
