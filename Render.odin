@@ -13,8 +13,8 @@ PLAYER_PARTICLE_COUNT :: 40
 I_MAT :: glm.mat4(1.0)
 
 SHAPES :: enum{
-    WEIRD,
     CUBE,
+    WEIRD,
 }
 
 SHAPE_NAMES := [SHAPES]string {
@@ -179,7 +179,7 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     return true
 }
 
-init_level_render_data :: proc(gs: ^Game_State, shst: ^ShaderState, rs: ^Render_State) {
+init_level_render_data :: proc(gs: ^Game_State, rs: ^Render_State) {
     vertices := make([dynamic]Vertex); defer delete(vertices)
     indices := make([dynamic]u32); defer delete(indices)
     for shape in SHAPES {

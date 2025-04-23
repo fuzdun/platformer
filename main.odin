@@ -39,9 +39,9 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.dirty_entities = make([dynamic]int)
     gs.editor_state.y_rot = -.25
     gs.editor_state.zoom = 200
-    for &registry in gs.editor_state.ssbo_registry {
-        registry = make([dynamic]int)
-    }
+    // for &registry in gs.editor_state.ssbo_registry {
+    //     registry = make([dynamic]int)
+    // }
     resize(&gs.player_state.trail, TRAIL_SIZE)
     gs.time_mult = 1
 }
@@ -56,9 +56,9 @@ gamestate_free :: proc(gs: ^Game_State) {
         delete(sd.indices) 
         delete(sd.vertices)
     }
-    for registry in gs.editor_state.ssbo_registry {
-        delete(registry)
-    }
+    // for registry in gs.editor_state.ssbo_registry {
+    //     delete(registry)
+    // }
 }
 
 controller : ^SDL.GameController
@@ -133,9 +133,8 @@ main :: proc () {
         return
     }
 
-    load_level_geometry(&gs, &ps, &rs, &ss, "test_level")
-    init_level_render_data(&gs, &ss, &rs)
-    
+    load_level_geometry(&gs, &ps, &rs, "test_level")
+    init_level_render_data(&gs, &rs)
 
     // start frame loop
     frame_loop(window, &gs, &rs, &ss, &ps)
