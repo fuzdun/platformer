@@ -145,7 +145,7 @@ void main()
     float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
     float freq = 2.0 * line_len;
     float width =  sin(-time * 70.0 + t * TWOPI * freq) * 5.0 + 40.0;
-    float border_d = 0.025 * width;
+    float border_d = 0.055 * width;
     vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.5, 0.0, 0.5), t);
     trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
 
