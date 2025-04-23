@@ -79,7 +79,7 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
     new_pt: [3]f32 = {f32(ps.position.x), f32(ps.position.y), f32(ps.position.z)}
     inject_at(&ps.trail, 0, new_pt)
     ps.prev_trail_sample = ps.trail_sample
-    ps.trail_sample = {ps.trail[2], ps.trail[4], ps.trail[8]}
+    ps.trail_sample = {ps.trail[2], ps.trail[6], ps.trail[10]}
     move_spd := P_ACCEL
     if ps.on_slope {
         move_spd = SLOPE_SPEED 
