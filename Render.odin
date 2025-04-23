@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "core:slice"
 import str "core:strings"
 import gl "vendor:OpenGL"
 import la "core:math/linalg"
@@ -22,23 +23,23 @@ SHAPE_NAMES := [SHAPES]string {
     .WEIRD = "weird"
 }
 
-Background_Vertex :: struct {
+Quad_Vertex :: struct {
     position: glm.vec3,
     uv: glm.vec2
 }
 
-BACKGROUND_VERTICES :: [4]Background_Vertex {
+BACKGROUND_VERTICES :: [4]Quad_Vertex {
     {{-1, -1, -1}, {0, 0}},
     {{1, -1, -1}, {1, 0}},
     {{-1, 1, -1}, {0, 1}},
     {{1, 1, -1}, {1, 1}},
 }
 
-PARTICLE_VERTICES :: [4]glm.vec3 {
-    {-0.3, -0.3, 0.0},
-    {0.3, -0.3, 0.0},
-    {-0.3, 0.3, 0.0},
-    {0.3, 0.3, 0.0},
+PARTICLE_VERTICES :: [4]Quad_Vertex {
+    {{-0.3, -0.3, 0.0}, {0, 0}},
+    {{0.3, -0.3, 0.0}, {1, 0}},
+    {{-0.3, 0.3, 0.0}, {0, 1}},
+    {{0.3, 0.3, 0.0}, {1, 1}},
 }
 
 Vertex_Offsets :: [len(SHAPES)]u32
@@ -152,21 +153,24 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.BindVertexArray(rs.particle_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
     gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
     gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0)
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, position))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+    gl.EnableVertexAttribArray(2)
+    gl.VertexAttribPointer(2, 3, gl.FLOAT, false, 0, 0)
     gl.VertexAttribDivisor(0, 0)
-    gl.VertexAttribDivisor(1, 1)
+    gl.VertexAttribDivisor(1, 0)
+    gl.VertexAttribDivisor(2, 1)
 
     bv := BACKGROUND_VERTICES
     gl.BindVertexArray(rs.background_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(bv[0]) * len(bv), &bv[0], gl.STATIC_DRAW)
     gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Background_Vertex), offset_of(Background_Vertex, position))
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, position))
     gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Background_Vertex), offset_of(Background_Vertex, uv))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
 
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     gl.BindVertexArray(0)
@@ -233,14 +237,16 @@ update_vertices :: proc(gs: ^Game_State, rs: ^Render_State) {
 
 update_player_particles :: proc(rs: ^Render_State, time: f32) {
     for &pp, pp_idx in rs.player_particles {
-        h_angle := 3.14 * math.sin((time / 4000 + f32(pp_idx) * 200) * 3.14) * 4
-        v_angle := 3.14 * math.sin((time / 3600 + f32(pp_idx) * 200) * 3.14) * 4
+        h_angle := 3.14 * math.sin((time / 8000 + f32(pp_idx) * 200) * 3.14) * 4
+        v_angle := 3.14 * math.sin((time / 7200 + f32(pp_idx) * 200) * 3.14) * 4
         xz := SPHERE_RADIUS * math.cos(v_angle)
         x := xz * math.cos(h_angle)
         z := xz * math.sin(h_angle)
         y := SPHERE_RADIUS * math.sin(v_angle)
         pp = {x, y, z} * 1.5
     }
+    z_sort := proc(a: [3]f32, b: [3]f32) -> bool { return a.z < b.z }
+    slice.sort_by(rs.player_particles[:], z_sort)
 }
 
 render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Physics_State, time: f64, interp_t: f64) {
