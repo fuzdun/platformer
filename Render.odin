@@ -10,7 +10,10 @@ import glm "core:math/linalg/glsl"
 import rnd "core:math/rand"
 import tm "core:time"
 
-PLAYER_PARTICLE_COUNT :: 40
+PLAYER_PARTICLE_STACK_COUNT :: 7
+PLAYER_PARTICLE_SECTOR_COUNT :: 8
+
+PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT
 I_MAT :: glm.mat4(1.0)
 
 SHAPES :: enum{
@@ -236,14 +239,27 @@ update_vertices :: proc(gs: ^Game_State, rs: ^Render_State) {
 }
 
 update_player_particles :: proc(rs: ^Render_State, time: f32) {
-    for &pp, pp_idx in rs.player_particles {
-        h_angle := 3.14 * math.sin((time / 8000 + f32(pp_idx) * 200) * 3.14) * 4
-        v_angle := 3.14 * math.sin((time / 7200 + f32(pp_idx) * 200) * 3.14) * 4
-        xz := SPHERE_RADIUS * math.cos(v_angle)
-        x := xz * math.cos(h_angle)
-        z := xz * math.sin(h_angle)
-        y := SPHERE_RADIUS * math.sin(v_angle)
-        pp = {x, y, z} * 1.5
+    vertical_count := PLAYER_PARTICLE_STACK_COUNT
+    horizontal_count := PLAYER_PARTICLE_SECTOR_COUNT
+    x, y, z, xz: f32
+    horizontal_angle, vertical_angle: f32
+    s, t: f32
+    vr1, vr2: u32
+    PI := f32(math.PI)
+
+    vertical_step := PI / f32(vertical_count)
+    horizontal_step := (2 * PI) / f32(horizontal_count)
+
+    for i in 0..<vertical_count {
+        vertical_angle = PI / 2.0 - f32(i) * vertical_step 
+        xz := SPHERE_RADIUS * math.cos(vertical_angle)
+        y = SPHERE_RADIUS * math.sin(vertical_angle)
+        for j in 0..<horizontal_count {
+            horizontal_angle = f32(j) * horizontal_step 
+            x = xz * math.cos(horizontal_angle)
+            z = xz * math.sin(horizontal_angle)
+            rs.player_particles[i * horizontal_count + j] = {x, y, z} * 2.0
+        }
     }
     z_sort := proc(a: [3]f32, b: [3]f32) -> bool { return a.z < b.z }
     slice.sort_by(rs.player_particles[:], z_sort)
