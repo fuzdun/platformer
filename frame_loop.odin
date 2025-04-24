@@ -105,6 +105,38 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
     }
 }
 
+RingBuffer :: struct($N: int, $T: typeid) {
+    insert_at : int,
+    values : [N]T
+}
+
+ring_buffer_init :: proc(buffer: ^RingBuffer($N, $T), default: T) {
+    for &v in buffer.values {
+        v = default
+    }
+}
+
+ring_buffer_push :: proc(buffer: ^RingBuffer($N, $T), value: T) {
+    buffer.values[buffer.insert_at] = value
+    buffer.insert_at = (buffer.insert_at + 1) % N
+}
+
+ring_buffer_average :: proc(buffer: RingBuffer($N, $T)) -> T {
+    sum : T = 0
+    for val in buffer.values {
+        sum += val
+    }
+    return sum / N
+}
+
+ring_buffer_at :: proc(buffer: RingBuffer($N, $T), idx: int) -> T {
+    adjusted_idx := buffer.insert_at + idx
+    if adjusted_idx < 0 {
+        adjusted_idx += N
+    }
+    return buffer.values[adjusted_idx % N]
+}
+
 FrameTimeBuffer :: struct {
     insert_at : i32,
     values : [4]i64

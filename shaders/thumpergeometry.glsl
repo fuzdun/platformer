@@ -14,9 +14,11 @@ in TE_OUT {
 } te_out[];
 
 out vec3 global_pos;
-out vec2 uv;
+out vec2 perspective_uv;
+out vec2 affine_uv;
 out vec3 normal_frag;
 out vec3 player_pos;
+out int in_view;
 
 #define MAX_INTERVAL 200.0 
 
@@ -46,12 +48,21 @@ void main() {
         vec4 new_avg = avg_pos + disp;
         new_pos += disp;   
         new_pos += normalize(new_avg - new_pos) * dist_fact;
-        gl_Position = te_out[0].projection * new_pos;
+        vec4 proj_pos = te_out[0].projection * new_pos;
+        vec4 snapped_pos = proj_pos;
+        snapped_pos.xyz /= proj_pos.w;
+        bool in_ndc = snapped_pos.x >= -1 && snapped_pos.x <= 1 && snapped_pos.y >= -1 && snapped_pos.y <= 1;
+        in_view = in_ndc ? 1 : 0;
+        snapped_pos.xy = floor(100 * snapped_pos.xy) / 100;
+        snapped_pos.xyz *= proj_pos.w;
+        gl_Position = snapped_pos;
+        // gl_Position = te_out[0].projection * new_pos;
 
 
         global_pos = new_pos.xyz;
         player_pos = te_out[i].player_pos;
-        uv = te_out[i].uv;
+        perspective_uv = te_out[i].uv;
+        affine_uv = te_out[i].uv;
         normal_frag = te_out[i].normal_frag;
         EmitVertex();
     }

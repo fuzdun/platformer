@@ -96,7 +96,6 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
         append(&gs.dirty_entities, es.selected_entity)
     }
     if is.up_pressed {
-        fmt.println(selected_obj)
         if rotating {
             rot_x -= OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)

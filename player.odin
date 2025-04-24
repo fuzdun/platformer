@@ -5,17 +5,26 @@ import glm "core:math/linalg/glsl"
 import "core:fmt"
 
 // should update this
-Player_Input_State :: struct {
-    got_jump: bool,
-    got_input: bool,
-    got_dir: bool,
-    dir: la.Vector2f64,
+Player_States :: enum {
+    ON_GROUND,
+    ON_WALL,
+    ON_SLOPE,
+    IN_AIR,
+    DASHING 
 }
+// Player_Input_State :: struct {
+//     got_jump: bool,
+//     got_input: bool,
+//     got_dir: bool,
+//     dir: la.Vector2f64,
+// }
 
 Player_State :: struct {
+    state: Player_States,
     position: [3]f32,
     velocity: [3]f32,
-    trail: [dynamic]glm.vec3,
+    trail: RingBuffer(TRAIL_SIZE, [3]f32),
+    // trail: [dynamic]glm.vec3,
     touch_pt: [3]f32,
     touch_time: f32,
     crunch_pt: [3]f32,
@@ -29,17 +38,17 @@ Player_State :: struct {
     dash_time: f32,
     dashing: bool,
     dash_vel: glm.vec3,
-    on_ground: bool,
-    on_wall: bool,
-    on_slope: bool,
+    // on_ground: bool,
+    // on_wall: bool,
+    // on_slope: bool,
 
     left_ground: f32,
     left_slope: f32,
+    left_wall: f32,
 
     contact_ray: [3]f32,
     ground_x: [3]f32,
     ground_z: [3]f32,
-    sonar_time: f32,
     prev_position: [3]f32,
     trail_sample: [3]glm.vec3,
     prev_trail_sample: [3]glm.vec3
@@ -52,11 +61,12 @@ P_ACCEL: f32: 150.0
 DASH_SPD: f32: 75.0
 DASH_LEN: f32: 150 
 BUNNY_WINDOW: f32: 100
-BUNNY_DEBOUNCE: f32: 400
+BUNNY_DASH_DEBOUNCE: f32: 400
 GROUND_BUNNY_V_SPEED: f32: 70
 GROUND_BUNNY_H_SPEED: f32: 30
+MIN_BUNNY_XZ_VEL: f32: 20.0
 GRAV: f32: 135
-WALL_GRAV: f32: 60 
+WALL_GRAV: f32: 20 
 SLOPE_GRAV: f32: 60 
 WALL_JUMP_FORCE :: 35 
 SLOPE_V_JUMP_FORCE :: 40 
@@ -68,26 +78,41 @@ GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
 GROUND_OFFSET: f32 = 1.0 
 AIR_SPEED :: 120.0
 SLOPE_SPEED :: 80.0 
+COYOTE_TIME ::  150
 
 update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f32) {
     ps := &gs.player_state
     is := &gs.input_state
-    if is.q_pressed {
-        ps.sonar_time = f32(elapsed_time)
-    }
-    pop(&ps.trail)
-    new_pt: [3]f32 = {f32(ps.position.x), f32(ps.position.y), f32(ps.position.z)}
-    inject_at(&ps.trail, 0, new_pt)
+
+    // update trail
+    ring_buffer_push(&ps.trail, [3]f32 {f32(ps.position.x), f32(ps.position.y), f32(ps.position.z)})
     ps.prev_trail_sample = ps.trail_sample
-    ps.trail_sample = {ps.trail[2], ps.trail[6], ps.trail[10]}
+    ps.trail_sample = {ring_buffer_at(ps.trail, -4), ring_buffer_at(ps.trail, -8), ring_buffer_at(ps.trail, -12)}
+
     move_spd := P_ACCEL
-    if ps.on_slope {
+    if ps.state == .ON_SLOPE {
         move_spd = SLOPE_SPEED 
-    } else if !ps.on_ground {
+    } else if ps.state == .IN_AIR {
         move_spd = AIR_SPEED
     }
-    right_vec := (ps.on_ground || ps.on_slope) ? ps.ground_x : [3]f32{1, 0, 0}
-    fwd_vec := (ps.on_ground || ps.on_slope) ? ps.ground_z : [3]f32{0, 0, -1}
+
+    // process directional input
+    input_x: f32 = 0.0
+    input_z: f32 = 0.0
+    if is.left_pressed do input_x -= 1
+    if is.right_pressed do input_x += 1
+    if is.up_pressed do input_z -= 1
+    if is.down_pressed do input_z += 1
+    input_dir := la.normalize([2]f32{input_x, input_z})
+    if is.hor_axis !=0 || is.vert_axis != 0 {
+        input_dir = la.normalize([2]f32{is.hor_axis, -is.vert_axis})
+    }
+    got_dir_input := is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
+
+    // move player through air or along ground axes
+    grounded := ps.state == .ON_GROUND || ps.state == .ON_SLOPE
+    right_vec := grounded ? ps.ground_x : [3]f32{1, 0, 0}
+    fwd_vec := grounded ? ps.ground_z : [3]f32{0, 0, -1}
     if is.left_pressed {
        ps.velocity -= move_spd * delta_time * right_vec
     }
@@ -107,68 +132,74 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
         ps.velocity += move_spd * delta_time * is.vert_axis * fwd_vec
     }
 
-    input_x: f32 = 0.0
-    input_z: f32 = 0.0
-    if is.left_pressed do input_x -= 1
-    if is.right_pressed do input_x += 1
-    if is.up_pressed do input_z -= 1
-    if is.down_pressed do input_z += 1
-    input_dir := la.normalize([2]f32{input_x, input_z})
-    if is.hor_axis !=0 || is.vert_axis != 0 {
-        input_dir = la.normalize([2]f32{is.hor_axis, -is.vert_axis})
-    }
-
-    clamped_xz := la.clamp_length(ps.velocity.xz, MAX_PLAYER_SPEED)
-    ps.velocity.xz = math.lerp(ps.velocity.xz, clamped_xz, f32(0.05))
-    got_dir_input := is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
-    if ps.on_ground && !got_dir_input {
-        ps.velocity *= math.pow(GROUND_FRICTION, delta_time)
-    }
-    if !ps.on_ground {
-        down: [3]f32 = {0, -1, 0}
-        grav_vec := (ps.on_slope ? SLOPE_GRAV : (ps.on_wall ? WALL_JUMP_FORCE : GRAV)) * down
-        norm_contact := la.normalize(ps.contact_ray)
-        if ps.on_wall {
-            grav_vec -= la.dot(norm_contact, grav_vec) * norm_contact
-        } else if ps.on_slope {
-            grav_vec -= la.dot(norm_contact, grav_vec) * norm_contact 
-        }
-        ps.velocity += grav_vec * delta_time
-    }
+    // register jump pressed
     if is.z_pressed && ps.can_jump {
         ps.jump_pressed_time = f32(elapsed_time)
     }
-    if ps.on_ground && ps.touch_pt != 0 && math.abs(ps.touch_time - ps.jump_pressed_time) < BUNNY_WINDOW && f32(elapsed_time) - ps.last_dash > BUNNY_DEBOUNCE {
+
+    // clamp xz velocity
+    clamped_xz := la.clamp_length(ps.velocity.xz, MAX_PLAYER_SPEED)
+    ps.velocity.xz = math.lerp(ps.velocity.xz, clamped_xz, f32(0.05))
+
+    // apply ground friction
+    if ps.state == .ON_GROUND && !got_dir_input {
+        ps.velocity *= math.pow(GROUND_FRICTION, delta_time)
+    }
+
+    // apply gravity
+    if ps.state != .ON_GROUND {
+        down: [3]f32 = {0, -1, 0}
+        norm_contact := la.normalize(ps.contact_ray)
+        grav_force := GRAV
+        if ps.state == .ON_SLOPE {
+            grav_force = SLOPE_GRAV
+        }
+        if ps.state == .ON_WALL {
+            grav_force = WALL_GRAV
+        }
+        if ps.state == .ON_WALL || ps.state == .ON_SLOPE {
+            down -= la.dot(norm_contact, down) * norm_contact
+        }
+        ps.velocity += down * grav_force * delta_time
+    }
+
+    // bunny hop
+    can_bunny_hop := f32(elapsed_time) - ps.last_dash > BUNNY_DASH_DEBOUNCE
+    got_bunny_hop_input := math.abs(ps.touch_time - ps.jump_pressed_time) < BUNNY_WINDOW
+    if ps.state == .ON_GROUND && got_bunny_hop_input && can_bunny_hop {
         ps.can_dash = true
         ps.bunny_hop_y = ps.position.y
-        ps.on_ground = false
+        ps.state = .IN_AIR
         ps.velocity.y = GROUND_BUNNY_V_SPEED
-        if la.length(ps.velocity.xz) > 0.1 {
+        if la.length(ps.velocity.xz) > MIN_BUNNY_XZ_VEL {
             ps.velocity.xz += la.normalize(ps.velocity.xz) * GROUND_BUNNY_H_SPEED
         }
         ps.crunch_pt = ps.position - {0, 0, 0.5}
         ps.crunch_time = f32(elapsed_time)
         ps.last_dash = f32(elapsed_time)
     }
-    if is.z_pressed && ps.can_jump && (ps.on_ground || (f32(elapsed_time) - ps.left_ground < 150)) {
+
+    // normal jump
+    if is.z_pressed && ps.can_jump && (ps.state == .ON_GROUND || (f32(elapsed_time) - ps.left_ground < COYOTE_TIME)) {
         ps.velocity.y = P_JUMP_SPEED
-        ps.on_ground = false
-    } else if is.z_pressed && ps.can_jump && (ps.on_slope || (f32(elapsed_time) - ps.left_slope < 150)) {
+        ps.state = .IN_AIR
+
+    // slope jump
+    } else if is.z_pressed && ps.can_jump && (ps.state == .ON_SLOPE || (f32(elapsed_time) - ps.left_slope < COYOTE_TIME)) {
         ps.velocity += -la.normalize(ps.contact_ray) * SLOPE_JUMP_FORCE
         ps.velocity.y = SLOPE_V_JUMP_FORCE
-        ps.on_slope = false
+        ps.state = .IN_AIR
     }
-    if is.z_pressed && ps.on_wall && ps.can_jump {
+
+    // wall jump
+    if is.z_pressed && ps.can_jump && (ps.state == .ON_WALL || (f32(elapsed_time) - ps.left_wall < COYOTE_TIME)) {
         ps.velocity.y = P_JUMP_SPEED
         ps.velocity += -ps.contact_ray * WALL_JUMP_FORCE 
-        ps.on_wall = false
+        ps.state = .IN_AIR
     }
 
-    if !ps.can_dash {
-        ps.can_dash = !is.x_pressed && ps.on_ground
-    }
-
-    if is.x_pressed && ps.can_dash && ps.velocity != 0{
+    // dash
+    if is.x_pressed && ps.can_dash && ps.velocity != 0 {
         ps.can_dash = false
         ps.dashing = true
         dash_dir := input_dir != 0 ? input_dir : la.normalize(ps.velocity.xz)
@@ -176,12 +207,13 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
         ps.dash_vel.xz = la.clamp_length(tgt_dash_vel.xz + ps.velocity.xz, DASH_SPD)
         ps.dash_time = f32(elapsed_time)
     }
+
+    //end dash
     if ps.dashing && f32(elapsed_time) > ps.dash_time + DASH_LEN {
         ps.dashing = false
     }
     
-    ps.can_jump = !is.z_pressed
-
+    // bunny hop time dilation
     if f32(elapsed_time) - ps.crunch_time < 1000 {
         if ps.position.y > ps.bunny_hop_y {
             fact := abs(ps.velocity.y) / GROUND_BUNNY_V_SPEED
@@ -194,10 +226,20 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
         gs.time_mult = f32(math.lerp(gs.time_mult, 1, f32(0.05)))
     }
 
+    // debounce jump/dash input
+    if !ps.can_jump {
+        ps.can_jump = !is.z_pressed
+    }
+    if !ps.can_dash {
+        ps.can_dash = !is.x_pressed && ps.state == .ON_GROUND
+    }
+
+    // handle reset
     if is.r_pressed {
         ps.position = INIT_PLAYER_POS
         ps.velocity = [3]f32 {0, 0, 0}
     }
+
 }
 
 move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, delta_time: f32) {

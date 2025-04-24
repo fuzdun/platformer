@@ -11,6 +11,6 @@ out vec2 uv;
 
 void main() {
     uv = uv_in;
-    gl_Position = projection * (aPos + offset + vec4(player_pos, 0.0) * 2);
+    gl_Position = projection * (aPos + offset + vec4(player_pos, 0.0) * 2.0);
 }
 

@@ -10,10 +10,12 @@ import glm "core:math/linalg/glsl"
 import rnd "core:math/rand"
 import tm "core:time"
 
-PLAYER_PARTICLE_STACK_COUNT :: 7
-PLAYER_PARTICLE_SECTOR_COUNT :: 8
+PLAYER_PARTICLE_STACK_COUNT :: 9
+PLAYER_PARTICLE_SECTOR_COUNT :: 12
+// PLAYER_PARTICLE_STACK_COUNT :: 4
+// PLAYER_PARTICLE_SECTOR_COUNT :: 4
 
-PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT
+PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT + 2
 I_MAT :: glm.mat4(1.0)
 
 SHAPES :: enum{
@@ -183,6 +185,8 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
 
     gl.Enable(gl.BLEND)
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+    gl.TexParameteri(gl.TEXTURE_2D, gl.GENERATE_MIPMAP, 0)
     return true
 }
 
@@ -247,20 +251,26 @@ update_player_particles :: proc(rs: ^Render_State, time: f32) {
     vr1, vr2: u32
     PI := f32(math.PI)
 
-    vertical_step := PI / f32(vertical_count)
+    vertical_step := PI / f32(vertical_count + 1)
     horizontal_step := (2 * PI) / f32(horizontal_count)
-
+    sphere_rotate := la.matrix3_from_euler_angles(time / 250, time / 250, 0, .XYZ)
     for i in 0..<vertical_count {
-        vertical_angle = PI / 2.0 - f32(i) * vertical_step 
+        vertical_angle = PI / 2.0 - f32(i + 1) * vertical_step
         xz := SPHERE_RADIUS * math.cos(vertical_angle)
         y = SPHERE_RADIUS * math.sin(vertical_angle)
         for j in 0..<horizontal_count {
-            horizontal_angle = f32(j) * horizontal_step 
+            horizontal_angle = f32(j) * horizontal_step
             x = xz * math.cos(horizontal_angle)
             z = xz * math.sin(horizontal_angle)
-            rs.player_particles[i * horizontal_count + j] = {x, y, z} * 2.0
+            pos: [3]f32 = {x, y, z}
+            rs.player_particles[i * horizontal_count + j] = sphere_rotate * pos * 2.0
         }
     }
+    end_idx := vertical_count * horizontal_count
+    top_pt: [3]f32 = {0, SPHERE_RADIUS * 2.0, 0}
+    bot_pt: [3]f32 = {0, -SPHERE_RADIUS * 2.0, 0}
+    rs.player_particles[end_idx] = sphere_rotate * top_pt
+    rs.player_particles[end_idx + 1] = sphere_rotate * bot_pt
     z_sort := proc(a: [3]f32, b: [3]f32) -> bool { return a.z < b.z }
     slice.sort_by(rs.player_particles[:], z_sort)
 }
@@ -359,7 +369,6 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         set_vec3_uniform(shst, "crunch_pt", 1, &crunch_pt)
         set_float_uniform(shst, "crunch_time", f32(gs.player_state.crunch_time) / 1000)
         set_float_uniform(shst, "time", f32(time) / 1000)
-        set_float_uniform(shst, "sonar_time", f32(gs.player_state.sonar_time) / 1000)
         set_matrix_uniform(shst, "projection", &proj_mat)
         draw_shader_render_queue(rs, shst, gl.PATCHES)
     }
@@ -369,6 +378,15 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         use_shader(shst, rs, .Player_Particle)
         gl.BindVertexArray(rs.particle_vao)
         ppv := PARTICLE_VERTICES
+        
+        camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
+        camera_right_worldspace = la.normalize(camera_right_worldspace)
+        camera_up_worldspace: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
+        camera_up_worldspace = la.normalize(camera_up_worldspace)
+        for &pv in ppv {
+            pv.position = camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y
+        }
+
         ppp := rs.player_particles
         i_ppos:[3]f32 = interpolated_player_pos(&gs.player_state, f32(interp_t))
         set_matrix_uniform(shst, "projection", &proj_mat)

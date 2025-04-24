@@ -181,7 +181,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                         closest_pt := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, plane_q)
                         if la.length2(closest_pt - plane_q) < GROUNDED_RADIUS2 {
                             got_contact_ray_col = true
-                            if gs.player_state.on_ground {
+                            if gs.player_state.state == .ON_GROUND {
                                 //gs.player_state.position = plane_q + normal * GROUND_OFFSET 
                             }
                         }
@@ -191,16 +191,19 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
         }         
         tv_offset += len(coll.vertices)
     }
-    if gs.player_state.on_ground {
+
+    p_state := gs.player_state.state
+    if (p_state == .ON_GROUND || p_state == .ON_WALL || p_state == .ON_SLOPE) && !got_contact_ray_col {
+        gs.player_state.state = .IN_AIR
+    }
+    if p_state == .ON_GROUND {
         gs.player_state.left_ground = elapsed_time
-        gs.player_state.on_ground = got_contact_ray_col
     }
-    if gs.player_state.on_wall {
-        gs.player_state.on_wall = got_contact_ray_col
-    }
-    if gs.player_state.on_slope {
+    if p_state == .ON_SLOPE {
         gs.player_state.left_slope = elapsed_time
-        gs.player_state.on_slope = got_contact_ray_col
+    }
+    if p_state == .ON_WALL {
+        gs.player_state.left_wall = elapsed_time
     }
 
     best_plane_normal: [3]f32 = {100, 100, 100}
@@ -224,36 +227,26 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
         ground_x := [3]f32{1, 0, 0}
         ground_z := [3]f32{0, 0, -1}
         if best_plane_normal.y >= 0.85{
-            if !gs.player_state.on_ground {
+            if gs.player_state.state != .ON_GROUND {
                 gs.player_state.touch_pt = gs.player_state.position - {0, 0, 0.5}
                 gs.player_state.touch_time = elapsed_time
             }
-            //fmt.println(ppos32)
-            //fmt.println(best_plane_intersection)
-            //fmt.println(best_plane_normal * GROUND_OFFSET)
             //gs.player_state.position = best_plane_intersection + best_plane_normal * GROUND_OFFSET 
             gs.player_state.ground_x = la.normalize(ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal)
             gs.player_state.ground_z = la.normalize(ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal)
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
-            gs.player_state.on_ground = true
-            gs.player_state.on_wall = false
-            gs.player_state.on_slope = false
+            gs.player_state.state = .ON_GROUND
         } else if .2 <= best_plane_normal.y && best_plane_normal.y < .85 {
-            if !gs.player_state.on_slope {
+            if gs.player_state.state != .ON_SLOPE {
                 gs.player_state.ground_x = ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal
                 gs.player_state.ground_z = ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal
                 //gs.player_state.crunch_pt = gs.player_state.position - {0, 0, 0.5}
                 //gs.player_state.crunch_time = elapsed_time
-                gs.player_state.on_slope = true
-                gs.player_state.on_wall = false
-                gs.player_state.on_ground = false
+                gs.player_state.state = .ON_SLOPE
             }
-            gs.player_state.on_slope = true
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
-        } else if best_plane_normal.y < .2 && !gs.player_state.on_ground {
-            gs.player_state.on_wall = true
-            gs.player_state.on_ground = false
-            gs.player_state.on_slope = false
+        } else if best_plane_normal.y < .2 && gs.player_state.state != .ON_GROUND {
+            gs.player_state.state = .ON_WALL
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
         }
     }

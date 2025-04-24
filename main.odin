@@ -32,7 +32,11 @@ Game_State :: struct {
 
 gamestate_init :: proc(gs: ^Game_State) {
     gs.level_geometry = make(Level_Geometry_State)
-    gs.player_state.trail = make([dynamic][3]f32)
+
+    // gs.player_state.trail = make([dynamic][3]f32)
+    ring_buffer_init(&gs.player_state.trail, [3]f32{0, 0, 0})
+
+    gs.player_state.state = .IN_AIR
     gs.player_state.position = INIT_PLAYER_POS
     gs.player_state.can_dash = true
     gs.camera_state.position = {10, 60, 300}
@@ -42,14 +46,14 @@ gamestate_init :: proc(gs: ^Game_State) {
     // for &registry in gs.editor_state.ssbo_registry {
     //     registry = make([dynamic]int)
     // }
-    resize(&gs.player_state.trail, TRAIL_SIZE)
+    // resize(&gs.player_state.trail, TRAIL_SIZE)
     gs.time_mult = 1
 }
 
 gamestate_free :: proc(gs: ^Game_State) {
     delete_soa(gs.level_geometry)
     delete(gs.dirty_entities)
-    delete(gs.player_state.trail)
+    // delete(gs.player_state.trail)
     delete(gs.player_geometry.vertices)
     delete(gs.player_geometry.indices)
     for sd in gs.level_resources {

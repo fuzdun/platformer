@@ -3,7 +3,9 @@
 out vec4 fragColor;
 
 in vec3 global_pos;
-in vec2 uv;
+in noperspective vec2 affine_uv;
+in vec2 perspective_uv;
+in flat int in_view;
 in vec3 normal_frag;
 in vec3 player_pos;
 
@@ -116,6 +118,7 @@ float jaggy(float x)
 
 void main()
 {
+    vec2 uv = in_view == 1 ? affine_uv : perspective_uv;
     float plane_off = dot(normal_frag, global_pos);
     float dist = dot(normal_frag, player_pos) - plane_off;
     vec3 proj_pt = player_pos - dist * normal_frag;
@@ -144,7 +147,7 @@ void main()
     d += t * 0.69;
     float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
     float freq = 2.0 * line_len;
-    float width =  sin(-time * 70.0 + t * TWOPI * freq) * 5.0 + 40.0;
+    float width =  sin(-time * 70.0 + t * TWOPI * freq) * 2.0 + 40.0;
     float border_d = 0.050 * width;
     vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.5, 0.0, 0.5), t);
     trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
