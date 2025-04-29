@@ -10,10 +10,10 @@ import glm "core:math/linalg/glsl"
 import rnd "core:math/rand"
 import tm "core:time"
 
-PLAYER_PARTICLE_STACK_COUNT :: 9
-PLAYER_PARTICLE_SECTOR_COUNT :: 12
-// PLAYER_PARTICLE_STACK_COUNT :: 4
-// PLAYER_PARTICLE_SECTOR_COUNT :: 4
+// PLAYER_PARTICLE_STACK_COUNT :: 6
+// PLAYER_PARTICLE_SECTOR_COUNT :: 8 
+PLAYER_PARTICLE_STACK_COUNT :: 4
+PLAYER_PARTICLE_SECTOR_COUNT :: 7
 
 PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT + 2
 I_MAT :: glm.mat4(1.0)
@@ -41,10 +41,10 @@ BACKGROUND_VERTICES :: [4]Quad_Vertex {
 }
 
 PARTICLE_VERTICES :: [4]Quad_Vertex {
-    {{-0.3, -0.3, 0.0}, {0, 0}},
-    {{0.3, -0.3, 0.0}, {1, 0}},
-    {{-0.3, 0.3, 0.0}, {0, 1}},
-    {{0.3, 0.3, 0.0}, {1, 1}},
+    {{-0.9, -0.9, 0.0}, {0, 0}},
+    {{0.9, -0.9, 0.0}, {1, 0}},
+    {{-0.9, 0.9, 0.0}, {0, 1}},
+    {{0.9, 0.9, 0.0}, {1, 1}},
 }
 
 Vertex_Offsets :: [len(SHAPES)]u32
@@ -72,7 +72,7 @@ Render_State :: struct {
     player_particle_poss: [dynamic]glm.vec3,
     z_widths: [dynamic]f32,
     shader_render_queues: Shader_Render_Queues,
-    player_particles: [PLAYER_PARTICLE_COUNT][3]f32,
+    player_particles: [PLAYER_PARTICLE_COUNT][4]f32,
     vertex_offsets: Vertex_Offsets,
     index_offsets: Index_Offsets,
     player_vertex_offset: u32,
@@ -163,7 +163,7 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
     gl.EnableVertexAttribArray(2)
-    gl.VertexAttribPointer(2, 3, gl.FLOAT, false, 0, 0)
+    gl.VertexAttribPointer(2, 4, gl.FLOAT, false, 0, 0)
     gl.VertexAttribDivisor(0, 0)
     gl.VertexAttribDivisor(1, 0)
     gl.VertexAttribDivisor(2, 1)
@@ -242,7 +242,7 @@ update_vertices :: proc(gs: ^Game_State, rs: ^Render_State) {
 
 }
 
-update_player_particles :: proc(rs: ^Render_State, time: f32) {
+update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) {
     vertical_count := PLAYER_PARTICLE_STACK_COUNT
     horizontal_count := PLAYER_PARTICLE_SECTOR_COUNT
     x, y, z, xz: f32
@@ -253,25 +253,40 @@ update_player_particles :: proc(rs: ^Render_State, time: f32) {
 
     vertical_step := PI / f32(vertical_count + 1)
     horizontal_step := (2 * PI) / f32(horizontal_count)
-    sphere_rotate := la.matrix3_from_euler_angles(time / 250, time / 250, 0, .XYZ)
+    // sphere_rotate := la.matrix3_from_euler_angles(time / 4000, time / 4000, 0, .XYZ)
+    sphere_rotate := la.matrix3_from_euler_angles(time / 300, time / 300, 0, .XYZ)
     for i in 0..<vertical_count {
         vertical_angle = PI / 2.0 - f32(i + 1) * vertical_step
         xz := SPHERE_RADIUS * math.cos(vertical_angle)
         y = SPHERE_RADIUS * math.sin(vertical_angle)
         for j in 0..<horizontal_count {
+            id := i * horizontal_count + j
             horizontal_angle = f32(j) * horizontal_step
             x = xz * math.cos(horizontal_angle)
             z = xz * math.sin(horizontal_angle)
-            pos: [3]f32 = {x, y, z}
-            rs.player_particles[i * horizontal_count + j] = sphere_rotate * pos * 2.0
+            // pos: [4]f32 = {x, y, z, f32(id)}
+            pos: [4]f32 = {x, y, z, f32(id)}
+            pos.xyz = sphere_rotate * pos.xyz * 2.0
+
+            displacement_fact := la.dot(ps.particle_displacement, pos.xyz)
+            if displacement_fact > 0 {
+                displacement_fact *= 0.2
+            }
+            pos.xyz += la.clamp_length(ps.particle_displacement * displacement_fact * 0.0005, 12.0)
+
+            rs.player_particles[i * horizontal_count + j] = pos
         }
     }
     end_idx := vertical_count * horizontal_count
-    top_pt: [3]f32 = {0, SPHERE_RADIUS * 2.0, 0}
-    bot_pt: [3]f32 = {0, -SPHERE_RADIUS * 2.0, 0}
-    rs.player_particles[end_idx] = sphere_rotate * top_pt
-    rs.player_particles[end_idx + 1] = sphere_rotate * bot_pt
-    z_sort := proc(a: [3]f32, b: [3]f32) -> bool { return a.z < b.z }
+    top_pt: [4]f32 = {0, SPHERE_RADIUS * 2.0, 0, f32(end_idx)}
+    bot_pt: [4]f32 = {0, -SPHERE_RADIUS * 2.0, 0, f32(end_idx + 1)}
+    top_pt.xyz = sphere_rotate * top_pt.xyz
+    bot_pt.xyz = sphere_rotate * bot_pt.xyz
+    rs.player_particles[end_idx] = top_pt
+    rs.player_particles[end_idx + 1] = bot_pt
+    
+    // z_sort := proc(a: [4]f32, b: [4]f32) -> bool { return a.z < b.z }
+    z_sort := proc(a: [4]f32, b: [4]f32) -> bool { return a.z < b.z }
     slice.sort_by(rs.player_particles[:], z_sort)
 }
 
@@ -342,7 +357,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
 
     if !EDIT {
         use_shader(shst, rs, .Player)
-        p_color: [3]f32 = gs.player_state.dashing ? {0.0, 1.0, 0} : {1.0, 0.0, 0.5}
+        p_color: [3]f32 = gs.player_state.dashing ? {0.0, 1.0, 0} : {0.8, 0.4, 0.0}
         set_matrix_uniform(shst, "projection", &proj_mat)
         set_matrix_uniform(shst, "transform", &player_mat)
         set_float_uniform(shst, "i_time", f32(time) / 1000)
@@ -377,24 +392,25 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     if !EDIT {
         use_shader(shst, rs, .Player_Particle)
         gl.BindVertexArray(rs.particle_vao)
-        ppv := PARTICLE_VERTICES
+        pv := PARTICLE_VERTICES
         
         camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
         camera_right_worldspace = la.normalize(camera_right_worldspace)
         camera_up_worldspace: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
         camera_up_worldspace = la.normalize(camera_up_worldspace)
-        for &pv in ppv {
+        for &pv in pv {
             pv.position = camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y
         }
 
-        ppp := rs.player_particles
+        pp := rs.player_particles
         i_ppos:[3]f32 = interpolated_player_pos(&gs.player_state, f32(interp_t))
         set_matrix_uniform(shst, "projection", &proj_mat)
+        set_float_uniform(shst, "i_time", f32(time))
         set_vec3_uniform(shst, "player_pos", 1, &i_ppos)
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(ppv[0]) * len(ppv), &ppv[0], gl.DYNAMIC_DRAW) 
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), &pv[0], gl.DYNAMIC_DRAW) 
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(ppp[0]) * len(ppp), &ppp[0], gl.DYNAMIC_DRAW) 
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.DYNAMIC_DRAW) 
         gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
     }
     // ================================

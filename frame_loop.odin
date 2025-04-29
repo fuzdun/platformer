@@ -94,7 +94,7 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
         //fmt.println("update time:", time.since(update_start))
         //draw_start := time.now()
         update_vertices(gs, rs)
-        update_player_particles(rs, f32(elapsed_time))
+        update_player_particles(rs, gs.player_state, f32(elapsed_time))
         render(gs, rs, ss, ps, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
 
         //swap_start := time.now()

@@ -238,14 +238,16 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             gs.player_state.state = .ON_GROUND
         } else if .2 <= best_plane_normal.y && best_plane_normal.y < .85 {
             if gs.player_state.state != .ON_SLOPE {
+                gs.player_state.touch_pt = gs.player_state.position - {0, 0, 0.5}
+                gs.player_state.touch_time = elapsed_time
                 gs.player_state.ground_x = ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal
                 gs.player_state.ground_z = ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal
-                //gs.player_state.crunch_pt = gs.player_state.position - {0, 0, 0.5}
-                //gs.player_state.crunch_time = elapsed_time
                 gs.player_state.state = .ON_SLOPE
             }
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
         } else if best_plane_normal.y < .2 && gs.player_state.state != .ON_GROUND {
+            gs.player_state.touch_pt = gs.player_state.position - {0, 0, 0.5}
+            gs.player_state.touch_time = elapsed_time
             gs.player_state.state = .ON_WALL
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
         }

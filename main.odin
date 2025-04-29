@@ -8,10 +8,10 @@ import la "core:math/linalg"
 import "core:mem"
 import "core:os"
 
-//WIDTH :: 1920.0
-//HEIGHT :: 1080.0
-WIDTH :: 600
-HEIGHT :: 600
+// WIDTH :: 1920.0
+// HEIGHT :: 1080.0
+WIDTH :: 900
+HEIGHT :: 900
 TITLE :: "platformer"
 
 EDIT :: #config(EDIT, false)
@@ -38,7 +38,8 @@ gamestate_init :: proc(gs: ^Game_State) {
 
     gs.player_state.state = .IN_AIR
     gs.player_state.position = INIT_PLAYER_POS
-    gs.player_state.can_dash = true
+    gs.player_state.can_press_dash = true
+    gs.player_state.can_press_jump = false
     gs.camera_state.position = {10, 60, 300}
     gs.dirty_entities = make([dynamic]int)
     gs.editor_state.y_rot = -.25

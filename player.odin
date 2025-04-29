@@ -24,7 +24,6 @@ Player_State :: struct {
     position: [3]f32,
     velocity: [3]f32,
     trail: RingBuffer(TRAIL_SIZE, [3]f32),
-    // trail: [dynamic]glm.vec3,
     touch_pt: [3]f32,
     touch_time: f32,
     crunch_pt: [3]f32,
@@ -33,14 +32,11 @@ Player_State :: struct {
     last_dash: f32,
     jump_pressed_time: f32,
 
-    can_jump: bool,
-    can_dash: bool,
+    can_press_jump: bool,
+    can_press_dash: bool,
     dash_time: f32,
     dashing: bool,
     dash_vel: glm.vec3,
-    // on_ground: bool,
-    // on_wall: bool,
-    // on_slope: bool,
 
     left_ground: f32,
     left_slope: f32,
@@ -51,11 +47,15 @@ Player_State :: struct {
     ground_z: [3]f32,
     prev_position: [3]f32,
     trail_sample: [3]glm.vec3,
-    prev_trail_sample: [3]glm.vec3
+    prev_trail_sample: [3]glm.vec3,
+
+    particle_displacement: [3]f32,
+    tgt_particle_displacement: [3]f32
 }
 
 GROUND_FRICTION :: 0.05
 MAX_PLAYER_SPEED: f32: 50.0
+MAX_FALL_SPEED: f32: 60.0
 P_JUMP_SPEED: f32: 60.0
 P_ACCEL: f32: 150.0
 DASH_SPD: f32: 75.0
@@ -76,9 +76,11 @@ GROUND_RAY_LEN ::  2.0
 GROUNDED_RADIUS: f32: 0.01 
 GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
 GROUND_OFFSET: f32 = 1.0 
-AIR_SPEED :: 120.0
+AIR_SPEED :: 100.0
 SLOPE_SPEED :: 80.0 
 COYOTE_TIME ::  150
+PARTICLE_DISPLACEMENT_LERP :: 0.25
+TGT_PARTICLE_DISPLACEMENT_LERP :: 0.4
 
 update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f32) {
     ps := &gs.player_state
@@ -133,13 +135,14 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
     }
 
     // register jump pressed
-    if is.z_pressed && ps.can_jump {
+    if is.z_pressed {
         ps.jump_pressed_time = f32(elapsed_time)
     }
 
     // clamp xz velocity
     clamped_xz := la.clamp_length(ps.velocity.xz, MAX_PLAYER_SPEED)
     ps.velocity.xz = math.lerp(ps.velocity.xz, clamped_xz, f32(0.05))
+    ps.velocity.y = math.clamp(ps.velocity.y, -MAX_FALL_SPEED, MAX_FALL_SPEED)
 
     // apply ground friction
     if ps.state == .ON_GROUND && !got_dir_input {
@@ -165,9 +168,9 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
 
     // bunny hop
     can_bunny_hop := f32(elapsed_time) - ps.last_dash > BUNNY_DASH_DEBOUNCE
-    got_bunny_hop_input := math.abs(ps.touch_time - ps.jump_pressed_time) < BUNNY_WINDOW
-    if ps.state == .ON_GROUND && got_bunny_hop_input && can_bunny_hop {
-        ps.can_dash = true
+    got_bunny_hop_input := ps.state != .IN_AIR && math.abs(ps.touch_time - ps.jump_pressed_time) < BUNNY_WINDOW
+    if got_bunny_hop_input && can_bunny_hop {
+        ps.can_press_dash = true
         ps.bunny_hop_y = ps.position.y
         ps.state = .IN_AIR
         ps.velocity.y = GROUND_BUNNY_V_SPEED
@@ -179,28 +182,45 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
         ps.last_dash = f32(elapsed_time)
     }
 
+    // jumps
+    pressed_jump := is.z_pressed && ps.can_press_jump
+    ground_jumped := pressed_jump && (ps.state == .ON_GROUND || (f32(elapsed_time) - ps.left_ground < COYOTE_TIME))
+    slope_jumped := pressed_jump && (ps.state == .ON_SLOPE || (f32(elapsed_time) - ps.left_slope < COYOTE_TIME))
+    wall_jumped := pressed_jump && (ps.state == .ON_WALL || (f32(elapsed_time) - ps.left_wall < COYOTE_TIME))
+
+
     // normal jump
-    if is.z_pressed && ps.can_jump && (ps.state == .ON_GROUND || (f32(elapsed_time) - ps.left_ground < COYOTE_TIME)) {
+    if ground_jumped {
         ps.velocity.y = P_JUMP_SPEED
         ps.state = .IN_AIR
 
     // slope jump
-    } else if is.z_pressed && ps.can_jump && (ps.state == .ON_SLOPE || (f32(elapsed_time) - ps.left_slope < COYOTE_TIME)) {
+    } else if slope_jumped {
         ps.velocity += -la.normalize(ps.contact_ray) * SLOPE_JUMP_FORCE
         ps.velocity.y = SLOPE_V_JUMP_FORCE
         ps.state = .IN_AIR
-    }
 
     // wall jump
-    if is.z_pressed && ps.can_jump && (ps.state == .ON_WALL || (f32(elapsed_time) - ps.left_wall < COYOTE_TIME)) {
+    } else if wall_jumped {
         ps.velocity.y = P_JUMP_SPEED
         ps.velocity += -ps.contact_ray * WALL_JUMP_FORCE 
         ps.state = .IN_AIR
     }
 
+    // set particle displacement on jump
+    if ground_jumped || slope_jumped || wall_jumped {
+        ps.can_press_jump = false
+        ps.tgt_particle_displacement = ps.velocity
+    }
+
+    // lerp particle displacement toward target
+    ps.particle_displacement = la.lerp(ps.particle_displacement, ps.tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
+    ps.tgt_particle_displacement = la.lerp(ps.tgt_particle_displacement, ps.velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
+
     // dash
-    if is.x_pressed && ps.can_dash && ps.velocity != 0 {
-        ps.can_dash = false
+    pressed_dash := is.x_pressed && ps.can_press_dash
+    if pressed_dash && ps.velocity != 0 {
+        ps.can_press_dash = false
         ps.dashing = true
         dash_dir := input_dir != 0 ? input_dir : la.normalize(ps.velocity.xz)
         tgt_dash_vel := [3]f32 {dash_dir.x, 0.0, dash_dir.y} * DASH_SPD 
@@ -209,10 +229,12 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
     }
 
     //end dash
-    if ps.dashing && f32(elapsed_time) > ps.dash_time + DASH_LEN {
+    hit_surface := ps.state == .ON_WALL || grounded
+    dash_expired := f32(elapsed_time) > ps.dash_time + DASH_LEN
+    if ps.dashing && (hit_surface || dash_expired){
         ps.dashing = false
     }
-    
+     
     // bunny hop time dilation
     if f32(elapsed_time) - ps.crunch_time < 1000 {
         if ps.position.y > ps.bunny_hop_y {
@@ -227,11 +249,11 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
     }
 
     // debounce jump/dash input
-    if !ps.can_jump {
-        ps.can_jump = !is.z_pressed
+    if !ps.can_press_jump {
+        ps.can_press_jump = !is.z_pressed && grounded || ps.state == .ON_WALL
     }
-    if !ps.can_dash {
-        ps.can_dash = !is.x_pressed && ps.state == .ON_GROUND
+    if !ps.can_press_dash {
+        ps.can_press_dash = !is.x_pressed && ps.state == .ON_GROUND
     }
 
     // handle reset

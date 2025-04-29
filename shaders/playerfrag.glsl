@@ -6,6 +6,7 @@ in float time;
 uniform vec3 p_color;
 
 out vec4 fragColor;
+
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }

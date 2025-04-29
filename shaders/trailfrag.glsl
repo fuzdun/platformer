@@ -119,6 +119,7 @@ float jaggy(float x)
 void main()
 {
     vec2 uv = in_view == 1 ? affine_uv : perspective_uv;
+    uv = floor(uv * 50.0) / 50.0;
     float plane_off = dot(normal_frag, global_pos);
     float dist = dot(normal_frag, player_pos) - plane_off;
     vec3 proj_pt = player_pos - dist * normal_frag;
@@ -172,8 +173,9 @@ void main()
     float y_border_fact = smoothstep(1.0 - v_border, 1.0, uv.y) +
         1.0 - smoothstep(0.0, v_border, uv.y);
     float border_fact = max(x_border_fact, y_border_fact);
-    vec3 border_col = border_fact * vec3(1.0, 0.8, 1.0);
-    vec3 col = mix(pattern_col + border_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+    // vec3 border_col = border_fact * vec3(1.0, 0.8, 1.0);
+    // vec3 col = mix(pattern_col + border_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+    vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
 
     fragColor = vec4(col, 1.0);
     // fragColor = vec4(0.0, 0.0, 1.0, 1.0);

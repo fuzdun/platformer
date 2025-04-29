@@ -8,9 +8,12 @@ uniform mat4 projection;
 uniform vec3 player_pos;
 
 out vec2 uv;
+flat out int id;
 
 void main() {
+    id = int(offset.a);
+    vec4 adjusted_offset = vec4(offset.xyz, 1.0);
     uv = uv_in;
-    gl_Position = projection * (aPos + offset + vec4(player_pos, 0.0) * 2.0);
+    gl_Position = projection * (aPos + adjusted_offset + vec4(player_pos, 0.0) * 2.0);
 }
 

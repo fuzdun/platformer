@@ -56,8 +56,6 @@ void main() {
         snapped_pos.xy = floor(100 * snapped_pos.xy) / 100;
         snapped_pos.xyz *= proj_pos.w;
         gl_Position = snapped_pos;
-        // gl_Position = te_out[0].projection * new_pos;
-
 
         global_pos = new_pos.xyz;
         player_pos = te_out[i].player_pos;
