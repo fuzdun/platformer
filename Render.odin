@@ -192,6 +192,8 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.Enable(gl.CULL_FACE)
     gl.Enable(gl.DEPTH_TEST)
 
+    gl.LineWidth(5)
+
     gl.Enable(gl.BLEND)
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 

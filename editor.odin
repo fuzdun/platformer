@@ -8,7 +8,7 @@ import "core:slice"
 OBJ_MOVE_SPD :: 30.0
 OBJ_ROT_SPD :: 1.0
 OBJ_SCALE_SPD :: 0.3
-MAX_DRAW_GEOMETRY_DIST :: 1000
+MAX_DRAW_GEOMETRY_DIST :: 300
 MAX_DRAW_GEOMETRY_DIST2 :: MAX_DRAW_GEOMETRY_DIST * MAX_DRAW_GEOMETRY_DIST
 
 SSBO_Registry :: [len(SHAPES) * len(ProgramName)][dynamic]int
@@ -37,7 +37,6 @@ get_selected_geometry_dists :: proc(es: ^Editor_State, ps: Physics_State, lgs: L
         if lg_dist > MAX_DRAW_GEOMETRY_DIST2 {
             continue
         }
-        fmt.println("should draw")
         s0, s1, dist := get_geometry_dist(ps, selected_geometry, lg)
         append(&es.connections, s0, s1)
     }
@@ -97,13 +96,9 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
     rot_x, rot_y, rot_z := la.euler_angles_xyz_from_quaternion(selected_obj.transform.rotation)
     if is.q_pressed && es.can_add {
         cur_shape := selected_obj.shape
-        rotation: quaternion128 = quaternion(real=0, imag=0, jmag=0, kmag=0)
-        // rotation: quaternion128 = selected_obj.transform
-        position: Position = lgs[es.selected_entity].transform.position
         new_lg: Level_Geometry
         new_lg.shape = cur_shape
         new_lg.collider = cur_shape 
-        // new_lg.transform = {position,{5, 5, 5}, rotation}
         new_lg.transform = selected_obj.transform
         new_lg.shaders = {.Trail}
         new_lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
@@ -127,7 +122,6 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
         new_lg.collider = SHAPES(nxt_shape)
         ordered_remove_soa(&gs.level_geometry, es.selected_entity) 
         append(&gs.level_geometry, new_lg)
-        // es.selected_entity = 0
         es.selected_entity = len(gs.level_geometry) - 1
         fmt.println(es.selected_entity)
         editor_reload_level_geometry(gs, ps, rs)
@@ -259,12 +253,9 @@ remove_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_State, 
 }
 
 add_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_State, es: ^Editor_State, lg_in: Level_Geometry) {
-    // fmt.println("before:", gs.level_geometry)
-    // cur_shape_idx := int(selected_obj.shape)
     lg := lg_in
     es.selected_entity = len(gs.level_geometry)
     append(&gs.level_geometry, lg)
     editor_reload_level_geometry(gs, ps, rs)
-    // fmt.println("before:", gs.level_geometry)
 }
 
