@@ -130,11 +130,9 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
 
             if total < player_sq_radius {
                 // got player within bounding box
-                coll_indices := make([dynamic]u16); defer delete(coll_indices)
-                append(&coll_indices, ..coll.indices)
-                l := len(coll_indices)
+                l := len(coll.indices)
                 for i := 0; i <= l - 3; i += 3 {
-                    tri_indices := coll_indices[i:i+3]
+                    tri_indices := coll.indices[i:i+3]
                     tri_vertex0 := vertices[tri_indices[0]]
                     tri_vertex1 := vertices[tri_indices[1]]
                     tri_vertex2 := vertices[tri_indices[2]]
@@ -342,6 +340,139 @@ ray_sphere_intersect :: proc(origin: [3]f32, dir: [3]f32, ppos: [3]f32) -> (t: f
     t = max(-b - math.sqrt(discr), 0)
     q = origin + t * dir
     ok = true
+    return
+}
+
+closest_segment_pts :: proc(p1: [3]f32, q1: [3]f32, p2: [3]f32, q2: [3]f32) -> (c1: [3]f32, c2: [3]f32, dist: f32) {
+    d1 := q1 - p1
+    d2 := q2 - p2
+    r := p1 - p2
+    s, t: f32
+    a := la.dot(d1, d1)
+    e := la.dot(d2, d2)
+    f := la.dot(d2, r)
+    if a < la.F32_EPSILON && e < la.F32_EPSILON{
+        c1 = p1
+        c2 = p2
+        dist = la.dot(c1 - c2, c1 - c2)
+        return
+    }
+    if a <= la.F32_EPSILON {
+        s = 0
+        t = clamp(f / e, 0, 1)
+    } else {
+        c := la.dot(d1, r)
+        if e <= la.F32_EPSILON {
+            t = 0
+            s = clamp(-c / a, 0, 1)
+        } else {
+            b := la.dot(d1, d2)
+            denom := a * e - b * b
+            if denom != 0 {
+                s = clamp((b * f - c * e) / denom, 0, 1)
+            } else {
+                s = 0
+            }
+            t = (b * s + f) / e
+            if t < 0 {
+                t = 0
+                s = clamp(-c / a, 0, 1)
+            } else if t > 1 {
+                t = 1
+                s = clamp((b - c) / a, 0, 1)
+            }
+        }
+    }
+    c1 = p1 + d1 * s
+    c2 = p2 + d2 * t
+    dist = la.dot(c1 - c2, c1 - c2)
+    return
+}
+
+closest_triangle_pt_3d :: proc(p: [3]f32, a: [3]f32, b: [3]f32, c: [3]f32) -> [3]f32 {
+    ab := b - a
+    ac := c - a
+    ap := p - a
+    d1 := la.dot(ab, ap)
+    d2 := la.dot(ac, ap)
+    if d1 <= 0 && d2 <= 0 {
+        return a
+    }
+    bp := p - b
+    d3 := la.dot(ab, bp)
+    d4 := la.dot(ac, bp)
+    if d3 >= 0 && d4 <= d3 {
+        return b
+    }
+    vc := d1 * d4 - d3 * d2 
+    if vc <= 0 && d1 >= 0 && d3 <= 0 {
+        v := d1 / (d1 - d3)
+        return a + v * ab
+    }
+    cp := p - c
+    d5 := la.dot(ab, cp)
+    d6 := la.dot(ac, cp)
+    if d6 >= 0 && d5 <= d6 {
+        return c
+    }
+    vb := d5 * d2 - d1 * d6
+    if vb <= 0 && d2 >= 0 && d6 <= 0 {
+        w := d2 / (d2 - d6)
+        return a + w * ac
+    }
+    va := d3 * d6 - d5 * d4
+    if va <= 0 && (d4 - d3) >= 0 && (d5 - d6) >= 0 {
+        w := (d4 - d3) / ((d4 - d3) + (d5 - d6))
+        return b + w * (c - b)
+    }
+    denom := 1 / (va + vb + vc)
+    v := vb * denom
+    w := vc * denom
+    return a + ab * v + ac * w
+}
+
+closest_triangle_connection :: proc(a: [3]f32, b: [3]f32, c: [3]f32, x: [3]f32, y: [3]f32, z:[3]f32) -> (s0: [3]f32, s1: [3]f32, shortest_dist := max(f32)) {
+    abc := [3][3]f32{a, b, c}
+    xyz := [3][3]f32{x, y, z}
+    segs0 := [3][2][3]f32{
+        {a, b},
+        {b, c},
+        {a, c}
+    }
+    segs1 := [3][2][3]f32{
+        {x, y},
+        {y, z},
+        {x, z}
+    }
+    for v0 in abc {
+        pt := closest_triangle_pt_3d(v0, x, y, z)
+        dist := la.length2(pt - v0)
+        if dist < shortest_dist {
+            shortest_dist = dist
+            s0 = v0
+            s1 = pt
+        }
+    }
+    for v1 in xyz {
+        pt := closest_triangle_pt_3d(v1, a, b, c)
+        dist := la.length2(pt - v1)
+        if dist < shortest_dist {
+            shortest_dist = dist
+            s0 = pt 
+            s1 = v1
+        }
+        
+    }
+    for seg0 in segs0 {
+        for seg1 in segs1 {
+            c0, c1, dist := closest_segment_pts(seg0[0], seg0[1], seg1[0], seg1[1])
+            if dist < shortest_dist {
+                shortest_dist = dist
+                s0 = c0
+                s1 = c1
+            }
+        }
+    }
     return
 }
 

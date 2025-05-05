@@ -11,6 +11,7 @@ ProgramName :: enum{
     Simple,
     Background,
     Player_Particle,
+    Outline
 }
 
 Program :: struct{
@@ -26,7 +27,7 @@ ActiveProgram :: struct{
     locations: map[string]i32
 }
 
-PROGRAM_CONFIGS := #partial[ProgramName]Program{
+PROGRAM_CONFIGS := [ProgramName]Program{
     .Trail = {
         pipeline = EDIT ? {"simplevertex", "simplefrag"} : {"thumpervertex", "tessellationctrl", "tessellationeval", "thumpergeometry", "trailfrag"},
         shader_types = EDIT ? {.VERTEX_SHADER, .FRAGMENT_SHADER} : {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
@@ -65,6 +66,14 @@ PROGRAM_CONFIGS := #partial[ProgramName]Program{
         uniforms = {"i_time"},
         init_proc = proc(){
             gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+        }
+    },
+    .Outline = {
+        pipeline = {"outlinevertex", "outlinefrag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"projection", "color"},
+        init_proc = proc() {
+            gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINES)
         }
     }
 }

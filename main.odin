@@ -10,8 +10,8 @@ import "core:os"
 
 // WIDTH :: 1920.0
 // HEIGHT :: 1080.0
-WIDTH :: 900
-HEIGHT :: 900
+WIDTH :: 800
+HEIGHT :: 800
 TITLE :: "platformer"
 
 EDIT :: #config(EDIT, false)
@@ -44,6 +44,7 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.dirty_entities = make([dynamic]int)
     gs.editor_state.y_rot = -.25
     gs.editor_state.zoom = 200
+    gs.editor_state.connections = make([dynamic][3]f32)
     // for &registry in gs.editor_state.ssbo_registry {
     //     registry = make([dynamic]int)
     // }
@@ -54,6 +55,7 @@ gamestate_init :: proc(gs: ^Game_State) {
 gamestate_free :: proc(gs: ^Game_State) {
     delete_soa(gs.level_geometry)
     delete(gs.dirty_entities)
+    delete(gs.editor_state.connections)
     // delete(gs.player_state.trail)
     delete(gs.player_geometry.vertices)
     delete(gs.player_geometry.indices)

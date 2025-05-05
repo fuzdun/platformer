@@ -8,6 +8,8 @@ import "core:slice"
 OBJ_MOVE_SPD :: 30.0
 OBJ_ROT_SPD :: 1.0
 OBJ_SCALE_SPD :: 0.3
+MAX_DRAW_GEOMETRY_DIST :: 1000
+MAX_DRAW_GEOMETRY_DIST2 :: MAX_DRAW_GEOMETRY_DIST * MAX_DRAW_GEOMETRY_DIST
 
 SSBO_Registry :: [len(SHAPES) * len(ProgramName)][dynamic]int
 
@@ -21,7 +23,60 @@ Editor_State :: struct {
     x_rot: f32,
     y_rot: f32,
     zoom: f32,
-    // ssbo_registry: SSBO_Registry
+    connections: [dynamic][3]f32
+}
+
+get_selected_geometry_dists :: proc(es: ^Editor_State, ps: Physics_State, lgs: Level_Geometry_State) {
+    clear(&es.connections)
+    selected_geometry := lgs[es.selected_entity]
+    for lg, idx in lgs {
+        if idx == es.selected_entity {
+            continue
+        } 
+        lg_dist := la.length2(selected_geometry.transform.position - lg.transform.position)
+        if lg_dist > MAX_DRAW_GEOMETRY_DIST2 {
+            continue
+        }
+        fmt.println("should draw")
+        s0, s1, dist := get_geometry_dist(ps, selected_geometry, lg)
+        append(&es.connections, s0, s1)
+    }
+}
+
+get_geometry_dist :: proc(ps: Physics_State, lga: Level_Geometry, lgb: Level_Geometry) -> (s0: [3]f32, s1: [3]f32, shortest_dist := max(f32)) {
+    shape_data_a := ps.level_colliders[lga.shape]
+    shape_data_b := ps.level_colliders[lgb.shape]
+    mat_a := trans_to_mat4(lga.transform)
+    mat_b := trans_to_mat4(lgb.transform)
+    vertices_a := make([][3]f32, len(shape_data_a.vertices))
+    vertices_b := make([][3]f32, len(shape_data_b.vertices))
+    lg_get_transformed_collider_vertices(lga, mat_a, ps, vertices_a)
+    lg_get_transformed_collider_vertices(lgb, mat_b, ps, vertices_b)
+
+    indices_a := shape_data_a.indices
+    indices_b := shape_data_b.indices
+    len_a := len(shape_data_a.indices)
+    len_b := len(shape_data_b.indices)
+    for i := 0; i <= len_a - 3; i += 3 {
+        tri_a := indices_a[i:i+3]
+        tri_a_v0 := vertices_a[tri_a[0]]
+        tri_a_v1 := vertices_a[tri_a[1]]
+        tri_a_v2 := vertices_a[tri_a[2]]
+        for j := 0; j <= len_b - 3; j += 3 {
+            tri_b := indices_b[j:j+3]
+            tri_b_v0 := vertices_b[tri_b[0]]
+            tri_b_v1 := vertices_b[tri_b[1]]
+            tri_b_v2 := vertices_b[tri_b[2]]
+            c0, c1, dist := closest_triangle_connection(tri_a_v0, tri_a_v1, tri_a_v2, tri_b_v0, tri_b_v1, tri_b_v2)
+            if dist < shortest_dist {
+                shortest_dist = dist
+                s0 = c0
+                s1 = c1
+            }
+        }
+    }
+    shortest_dist = math.sqrt(shortest_dist)
+    return
 }
 
 editor_move_camera :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^Camera_State, delta_time: f32) {

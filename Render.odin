@@ -54,6 +54,7 @@ Render_State :: struct {
     standard_vao: u32,
     particle_vao: u32,
     background_vao: u32,
+    lines_vao: u32,
 
     standard_ebo: u32,
     background_ebo: u32,
@@ -62,6 +63,7 @@ Render_State :: struct {
     particle_vbo: u32,
     particle_pos_vbo: u32,
     background_vbo: u32,
+    editor_lines_vbo: u32,
 
     indirect_buffer: u32,
 
@@ -141,9 +143,11 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.GenBuffers(1, &rs.particle_vbo)
     gl.GenBuffers(1, &rs.particle_pos_vbo)
     gl.GenBuffers(1, &rs.background_vbo)
+    gl.GenBuffers(1, &rs.editor_lines_vbo)
     gl.GenVertexArrays(1, &rs.standard_vao)
     gl.GenVertexArrays(1, &rs.particle_vao)
     gl.GenVertexArrays(1, &rs.background_vao)
+    gl.GenVertexArrays(1, &rs.lines_vao)
 
     gl.BindVertexArray(rs.standard_vao)
     gl.PatchParameteri(gl.PATCH_VERTICES, 3);
@@ -176,6 +180,11 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, position))
     gl.EnableVertexAttribArray(1)
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
+
+    gl.BindVertexArray(rs.lines_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
+    gl.EnableVertexAttribArray(0)
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of([3]f32), 0)
 
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     gl.BindVertexArray(0)
@@ -412,6 +421,17 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
         gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.DYNAMIC_DRAW) 
         gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
+    }
+    if EDIT && len(gs.editor_state.connections) > 0 {
+        gl.BindVertexArray(rs.lines_vao)
+        use_shader(shst, rs, .Outline)
+        set_matrix_uniform(shst, "projection", &proj_mat)
+        red := [3]f32{1.0, 0.0, 0.0}
+        set_vec3_uniform(shst, "color", 1, &red)
+        el := gs.editor_state.connections
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(el[0]) * len(el), &el[0], gl.DYNAMIC_DRAW)
+        gl.DrawArrays(gl.LINES, 0, i32(len(el)))
     }
     // ================================
 }

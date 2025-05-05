@@ -105,9 +105,17 @@ editor_reload_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^R
     fmt.println(rs.render_group_offsets)
 }
 
-lg_get_transformed_vertices :: proc(lg: Level_Geometry, trans_mat: matrix[4, 4]f32, ps: ^Physics_State, out: [][3]f32) {
+lg_get_transformed_collider_vertices :: proc(lg: Level_Geometry, trans_mat: matrix[4, 4]f32, ps: Physics_State, out: [][3]f32) {
     vertices := ps.level_colliders[lg.shape].vertices
     for v, vi in vertices {
+        out[vi] = (trans_mat * [4]f32{v[0], v[1], v[2], 1.0}).xyz    
+    }
+}
+
+lg_get_transformed_render_vertices :: proc(lg: Level_Geometry, gs: ^Game_State, trans_mat: matrix[4, 4]f32, out: [][3]f32) {
+    vertices := gs.level_resources[lg.shape].vertices
+    for vertex, vi in vertices {
+        v := vertex.pos
         out[vi] = (trans_mat * [4]f32{v[0], v[1], v[2], 1.0}).xyz    
     }
 }
@@ -119,7 +127,7 @@ add_geometry_to_physics :: proc(ps: ^Physics_State, lgs_in: #soa[]Level_Geometry
         vertices_len := len(ps.level_colliders[lg.shape].vertices)
         transformed_vertices := make([][3]f32, vertices_len);
         defer delete(transformed_vertices)
-        lg_get_transformed_vertices(lg, trans_mat, ps, transformed_vertices[:])
+        lg_get_transformed_collider_vertices(lg, trans_mat, ps^, transformed_vertices[:])
         lg.aabb = construct_aabb(transformed_vertices)
         append(&ps.static_collider_vertices, ..transformed_vertices)
     }
@@ -136,7 +144,7 @@ add_geometry_to_renderer :: proc(gs: ^Game_State, rs: ^Render_State, ps: ^Physic
         vertices_len := len(ps.level_colliders[lg.shape].vertices)
         transformed_vertices := make([][3]f32, vertices_len);
         defer delete(transformed_vertices)
-        lg_get_transformed_vertices(lg, trans_mat, ps, transformed_vertices[:])
+        lg_get_transformed_collider_vertices(lg, trans_mat, ps^, transformed_vertices[:])
         max_z := min(f32)
         min_z := max(f32)
         for v, vi in transformed_vertices {

@@ -88,7 +88,7 @@ float pattern( in vec2 p )
 }
 
 void main() {
-    vec2 pixellated_uv = floor(uv * 100) / 200;
+    vec2 pixellated_uv = floor(uv * 250) / 250;
     float shade = pattern(pixellated_uv);
     vec3 pattern_col = vec3(colormap(shade).rgb) * .8;
     fragColor = vec4(pattern_col, 1.0);
