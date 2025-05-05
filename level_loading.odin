@@ -102,7 +102,6 @@ editor_reload_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^R
     clear_render_state(rs)
     add_geometry_to_renderer(gs, rs, ps, current_level_geometry[:])
     init_level_render_data(gs, rs)
-    fmt.println(rs.render_group_offsets)
 }
 
 lg_get_transformed_collider_vertices :: proc(lg: Level_Geometry, trans_mat: matrix[4, 4]f32, ps: Physics_State, out: [][3]f32) {
