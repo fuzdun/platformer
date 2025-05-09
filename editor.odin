@@ -8,7 +8,7 @@ import "core:slice"
 OBJ_MOVE_SPD :: 30.0
 OBJ_ROT_SPD :: 1.0
 OBJ_SCALE_SPD :: 0.3
-MAX_DRAW_GEOMETRY_DIST :: 300
+MAX_DRAW_GEOMETRY_DIST :: 350
 MAX_DRAW_GEOMETRY_DIST2 :: MAX_DRAW_GEOMETRY_DIST * MAX_DRAW_GEOMETRY_DIST
 
 SSBO_Registry :: [len(SHAPES) * len(ProgramName)][dynamic]int
@@ -23,7 +23,12 @@ Editor_State :: struct {
     x_rot: f32,
     y_rot: f32,
     zoom: f32,
-    connections: [dynamic][3]f32
+    connections: [dynamic]Connection
+}
+
+Connection :: struct {
+    poss: [2][3]f32,
+    dist: int
 }
 
 get_selected_geometry_dists :: proc(es: ^Editor_State, ps: Physics_State, lgs: Level_Geometry_State) {
@@ -38,7 +43,7 @@ get_selected_geometry_dists :: proc(es: ^Editor_State, ps: Physics_State, lgs: L
             continue
         }
         s0, s1, dist := get_geometry_dist(ps, selected_geometry, lg)
-        append(&es.connections, s0, s1)
+        append(&es.connections, Connection{{s0, s1}, int(abs(dist))})
     }
 }
 
@@ -48,7 +53,9 @@ get_geometry_dist :: proc(ps: Physics_State, lga: Level_Geometry, lgb: Level_Geo
     mat_a := trans_to_mat4(lga.transform)
     mat_b := trans_to_mat4(lgb.transform)
     vertices_a := make([][3]f32, len(shape_data_a.vertices))
+    defer delete(vertices_a)
     vertices_b := make([][3]f32, len(shape_data_b.vertices))
+    defer delete(vertices_b)
     lg_get_transformed_collider_vertices(lga, mat_a, ps, vertices_a)
     lg_get_transformed_collider_vertices(lgb, mat_b, ps, vertices_b)
 

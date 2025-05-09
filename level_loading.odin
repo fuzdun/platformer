@@ -47,12 +47,11 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_Sta
     decoded, decode_err := cbor.decode(string(level_bin))
     defer cbor.destroy(decoded)
     decoded_arr := decoded.(^cbor.Array)
-
-    loaded_level_geometry := make(#soa[]Level_Geometry, len(decoded_arr))
-    defer delete(loaded_level_geometry)
     clear_soa(&gs.level_geometry)
 
     // standard load from level data=============
+    loaded_level_geometry := make(#soa[]Level_Geometry, len(decoded_arr))
+    defer delete(loaded_level_geometry)
     for entry, idx in decoded_arr {
         // decode level geometry struct
         lg: Level_Geometry
@@ -66,13 +65,14 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_Sta
     // ==========================================
 
     // perf test load======================
+    // loaded_level_geometry := make(#soa[]Level_Geometry, 500)
+    // defer delete(loaded_level_geometry)
     // for i in 0..<500 {
-    //
     //     rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
     //     //shape: SHAPES = rnd.choice([]SHAPES{.CUBE, .WEIRD})
     //     //shader: ProgramName = rnd.choice([]ProgramName{.Trail, .Simple})
     //     shape: SHAPES = .CUBE
-    //     shader: ProgramName = .Simple
+    //     shader: ProgramName = .Trail
     //     lg: Level_Geometry
     //     lg.shape = shape
     //     lg.collider = shape

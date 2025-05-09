@@ -11,7 +11,8 @@ ProgramName :: enum{
     Simple,
     Background,
     Player_Particle,
-    Outline
+    Outline,
+    Text,
 }
 
 Program :: struct{
@@ -33,7 +34,7 @@ PROGRAM_CONFIGS := [ProgramName]Program{
         shader_types = EDIT ? {.VERTEX_SHADER, .FRAGMENT_SHADER} : {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
         uniforms = EDIT ? {"projection"} : {"player_trail", "player_pos", "crunch_time", "crunch_pt", "time", "projection", "sonar_time"},
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT, gl.FILL)
+            // gl.PolygonMode(gl.FRONT, gl.FILL)
         },
     },
     .Player = {
@@ -41,7 +42,7 @@ PROGRAM_CONFIGS := [ProgramName]Program{
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"transform", "i_time", "projection", "p_color"},
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT, gl.FILL)
+            // gl.PolygonMode(gl.FRONT, gl.FILL)
         },
     },
     .Player_Particle = {
@@ -49,7 +50,7 @@ PROGRAM_CONFIGS := [ProgramName]Program{
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection", "player_pos", "i_time"},
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT, gl.FILL)
+            // gl.PolygonMode(gl.FRONT, gl.FILL)
         },
     },
     .Simple = {
@@ -57,7 +58,7 @@ PROGRAM_CONFIGS := [ProgramName]Program{
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection"},
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT, gl.FILL)
+            // gl.PolygonMode(gl.FRONT, gl.FILL)
         }
     },
     .Background = {
@@ -65,7 +66,7 @@ PROGRAM_CONFIGS := [ProgramName]Program{
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"i_time"},
         init_proc = proc(){
-            gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+            // gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
         }
     },
     .Outline = {
@@ -73,9 +74,15 @@ PROGRAM_CONFIGS := [ProgramName]Program{
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection", "color"},
         init_proc = proc() {
-            gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINES)
+            // gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINES)
         }
-    }
+    },
+    .Text = {
+        pipeline = {"textvertex", "textfrag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"projection", "transform"},
+        init_proc = proc() {}
+    },
 }
 
 ShaderState :: struct {
@@ -97,8 +104,8 @@ shader_state_free :: proc(shst: ^ShaderState) {
 
 init_shaders :: proc(sh: ^ShaderState) -> bool {
     for config, program in PROGRAM_CONFIGS {
-
         shaders := make([]u32, len(config.pipeline))
+        defer delete(shaders)
         for filename, shader_i in config.pipeline {
             id, ok := shader_program_from_file(filename, config.shader_types[shader_i])
             if !ok {

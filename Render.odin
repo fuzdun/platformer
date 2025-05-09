@@ -4,11 +4,15 @@ import "core:fmt"
 import "core:math"
 import "core:slice"
 import str "core:strings"
+import TTF "vendor:sdl2/ttf"
+import SDL "vendor:sdl2"
 import gl "vendor:OpenGL"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import rnd "core:math/rand"
 import tm "core:time"
+import strcnv "core:strconv"
+import ft "shared:freetype"
 
 // PLAYER_PARTICLE_STACK_COUNT :: 6
 // PLAYER_PARTICLE_SECTOR_COUNT :: 8 
@@ -28,9 +32,28 @@ SHAPE_NAMES := [SHAPES]string {
     .WEIRD = "weird"
 }
 
+Char_Tex :: struct {
+    id: u32,
+    size: glm.ivec2,
+    bearing: glm.ivec2,
+    next: u32
+}
+
 Quad_Vertex :: struct {
     position: glm.vec3,
     uv: glm.vec2
+}
+
+Quad_Vertex4 :: struct {
+    position: glm.vec4,
+    uv: glm.vec2
+}
+
+TEXT_VERTICES :: [4]Quad_Vertex4 {
+    {{-1, -1, 0, 1}, {0, 0}},
+    {{1, -1, 0, 1}, {1, 0}},
+    {{-1, 1, 0, 1}, {0, 1}},
+    {{1, 1, 0, 1}, {1, 1}}
 }
 
 BACKGROUND_VERTICES :: [4]Quad_Vertex {
@@ -51,10 +74,16 @@ Vertex_Offsets :: [len(SHAPES)]u32
 Index_Offsets :: [len(SHAPES)]u32
 
 Render_State :: struct {
+    ft_lib: ft.Library,
+    face: ft.Face,
+
+    char_tex_map: map[rune]Char_Tex,
+
     standard_vao: u32,
     particle_vao: u32,
     background_vao: u32,
     lines_vao: u32,
+    text_vao: u32,
 
     standard_ebo: u32,
     background_ebo: u32,
@@ -64,6 +93,7 @@ Render_State :: struct {
     particle_pos_vbo: u32,
     background_vbo: u32,
     editor_lines_vbo: u32,
+    text_vbo: u32,
 
     indirect_buffer: u32,
 
@@ -127,9 +157,54 @@ free_render_buffers :: proc(rs: ^Render_State) {
     }
     delete(rs.static_transforms)
     delete(rs.z_widths)
+    ft.done_face(rs.face)
+    ft.done_free_type(rs.ft_lib)
+    delete(rs.char_tex_map)
 }
 
 init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
+    ft.init_free_type(&rs.ft_lib)
+    ft.new_face(rs.ft_lib, "fonts/0xProtoNerdFont-Bold.ttf", 0, &rs.face)
+    rs.char_tex_map = make(map[rune]Char_Tex)
+    ft.set_pixel_sizes(rs.face, 0, 256)
+    gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
+    
+    for c in 0..<128 {
+        // fmt.println("before:", rs.face.glyph)
+        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
+            fmt.eprintln(char_load_err)
+        }
+        // fmt.println()
+        // fmt.println("after:", rs.face.glyph)
+        // fmt.println(rs.face.glyph.bitmap)
+        new_tex: u32 
+        gl.GenTextures(1, &new_tex)
+        gl.BindTexture(gl.TEXTURE_2D, new_tex)
+        gl.TexImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RED,
+            i32(rs.face.glyph.bitmap.width),
+            i32(rs.face.glyph.bitmap.rows),
+            0,
+            gl.RED,
+            gl.UNSIGNED_BYTE,
+            rs.face.glyph.bitmap.buffer
+        )
+        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        ct: Char_Tex = {
+            id = new_tex,
+            size = {i32(rs.face.glyph.bitmap.width), i32(rs.face.glyph.bitmap.rows)},
+            bearing = {i32(rs.face.glyph.bitmap_left), i32(rs.face.glyph.bitmap_top)},
+            next = u32(rs.face.glyph.advance.x)
+        }
+        // fmt.println(ct)
+        rs.char_tex_map[rune(c)] = ct
+    } 
+
     if !init_shaders(ss) {
         fmt.eprintln("shader init failed")
         return false
@@ -143,11 +218,13 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.GenBuffers(1, &rs.particle_vbo)
     gl.GenBuffers(1, &rs.particle_pos_vbo)
     gl.GenBuffers(1, &rs.background_vbo)
+    gl.GenBuffers(1, &rs.text_vbo)
     gl.GenBuffers(1, &rs.editor_lines_vbo)
     gl.GenVertexArrays(1, &rs.standard_vao)
     gl.GenVertexArrays(1, &rs.particle_vao)
     gl.GenVertexArrays(1, &rs.background_vao)
     gl.GenVertexArrays(1, &rs.lines_vao)
+    gl.GenVertexArrays(1, &rs.text_vao)
 
     gl.BindVertexArray(rs.standard_vao)
     gl.PatchParameteri(gl.PATCH_VERTICES, 3);
@@ -181,6 +258,15 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.EnableVertexAttribArray(1)
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
 
+    // tv := TEXT_VERTICES
+    gl.BindVertexArray(rs.text_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.text_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(Quad_Vertex4) * 4, nil, gl.DYNAMIC_DRAW);
+    gl.EnableVertexAttribArray(0)
+    gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(Quad_Vertex4), offset_of(Quad_Vertex4, position))
+    gl.EnableVertexAttribArray(1)
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex4), offset_of(Quad_Vertex4, uv))
+
     gl.BindVertexArray(rs.lines_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
     gl.EnableVertexAttribArray(0)
@@ -197,7 +283,7 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.Enable(gl.BLEND)
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
-    gl.TexParameteri(gl.TEXTURE_2D, gl.GENERATE_MIPMAP, 0)
+    // gl.TexParameteri(gl.TEXTURE_2D, gl.GENERATE_MIPMAP, 0)
     return true
 }
 
@@ -264,7 +350,6 @@ update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) 
 
     vertical_step := PI / f32(vertical_count + 1)
     horizontal_step := (2 * PI) / f32(horizontal_count)
-    // sphere_rotate := la.matrix3_from_euler_angles(time / 4000, time / 4000, 0, .XYZ)
     sphere_rotate := la.matrix3_from_euler_angles(time / 300, time / 300, 0, .XYZ)
     for i in 0..<vertical_count {
         vertical_angle = PI / 2.0 - f32(i + 1) * vertical_step
@@ -399,16 +484,16 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         draw_shader_render_queue(rs, shst, gl.PATCHES)
     }
 
+        
+    camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
+    camera_right_worldspace = la.normalize(camera_right_worldspace)
+    camera_up_worldspace: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
+    camera_up_worldspace = la.normalize(camera_up_worldspace)
     // PARTICLE DRAW TEST ZONE=========
     if !EDIT {
         use_shader(shst, rs, .Player_Particle)
         gl.BindVertexArray(rs.particle_vao)
         pv := PARTICLE_VERTICES
-        
-        camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
-        camera_right_worldspace = la.normalize(camera_right_worldspace)
-        camera_up_worldspace: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
-        camera_up_worldspace = la.normalize(camera_up_worldspace)
         for &pv in pv {
             pv.position = camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y
         }
@@ -424,18 +509,64 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.DYNAMIC_DRAW) 
         gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
     }
+
+    // draw geometry connections in editor
     if EDIT && len(gs.editor_state.connections) > 0 {
+        gl.BindVertexArray(rs.text_vao)
+        use_shader(shst, rs, .Text)
+        set_matrix_uniform(shst, "projection", &proj_mat)
+        connection_vertices := make([dynamic][3]f32); defer delete(connection_vertices)
+        for el in gs.editor_state.connections {
+            append(&connection_vertices, el.poss[0], el.poss[1])
+            avg_pos := el.poss[0] + (el.poss[1] - el.poss[0]) / 2
+            dist_txt_buf: [3]byte            
+            strcnv.itoa(dist_txt_buf[:], el.dist)
+            scale := gs.editor_state.zoom / 400 * .02
+            // scale: f32 = [0.02
+            // fmt.println(scale)
+            render_text(shst, rs, string(dist_txt_buf[:]), avg_pos, camera_up_worldspace, camera_right_worldspace, scale)
+        }
+
         gl.BindVertexArray(rs.lines_vao)
         use_shader(shst, rs, .Outline)
         set_matrix_uniform(shst, "projection", &proj_mat)
         red := [3]f32{1.0, 0.0, 0.0}
         set_vec3_uniform(shst, "color", 1, &red)
-        el := gs.editor_state.connections
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(el[0]) * len(el), &el[0], gl.DYNAMIC_DRAW)
-        gl.DrawArrays(gl.LINES, 0, i32(len(el)))
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(connection_vertices[0]) * len(connection_vertices), &connection_vertices[0], gl.DYNAMIC_DRAW)
+        gl.DrawArrays(gl.LINES, 0, i32(len(connection_vertices)))
     }
-    // ================================
+
+
+}
+
+render_text :: proc(shst: ^ShaderState, rs: ^Render_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
+    x: f32 = 0
+    trans_mat: = la.matrix4_translate(pos)
+    set_matrix_uniform(shst, "transform", &trans_mat)
+    for c in str.trim_null(text) {
+        char_tex := rs.char_tex_map[c]
+        x_off := x + f32(char_tex.bearing.x) * scale
+        y_off := -f32(char_tex.size.y - char_tex.bearing.y) * scale
+        w := f32(char_tex.size.x) * scale
+        h := f32(char_tex.size.y) * scale
+
+        vertices := [4]Quad_Vertex4 {
+            {{x_off,     y_off,     0, 1},     {0, 1}},
+            {{x_off + w, y_off,     0, 1},     {1, 1}},
+            {{x_off,     y_off + h, 0, 1},     {0, 0}},
+            {{x_off + w, y_off + h, 0, 1},     {1, 0}},
+        }
+        for &v in vertices {
+            v.position.xyz = cam_right * v.position.x + cam_up * v.position.y
+        }
+        gl.BindTexture(gl.TEXTURE_2D, char_tex.id)
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.text_vbo)
+        gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(vertices), &vertices[0])
+        gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    
+        x += f32(char_tex.next >> 6) * scale
+    } 
 }
 
 draw_shader_render_queue :: proc(rs: ^Render_State, shst: ^ShaderState, mode: u32) {

@@ -3,6 +3,7 @@ import "core:math"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import "core:fmt"
+// import "core:time"
 
 // should update this
 Player_States :: enum {
@@ -277,6 +278,7 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
     remaining_vel := init_velocity_len * delta_time
     velocity_normal := la.normalize(pls.velocity)
 
+    // pre_collision := time.now()
     get_collisions(gs, phs, delta_time, elapsed_time)
     if remaining_vel > 0 {
         loops := 0
@@ -301,6 +303,7 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
         pls.position += velocity_normal * remaining_vel
         pls.velocity = velocity_normal * init_velocity_len
     }
+    // fmt.println("collision check time", time.since(pre_collision))
 }
 
 interpolated_player_pos :: proc(ps: ^Player_State, t: f32) -> [3]f32 {

@@ -127,7 +127,6 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             if pz < lg.aabb.z0 do total += (pz - lg.aabb.z0) * (pz - lg.aabb.z0)
             if pz > lg.aabb.z1 do total += (pz - lg.aabb.z1) * (pz - lg.aabb.z1)
 
-
             if total < player_sq_radius {
                 // got player within bounding box
                 l := len(coll.indices)
@@ -432,6 +431,7 @@ closest_triangle_pt_3d :: proc(p: [3]f32, a: [3]f32, b: [3]f32, c: [3]f32) -> [3
 }
 
 closest_triangle_connection :: proc(a: [3]f32, b: [3]f32, c: [3]f32, x: [3]f32, y: [3]f32, z:[3]f32) -> (s0: [3]f32, s1: [3]f32, shortest_dist := max(f32)) {
+    // shortest_dist := max(f32)
     abc := [3][3]f32{a, b, c}
     xyz := [3][3]f32{x, y, z}
     segs0 := [3][2][3]f32{

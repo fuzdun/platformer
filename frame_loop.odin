@@ -10,9 +10,9 @@ import "core:math"
 quit_app := false
 
 frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: ^ShaderState, ps: ^Physics_State) {
-    //TARGET_FRAME_RATE :: 240.0
+    // TARGET_FRAME_RATE :: 240.0
     TARGET_FRAME_RATE :: 60.0
-    //TARGET_FRAME_RATE :: 60.0
+    // TARGET_FRAME_RATE :: 60.0
     FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
     clocks_per_second := i64(SDL.GetPerformanceFrequency())
     target_frame_clocks := clocks_per_second / TARGET_FRAME_RATE
@@ -37,7 +37,7 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
 
     for !quit_app {
         if quit_app do break
-        //update_start := time.now()
+        // update_start := time.now()
 
         elapsed_time := f64(SDL.GetTicks())
 
@@ -91,7 +91,7 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         
-        //fmt.println("update time:", time.since(update_start))
+        // fmt.println("update time:", time.since(update_start))
         //draw_start := time.now()
 
         update_vertices(gs, rs)

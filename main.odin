@@ -3,6 +3,7 @@ package main
 import "base:runtime"
 import "core:fmt"
 import SDL "vendor:sdl2"
+import TTF "vendor:sdl2/ttf"
 import gl "vendor:OpenGL"
 import la "core:math/linalg"
 import "core:mem"
@@ -10,8 +11,11 @@ import "core:os"
 
 // WIDTH :: 1920.0
 // HEIGHT :: 1080.0
-WIDTH :: 800
-HEIGHT :: 800
+// FULLSCREEN :: true
+WIDTH :: 900
+HEIGHT :: 900
+FULLSCREEN :: false
+
 TITLE :: "platformer"
 
 EDIT :: #config(EDIT, false)
@@ -44,7 +48,7 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.dirty_entities = make([dynamic]int)
     gs.editor_state.y_rot = -.25
     gs.editor_state.zoom = 200
-    gs.editor_state.connections = make([dynamic][3]f32)
+    gs.editor_state.connections = make([dynamic]Connection)
     // for &registry in gs.editor_state.ssbo_registry {
     //     registry = make([dynamic]int)
     // }
@@ -94,10 +98,15 @@ main :: proc () {
     }
 
     // create SDL window
-    if (SDL.Init({.VIDEO, .GAMECONTROLLER}) < 0) {
+    if SDL.Init({.VIDEO, .GAMECONTROLLER}) < 0 {
         fmt.println("SDL could not initialize")
     }
     SDL.GL_SetSwapInterval(1)
+
+    if TTF.Init() == -1 {
+        fmt.eprintln("failed to initialize TTF:", TTF.GetError())
+    }
+
     for i in 0..<SDL.NumJoysticks() {
         if (SDL.IsGameController(i)) {
             controller = SDL.GameControllerOpen(i)
@@ -108,6 +117,9 @@ main :: proc () {
         fmt.eprintln("Failed to create window")
     }
     defer SDL.DestroyWindow(window)
+    if FULLSCREEN {
+        SDL.SetWindowFullscreen(window, SDL.WINDOW_FULLSCREEN)
+    }
 
     // hook up OpenGL
     SDL.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 4)
