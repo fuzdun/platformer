@@ -9,12 +9,12 @@ import la "core:math/linalg"
 import "core:mem"
 import "core:os"
 
-// WIDTH :: 1920.0
-// HEIGHT :: 1080.0
-// FULLSCREEN :: true
-WIDTH :: 900
-HEIGHT :: 900
-FULLSCREEN :: false
+WIDTH :: 1920.0
+HEIGHT :: 1080.0
+FULLSCREEN :: true
+// WIDTH :: 900
+// HEIGHT :: 900
+// FULLSCREEN :: false
 
 TITLE :: "platformer"
 
@@ -47,7 +47,7 @@ gamestate_init :: proc(gs: ^Game_State) {
     gs.camera_state.position = {10, 60, 300}
     gs.dirty_entities = make([dynamic]int)
     gs.editor_state.y_rot = -.25
-    gs.editor_state.zoom = 200
+    gs.editor_state.zoom = 400
     gs.editor_state.connections = make([dynamic]Connection)
     // for &registry in gs.editor_state.ssbo_registry {
     //     registry = make([dynamic]int)

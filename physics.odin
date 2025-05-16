@@ -243,18 +243,20 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
             }
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
         } else if best_plane_normal.y < .2 && gs.player_state.state != .ON_GROUND {
-            gs.player_state.touch_pt = gs.player_state.position - {0, 0, 0.5}
-            gs.player_state.touch_time = elapsed_time
+            if gs.player_state.state != .ON_WALL {
+                gs.player_state.touch_pt = gs.player_state.position - {0, 0, 0.5}
+                gs.player_state.touch_time = elapsed_time
+            }
             gs.player_state.state = .ON_WALL
             gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
         }
     }
 }
 
+
 sphere_intersects_plane :: proc(c: [3]f32, r: f32, plane_norm: [3]f32, plane_dist: f32) -> (intersect_pt: [3]f32, did_intercept: bool) {
     dist := la.dot(c, plane_norm) - plane_dist
     return c - dist * plane_norm, abs(dist) < r
-    //return c - dist, false
 }
 
 ray_plane_intersection :: proc(start: [3]f32, offset: [3]f32, plane_n: [3]f32, plane_d: f32) -> (t: f32, q: [3]f32, ok: bool) {

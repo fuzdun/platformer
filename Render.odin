@@ -16,8 +16,8 @@ import ft "shared:freetype"
 
 // PLAYER_PARTICLE_STACK_COUNT :: 6
 // PLAYER_PARTICLE_SECTOR_COUNT :: 8 
-PLAYER_PARTICLE_STACK_COUNT :: 4
-PLAYER_PARTICLE_SECTOR_COUNT :: 7
+PLAYER_PARTICLE_STACK_COUNT :: 5
+PLAYER_PARTICLE_SECTOR_COUNT :: 8
 
 PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT + 2
 I_MAT :: glm.mat4(1.0)
@@ -351,6 +351,7 @@ update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) 
     vertical_step := PI / f32(vertical_count + 1)
     horizontal_step := (2 * PI) / f32(horizontal_count)
     sphere_rotate := la.matrix3_from_euler_angles(time / 300, time / 300, 0, .XYZ)
+    // sphere_rotate := la.matrix3_from_euler_angles(f32(0), f32(0), f32(0), .XYZ)
     for i in 0..<vertical_count {
         vertical_angle = PI / 2.0 - f32(i + 1) * vertical_step
         xz := SPHERE_RADIUS * math.cos(vertical_angle)
@@ -368,7 +369,8 @@ update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) 
             if displacement_fact > 0 {
                 displacement_fact *= 0.2
             }
-            pos.xyz += la.clamp_length(ps.particle_displacement * displacement_fact * 0.0005, 12.0)
+            // pos.xyz += la.clamp_length(ps.particle_displacement * displacement_fact * 0.0005, 12.0)
+            pos.xyz += la.clamp_length(ps.particle_displacement * displacement_fact * 0.0010, 20.0)
 
             rs.player_particles[i * horizontal_count + j] = pos
         }
@@ -453,7 +455,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
 
     if !EDIT {
         use_shader(shst, rs, .Player)
-        p_color: [3]f32 = gs.player_state.dashing ? {0.0, 1.0, 0} : {0.8, 0.4, 0.0}
+        p_color: [3]f32 = gs.player_state.dashing ? {0.0, 1.0, 0} : {0.9, 0.3, 0.9}
         set_matrix_uniform(shst, "projection", &proj_mat)
         set_matrix_uniform(shst, "transform", &player_mat)
         set_float_uniform(shst, "i_time", f32(time) / 1000)

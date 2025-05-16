@@ -6,16 +6,16 @@ out vec4 fragColor;
 
 uniform float i_time;
 
-const vec3 COLOR1 = vec3(0.0, 0.5, 1.0);
-const vec3 COLOR2 = vec3(0.8, 1.0, 0.0);
+const vec3 COLOR1 = vec3(1.0, 0.8, 0.0);
+const vec3 COLOR2 = vec3(0.8, 0.0, 0.0);
 
 float distance_from_sphere(vec3 p, vec3 c, float r) {
     return length(p - c) - r;
 }
 
 float map_world(vec3 p) {
-    float t = i_time / 400 + id * 90.0;
-    float displacment = sin(2.0 * p.x + t) * sin(2.0 * p.y + t) * sin(2.0 * p.z + t) * .60;
+    float t = i_time / 400 + id * 100.0;
+    float displacment = sin(2.0 * p.x + t) * sin(2.0 * p.y + t) * sin(2.0 * p.z + t) * .30;
     return distance_from_sphere(p, vec3(0.0, 0.0, 0.0), 3.0) + displacment;
 }
 
@@ -38,11 +38,16 @@ vec4 ray_march(vec3 ro, vec3 rd) {
         vec3 current_pos = ro + total_distance_traveled * rd;
         float distance_to_closest = map_world(current_pos);
         if (distance_to_closest < MINIMUM_HIT_DISTANCE) {
-            vec3 normal = calculate_normal(current_pos) * 0.5 + 0.5;
-            vec3 light_pos = vec3(2.0, 4.0, 6.0);
+            // vec3 normal = calculate_normal(current_pos) * 0.5 + 0.5;
+            vec3 normal = calculate_normal(current_pos);
+            vec3 light_pos = vec3(4.0, 4.0, -6.0);
             vec3 light_dir = normalize(light_pos - current_pos);
-            float diffuse_amt = max(0.0, dot(normal, light_dir));
-            return vec4(COLOR1, 1.0) * diffuse_amt + vec4(COLOR2, 1.0) * (1.0 - diffuse_amt); 
+            float diffuse_amt = dot(normal, light_dir);
+            // float diffuse_amt = dot(normal, light_dir);
+            // return diffuse_amt > .32 ? vec4(COLOR1, 1.0) : vec4(COLOR2, 1.0);
+            return mix(vec4(COLOR1, 1.0), vec4(COLOR2, 1.0), diffuse_amt);
+            // return vec4(COLOR1.xy, diffuse_amt, 1.0);
+            // return vec4(COLOR1, 1.0) * diffuse_amt + vec4(COLOR2, 1.0) * (1.0 - diffuse_amt); 
         }
         if (total_distance_traveled > MAXIMUM_TRACE_DISTANCE) {
             break;
@@ -58,7 +63,6 @@ void main() {
     vec3 ro = camera_pos;
     vec3 rd = vec3(uv2, 1.0);
     vec4 col = ray_march(ro, rd);
-    // col.g = 1.0 / id;
     fragColor = col; 
 }
 // void main() {

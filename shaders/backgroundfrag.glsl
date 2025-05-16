@@ -5,7 +5,7 @@ out vec4 fragColor;
 
 uniform float i_time;
 
-// vec4 greens (float x) {
+// vec4 colormap (float x) {
 //   const float e0 = 0.0;
 //   const vec4 v0 = vec4(0,0.26666666666666666,0.10588235294117647,1);
 //   const float e1 = 0.125;
