@@ -3,9 +3,51 @@ import "core:math"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import "core:fmt"
-// import "core:time"
 
-// should update this
+// move speed
+MAX_PLAYER_SPEED: f32: 50.0
+MAX_FALL_SPEED: f32: 60.0
+AIR_SPEED :: 100.0
+SLOPE_SPEED :: 80.0 
+P_ACCEL: f32: 150.0
+GROUND_BUNNY_V_SPEED: f32: 70
+GROUND_BUNNY_H_SPEED: f32: 30
+MIN_BUNNY_XZ_VEL: f32: 20.0
+
+// jump
+P_JUMP_SPEED: f32: 60.0
+WALL_JUMP_FORCE :: 25 
+SLOPE_V_JUMP_FORCE :: 50 
+SLOPE_JUMP_FORCE :: 40
+
+// forces
+GROUND_FRICTION :: 0.05
+GRAV: f32: 135
+WALL_GRAV: f32: 20 
+SLOPE_GRAV: f32: 60 
+
+// input
+COYOTE_TIME ::  150
+BUNNY_DASH_DEBOUNCE: f32: 400
+BUNNY_WINDOW: f32: 100
+
+// dash
+DASH_SPD: f32: 75.0
+DASH_LEN: f32: 175 
+DASH_DIST: f32: 15.0
+
+// physics
+GROUND_RAY_LEN ::  2.0
+GROUNDED_RADIUS: f32: 0.01 
+GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
+GROUND_OFFSET: f32 = 1.0 
+
+// rendering
+TRAIL_SIZE :: 50 
+PARTICLE_DISPLACEMENT_LERP :: 0.25
+TGT_PARTICLE_DISPLACEMENT_LERP :: 0.4
+
+
 Player_States :: enum {
     ON_GROUND,
     ON_WALL,
@@ -13,31 +55,27 @@ Player_States :: enum {
     IN_AIR,
     DASHING 
 }
-// Player_Input_State :: struct {
-//     got_jump: bool,
-//     got_input: bool,
-//     got_dir: bool,
-//     dir: la.Vector2f64,
-// }
 
 Player_State :: struct {
     state: Player_States,
-    position: [3]f32,
-    velocity: [3]f32,
-    trail: RingBuffer(TRAIL_SIZE, [3]f32),
+    dash_start_pos: [3]f32,
+    dash_end_pos: [3]f32,
+    dash_dir: [3]f32,
     touch_pt: [3]f32,
     touch_time: f32,
     crunch_pt: [3]f32,
     bunny_hop_y: f32,
     crunch_time: f32,
     last_dash: f32,
-    jump_pressed_time: f32,
+
+    position: [3]f32,
+    velocity: [3]f32,
 
     can_press_jump: bool,
     can_press_dash: bool,
+    jump_pressed_time: f32,
     dash_time: f32,
     dashing: bool,
-    dash_vel: glm.vec3,
 
     left_ground: f32,
     left_slope: f32,
@@ -47,41 +85,14 @@ Player_State :: struct {
     ground_x: [3]f32,
     ground_z: [3]f32,
     prev_position: [3]f32,
+
     trail_sample: [3]glm.vec3,
     prev_trail_sample: [3]glm.vec3,
+    trail: RingBuffer(TRAIL_SIZE, [3]f32),
 
     particle_displacement: [3]f32,
     tgt_particle_displacement: [3]f32
 }
-
-GROUND_FRICTION :: 0.05
-MAX_PLAYER_SPEED: f32: 50.0
-MAX_FALL_SPEED: f32: 60.0
-P_JUMP_SPEED: f32: 60.0
-P_ACCEL: f32: 150.0
-DASH_SPD: f32: 75.0
-DASH_LEN: f32: 150 
-BUNNY_WINDOW: f32: 100
-BUNNY_DASH_DEBOUNCE: f32: 400
-GROUND_BUNNY_V_SPEED: f32: 70
-GROUND_BUNNY_H_SPEED: f32: 30
-MIN_BUNNY_XZ_VEL: f32: 20.0
-GRAV: f32: 135
-WALL_GRAV: f32: 20 
-SLOPE_GRAV: f32: 60 
-WALL_JUMP_FORCE :: 25 
-SLOPE_V_JUMP_FORCE :: 50 
-SLOPE_JUMP_FORCE :: 40
-TRAIL_SIZE :: 50 
-GROUND_RAY_LEN ::  2.0
-GROUNDED_RADIUS: f32: 0.01 
-GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
-GROUND_OFFSET: f32 = 1.0 
-AIR_SPEED :: 100.0
-SLOPE_SPEED :: 80.0 
-COYOTE_TIME ::  150
-PARTICLE_DISPLACEMENT_LERP :: 0.25
-TGT_PARTICLE_DISPLACEMENT_LERP :: 0.4
 
 update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f32) {
     ps := &gs.player_state
@@ -106,9 +117,9 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
     if is.right_pressed do input_x += 1
     if is.up_pressed do input_z -= 1
     if is.down_pressed do input_z += 1
-    input_dir := la.normalize([2]f32{input_x, input_z})
+    input_dir := la.normalize0([2]f32{input_x, input_z})
     if is.hor_axis !=0 || is.vert_axis != 0 {
-        input_dir = la.normalize([2]f32{is.hor_axis, -is.vert_axis})
+        input_dir = la.normalize0([2]f32{is.hor_axis, -is.vert_axis})
     }
     got_dir_input := is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
 
@@ -223,9 +234,10 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
     if pressed_dash && ps.velocity != 0 {
         ps.can_press_dash = false
         ps.dashing = true
-        dash_dir := input_dir != 0 ? input_dir : la.normalize(ps.velocity.xz)
-        tgt_dash_vel := [3]f32 {dash_dir.x, 0.0, dash_dir.y} * DASH_SPD 
-        ps.dash_vel.xz = la.clamp_length(tgt_dash_vel.xz + ps.velocity.xz, DASH_SPD)
+        ps.dash_start_pos = ps.position
+        dash_input := input_dir == 0 ? la.normalize0(ps.velocity.xz) : input_dir
+        ps.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
+        ps.dash_end_pos = ps.position + DASH_DIST * ps.dash_dir
         ps.dash_time = f32(elapsed_time)
     }
 
@@ -234,13 +246,23 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
     dash_expired := f32(elapsed_time) > ps.dash_time + DASH_LEN
     if ps.dashing && (hit_surface || dash_expired){
         ps.dashing = false
+        ps.velocity = la.normalize(ps.dash_end_pos - ps.dash_start_pos) * DASH_SPD
+        ps.position = ps.dash_end_pos
     }
      
+    // dashing
+    if ps.dashing {
+        ps.velocity = 0
+        dash_t := (f32(elapsed_time) - ps.dash_time) / DASH_LEN
+        dash_delta := ps.dash_end_pos - ps.dash_start_pos
+        ps.position = ps.dash_start_pos + dash_delta * dash_t
+    }
+
     // bunny hop time dilation
-    if f32(elapsed_time) - ps.crunch_time < 1000 {
+    if ps.state != .ON_GROUND && f32(elapsed_time) - ps.crunch_time < 1000 {
         if ps.position.y > ps.bunny_hop_y {
             fact := abs(ps.velocity.y) / GROUND_BUNNY_V_SPEED
-            gs.time_mult = clamp(fact * fact * 4.5, 1.15, 1.5)
+            gs.time_mult = clamp(fact * fact * 4.5, 1.15, 2.5)
         } else {
             gs.time_mult = f32(math.lerp(gs.time_mult, 1, f32(0.05)))
         }
@@ -269,16 +291,15 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
     pls := &gs.player_state
     pls.prev_position = pls.position
 
-    if pls.dashing {
-        pls.velocity = pls.dash_vel
-    }
+    // if pls.dashing {
+    //     pls.velocity = pls.dash_vel
+    // }
 
     init_velocity_len := la.length(pls.velocity)
 
     remaining_vel := init_velocity_len * delta_time
     velocity_normal := la.normalize(pls.velocity)
 
-    // pre_collision := time.now()
     get_collisions(gs, phs, delta_time, elapsed_time)
     if remaining_vel > 0 {
         loops := 0
@@ -303,7 +324,6 @@ move_player :: proc(gs: ^Game_State, phs: ^Physics_State, elapsed_time: f32, del
         pls.position += velocity_normal * remaining_vel
         pls.velocity = velocity_normal * init_velocity_len
     }
-    // fmt.println("collision check time", time.since(pre_collision))
 }
 
 interpolated_player_pos :: proc(ps: ^Player_State, t: f32) -> [3]f32 {

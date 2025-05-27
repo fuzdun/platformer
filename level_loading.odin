@@ -50,41 +50,41 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_Sta
     clear_soa(&gs.level_geometry)
 
     // standard load from level data=============
-    loaded_level_geometry := make(#soa[]Level_Geometry, len(decoded_arr))
-    defer delete(loaded_level_geometry)
-    for entry, idx in decoded_arr {
-        // decode level geometry struct
-        lg: Level_Geometry
-        entry_bin, _ := cbor.encode(entry)
-        defer delete(entry_bin)
-        cbor.unmarshal(string(entry_bin), &lg)
-        lg.attributes = trim_bit_set(lg.attributes)
-        lg.shaders = trim_bit_set(lg.shaders)
-        loaded_level_geometry[idx] = lg
-    }
+    // loaded_level_geometry := make(#soa[]Level_Geometry, len(decoded_arr))
+    // defer delete(loaded_level_geometry)
+    // for entry, idx in decoded_arr {
+    //     // decode level geometry struct
+    //     lg: Level_Geometry
+    //     entry_bin, _ := cbor.encode(entry)
+    //     defer delete(entry_bin)
+    //     cbor.unmarshal(string(entry_bin), &lg)
+    //     lg.attributes = trim_bit_set(lg.attributes)
+    //     lg.shaders = trim_bit_set(lg.shaders)
+    //     loaded_level_geometry[idx] = lg
+    // }
     // ==========================================
 
     // perf test load======================
-    // loaded_level_geometry := make(#soa[]Level_Geometry, 500)
-    // defer delete(loaded_level_geometry)
-    // for i in 0..<500 {
-    //     rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
-    //     //shape: SHAPES = rnd.choice([]SHAPES{.CUBE, .WEIRD})
-    //     //shader: ProgramName = rnd.choice([]ProgramName{.Trail, .Simple})
-    //     shape: SHAPES = .CUBE
-    //     shader: ProgramName = .Trail
-    //     lg: Level_Geometry
-    //     lg.shape = shape
-    //     lg.collider = shape
-    //
-    //     x := f32(i % 10)
-    //     y := math.floor(f32(i) / 10.0)
-    //     lg.transform = {{x * 20, y * -2 -20, y * -10 + 300},{10, 10, 10}, rot}
-    //     lg.shaders = {shader}
-    //     lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-    //
-    //     loaded_level_geometry[i] = lg
-    // }
+    loaded_level_geometry := make(#soa[]Level_Geometry, 500)
+    defer delete(loaded_level_geometry)
+    for i in 0..<500 {
+        rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
+        //shape: SHAPES = rnd.choice([]SHAPES{.CUBE, .WEIRD})
+        //shader: ProgramName = rnd.choice([]ProgramName{.Trail, .Simple})
+        shape: SHAPES = .CUBE
+        shader: ProgramName = .Trail
+        lg: Level_Geometry
+        lg.shape = shape
+        lg.collider = shape
+
+        x := f32(i % 10)
+        y := math.floor(f32(i) / 10.0)
+        lg.transform = {{x * 20, y * -2 -20, y * -10 + 300},{10, 10, 10}, rot}
+        lg.shaders = {shader}
+        lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+
+        loaded_level_geometry[i] = lg
+    }
     // =====================================
 
     add_geometry_to_physics(ps, loaded_level_geometry)

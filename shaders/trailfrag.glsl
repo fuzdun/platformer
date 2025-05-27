@@ -118,7 +118,8 @@ float jaggy(float x)
 
 void main()
 {
-    vec2 uv = in_view == 1 ? affine_uv : perspective_uv;
+    // vec2 uv = in_view == 1 ? affine_uv : perspective_uv;
+    vec2 uv = perspective_uv;
     uv = floor(uv * 50.0) / 50.0;
     float plane_off = dot(normal_frag, global_pos);
     float dist = dot(normal_frag, player_pos) - plane_off;

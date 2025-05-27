@@ -6,7 +6,7 @@ out vec4 fragColor;
 
 uniform float i_time;
 
-const vec3 COLOR1 = vec3(1.0, 0.8, 0.0);
+const vec3 COLOR1 = vec3(0.6, 0.7, 0.3);
 const vec3 COLOR2 = vec3(0.8, 0.0, 0.0);
 
 float distance_from_sphere(vec3 p, vec3 c, float r) {

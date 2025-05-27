@@ -13,6 +13,7 @@ ProgramName :: enum{
     Player_Particle,
     Outline,
     Text,
+    Line
 }
 
 Program :: struct{
@@ -40,7 +41,7 @@ PROGRAM_CONFIGS := [ProgramName]Program{
     .Player = {
         pipeline = {"playervertex", "playerfrag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"transform", "i_time", "projection", "p_color"},
+        uniforms = {"transform", "i_time", "projection", "p_color", "constrain_amt", "constrain_dir"},
         init_proc = proc() {
             // gl.PolygonMode(gl.FRONT, gl.FILL)
         },
@@ -75,6 +76,14 @@ PROGRAM_CONFIGS := [ProgramName]Program{
         uniforms = {"projection", "color"},
         init_proc = proc() {
             // gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINES)
+        }
+    },
+    .Line = {
+        pipeline = {"linevertex", "linegeometry", "linefrag"},
+        shader_types = {.VERTEX_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"projection", "color", "line_dir", "dash_time", "i_time"},
+        init_proc = proc() {
+
         }
     },
     .Text = {
