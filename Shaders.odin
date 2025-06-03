@@ -41,7 +41,7 @@ PROGRAM_CONFIGS := [ProgramName]Program{
     .Player = {
         pipeline = {"playervertex", "playerfrag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"transform", "i_time", "projection", "p_color", "constrain_amt", "constrain_dir"},
+        uniforms = {"transform", "i_time", "dash_time", "dash_end_time", "projection", "p_color", "constrain_dir"},
         init_proc = proc() {
             // gl.PolygonMode(gl.FRONT, gl.FILL)
         },

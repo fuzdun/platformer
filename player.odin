@@ -75,6 +75,7 @@ Player_State :: struct {
     can_press_dash: bool,
     jump_pressed_time: f32,
     dash_time: f32,
+    dash_end_time: f32,
     dashing: bool,
 
     left_ground: f32,
@@ -245,6 +246,7 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
     hit_surface := ps.state == .ON_WALL || grounded
     dash_expired := f32(elapsed_time) > ps.dash_time + DASH_LEN
     if ps.dashing && (hit_surface || dash_expired){
+        ps.dash_end_time = f32(elapsed_time)
         ps.dashing = false
         ps.velocity = la.normalize(ps.dash_end_pos - ps.dash_start_pos) * DASH_SPD
         ps.position = ps.dash_end_pos
@@ -255,14 +257,14 @@ update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f
         ps.velocity = 0
         dash_t := (f32(elapsed_time) - ps.dash_time) / DASH_LEN
         dash_delta := ps.dash_end_pos - ps.dash_start_pos
-        ps.position = ps.dash_start_pos + dash_delta * dash_t
+        ps.position = ps.dash_start_pos; //ps.dash_start_pos + dash_delta * dash_t
     }
 
     // bunny hop time dilation
     if ps.state != .ON_GROUND && f32(elapsed_time) - ps.crunch_time < 1000 {
         if ps.position.y > ps.bunny_hop_y {
             fact := abs(ps.velocity.y) / GROUND_BUNNY_V_SPEED
-            gs.time_mult = clamp(fact * fact * 4.5, 1.15, 2.5)
+            gs.time_mult = clamp(fact * fact * 4.5, 1.15, 1.5)
         } else {
             gs.time_mult = f32(math.lerp(gs.time_mult, 1, f32(0.05)))
         }

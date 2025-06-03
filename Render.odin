@@ -495,7 +495,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         // if !gs.player_state.dashing {
             use_shader(shst, rs, .Player)
             // p_color: [3]f32 = gs.player_state.dashing ? {0.0, 1.0, 0} : {0.9, 0.3, 0.9}
-            p_color := [3]f32 {1.0, 0.0, 0.0}
+            p_color := [3]f32 {1.0, 1.0, 0.0}
             constrain_len: f32 = 250.0
             constrain_amt := clamp(abs(constrain_len / 2 - (f32(time) - gs.player_state.dash_time)) / constrain_len, 0, 1)
             constrain_dir := la.normalize0(gs.player_state.dash_dir)
@@ -503,9 +503,11 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             // constrain_amt := f32(0.2)
             set_matrix_uniform(shst, "projection", &proj_mat)
             set_matrix_uniform(shst, "transform", &player_mat)
-            set_float_uniform(shst, "i_time", f32(time) / 1000)
+            set_float_uniform(shst, "i_time", f32(time))
+            set_float_uniform(shst, "dash_time", gs.player_state.dash_time)
+            set_float_uniform(shst, "dash_end_time", gs.player_state.dash_end_time)
             set_vec3_uniform(shst, "p_color", 1, &p_color)
-            set_float_uniform(shst, "constrain_amt", constrain_amt)
+            // set_float_uniform(shst, "constrain_amt", constrain_amt)
             set_vec3_uniform(shst, "constrain_dir", 1, &constrain_dir)
             draw_shader_render_queue(rs, shst, gl.TRIANGLES)
 
@@ -534,13 +536,14 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             set_float_uniform(shst, "i_time", f32(time))
             set_float_uniform(shst, "dash_time", gs.player_state.dash_time)
             set_float_uniform(shst, "resolution", f32(20))
-            dash_line: [2]Line_Vertex = {{gs.player_state.dash_start_pos, 0}, {gs.player_state.dash_end_pos, 1}}
+            dash_line_start := gs.player_state.dash_start_pos + gs.player_state.dash_dir * 4.5;
+            dash_line: [2]Line_Vertex = {{dash_line_start, 0}, {gs.player_state.dash_end_pos, 1}}
             green := [3]f32{1.0, 1.0, 0.0}
             set_vec3_uniform(shst, "color", 1, &green)
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
             gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.DYNAMIC_DRAW)
-            gl.LineWidth(4)
-            // gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
+            gl.LineWidth(2.5)
+            gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
         // }
     }
 
