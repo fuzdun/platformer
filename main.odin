@@ -97,7 +97,7 @@ main :: proc () {
         }
     }
 
-    // create SDL window
+    //create SDL window
     if SDL.Init({.VIDEO, .GAMECONTROLLER}) < 0 {
         fmt.println("SDL could not initialize")
     }

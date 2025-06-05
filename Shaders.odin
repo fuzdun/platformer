@@ -81,7 +81,7 @@ PROGRAM_CONFIGS := [ProgramName]Program{
     .Line = {
         pipeline = {"linevertex", "linegeometry", "linefrag"},
         shader_types = {.VERTEX_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"projection", "color", "line_dir", "dash_time", "i_time"},
+        uniforms = {"projection", "color", "line_dir", "dash_time", "i_time", "dash_dir", "resolution"},
         init_proc = proc() {
 
         }

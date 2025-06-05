@@ -174,7 +174,7 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     
     for c in 0..<128 {
         // fmt.println("before:", rs.face.glyph)
-        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         // fmt.println()
@@ -495,7 +495,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         // if !gs.player_state.dashing {
             use_shader(shst, rs, .Player)
             // p_color: [3]f32 = gs.player_state.dashing ? {0.0, 1.0, 0} : {0.9, 0.3, 0.9}
-            p_color := [3]f32 {1.0, 1.0, 0.0}
+            p_color := [3]f32 {1.0, 0.0, 0.0}
             constrain_len: f32 = 250.0
             constrain_amt := clamp(abs(constrain_len / 2 - (f32(time) - gs.player_state.dash_time)) / constrain_len, 0, 1)
             constrain_dir := la.normalize0(gs.player_state.dash_dir)
@@ -538,7 +538,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             set_float_uniform(shst, "resolution", f32(20))
             dash_line_start := gs.player_state.dash_start_pos + gs.player_state.dash_dir * 4.5;
             dash_line: [2]Line_Vertex = {{dash_line_start, 0}, {gs.player_state.dash_end_pos, 1}}
-            green := [3]f32{1.0, 1.0, 0.0}
+            green := [3]f32{1.0, 0.0, 0.0}
             set_vec3_uniform(shst, "color", 1, &green)
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
             gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.DYNAMIC_DRAW)
