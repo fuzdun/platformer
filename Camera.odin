@@ -32,14 +32,20 @@ move_camera :: proc(ps: Player_State, cs: ^Camera_State, elapsed_time: f64, delt
     // bef_thresh := true
     cs.prev_position = cs.position
     cs.prev_target = cs.target
-    tgt_y := ps.position.y + CAMERA_PLAYER_Y_OFFSET
-    tgt_z := ps.position.z + CAMERA_PLAYER_Z_OFFSET
-    tgt_x := ps.position.x + CAMERA_PLAYER_X_OFFSET
+    ppos := ps.position
+    if ps.dashing {
+        dash_t := (f32(elapsed_time) - ps.dash_time) / DASH_LEN
+        dash_delta := ps.dash_end_pos - ps.dash_start_pos
+        ppos = ps.dash_start_pos + dash_delta * dash_t
+    }
+    tgt_y := ppos.y + CAMERA_PLAYER_Y_OFFSET
+    tgt_z := ppos.z + CAMERA_PLAYER_Z_OFFSET
+    tgt_x := ppos.x + CAMERA_PLAYER_X_OFFSET
     tgt : [3]f32 = {tgt_x, tgt_y, tgt_z}
     cs.position = math.lerp(cs.position, tgt, f32(CAMERA_POS_LERP))
-    cs.target.x = math.lerp(cs.target.x, ps.position.x, f32(CAMERA_X_LERP))
-    cs.target.y = math.lerp(cs.target.y, ps.position.y, f32(CAMERA_Y_LERP))
-    cs.target.z = math.lerp(cs.target.z, ps.position.z, f32(CAMERA_Z_LERP))
+    cs.target.x = math.lerp(cs.target.x, ppos.x, f32(CAMERA_X_LERP))
+    cs.target.y = math.lerp(cs.target.y, ppos.y, f32(CAMERA_Y_LERP))
+    cs.target.z = math.lerp(cs.target.z, ppos.z, f32(CAMERA_Z_LERP))
 }
 
 interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4{

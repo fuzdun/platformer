@@ -1,6 +1,7 @@
 #version 460 core
 
 in vec2 uv;
+in float f_radius;
 flat in int id;
 out vec4 fragColor;
 
@@ -16,7 +17,7 @@ float distance_from_sphere(vec3 p, vec3 c, float r) {
 float map_world(vec3 p) {
     float t = i_time / 400 + id * 100.0;
     float displacment = sin(2.0 * p.x + t) * sin(2.0 * p.y + t) * sin(2.0 * p.z + t) * .30;
-    return distance_from_sphere(p, vec3(0.0, 0.0, 0.0), 3.0) + displacment;
+    return distance_from_sphere(p, vec3(0.0, 0.0, 0.0), f_radius) + displacment;
 }
 
 vec3 calculate_normal(vec3 p) {
@@ -26,7 +27,6 @@ vec3 calculate_normal(vec3 p) {
     float z_grad = map_world(p + step.yyx) - map_world(p - step.yyx);
     return normalize(vec3(x_grad, y_grad, z_grad));
 }
-
 
 vec4 ray_march(vec3 ro, vec3 rd) {
     float total_distance_traveled = 0.0;

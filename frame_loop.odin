@@ -40,6 +40,7 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
         // update_start := time.now()
 
         elapsed_time := f64(SDL.GetTicks())
+        //elapsed_time := f64(SDL.GetTicks()) * 0.1
 
         current_time = i64(SDL.GetPerformanceCounter())
         delta_time = current_time - previous_time
@@ -84,6 +85,7 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
             game_update(gs, ps, rs, elapsed_time, FIXED_DELTA_TIME * gs.time_mult)
             accumulator -= target_frame_clocks 
         }
+        //gs.time_mult = 0.25
         //time_mult = f32(math.sin(elapsed_time / 100) + 2.0)
 
         // Render

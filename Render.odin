@@ -374,7 +374,6 @@ update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) 
             if displacement_fact > 0 {
                 displacement_fact *= 0.2
             }
-            // pos.xyz += la.clamp_length(ps.particle_displacement * displacement_fact * 0.0005, 12.0)
             pos.xyz += la.clamp_length(ps.particle_displacement * displacement_fact * 0.0010, 20.0)
 
             rs.player_particles[i * horizontal_count + j] = pos
@@ -388,9 +387,27 @@ update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) 
     rs.player_particles[end_idx] = top_pt
     rs.player_particles[end_idx + 1] = bot_pt
     
-    // z_sort := proc(a: [4]f32, b: [4]f32) -> bool { return a.z < b.z }
+    for &p in rs.player_particles {
+        constrain_proj: [3]f32 = ps.dash_dir * la.dot(ps.dash_dir, p.xyz)
+        constrained_pos := p.xyz - constrain_proj
+        dash_pos_t := la.length(ps.dash_dir - constrain_proj) / 2.0
+        constrain_start_t := ps.dash_time + 50.0 * dash_pos_t
+        constrain_amt := 1.0 - easeout(clamp((time - constrain_start_t) / 75.0, 0.0, 1.0))
+        if (time - ps.dash_time > 200) {
+            constrain_amt = 1.0;
+        }
+        constrained_pos *= constrain_amt;
+        constrained_pos += constrain_proj;
+        //constrained_pos += constrain_proj * (1.0 - constrain_amt) * 2.5 + ps.dash_dir * 2.5 * (1.0 - constrain_amt);
+        p = {constrained_pos.x, constrained_pos.y, constrained_pos.z, p.w}
+    }
+
     z_sort := proc(a: [4]f32, b: [4]f32) -> bool { return a.z < b.z }
     slice.sort_by(rs.player_particles[:], z_sort)
+}
+
+easeout :: proc(n: f32) -> f32 {
+    return math.sin(n * math.PI / 2.0);
 }
 
 render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Physics_State, time: f64, interp_t: f64) {
@@ -497,17 +514,13 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             // p_color: [3]f32 = gs.player_state.dashing ? {0.0, 1.0, 0} : {0.9, 0.3, 0.9}
             p_color := [3]f32 {1.0, 0.0, 0.0}
             constrain_len: f32 = 250.0
-            constrain_amt := clamp(abs(constrain_len / 2 - (f32(time) - gs.player_state.dash_time)) / constrain_len, 0, 1)
             constrain_dir := la.normalize0(gs.player_state.dash_dir)
-            // constrain_amt := min((f32(time) - gs.player_state.dash_time) / 2000.0, 1)
-            // constrain_amt := f32(0.2)
             set_matrix_uniform(shst, "projection", &proj_mat)
             set_matrix_uniform(shst, "transform", &player_mat)
             set_float_uniform(shst, "i_time", f32(time))
             set_float_uniform(shst, "dash_time", gs.player_state.dash_time)
             set_float_uniform(shst, "dash_end_time", gs.player_state.dash_end_time)
             set_vec3_uniform(shst, "p_color", 1, &p_color)
-            // set_float_uniform(shst, "constrain_amt", constrain_amt)
             set_vec3_uniform(shst, "constrain_dir", 1, &constrain_dir)
             draw_shader_render_queue(rs, shst, gl.TRIANGLES)
 
@@ -521,12 +534,16 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             i_ppos:[3]f32 = interpolated_player_pos(&gs.player_state, f32(interp_t))
             set_matrix_uniform(shst, "projection", &proj_mat)
             set_float_uniform(shst, "i_time", f32(time))
+            set_float_uniform(shst, "radius", 3.0)
             set_vec3_uniform(shst, "player_pos", 1, &i_ppos)
+            set_vec3_uniform(shst, "constrain_dir", 1, &constrain_dir)
+            set_float_uniform(shst, "dash_time", gs.player_state.dash_time)
+            set_float_uniform(shst, "dash_end_time", gs.player_state.dash_end_time)
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
             gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), &pv[0], gl.DYNAMIC_DRAW) 
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
             gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.DYNAMIC_DRAW) 
-            // gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
+            gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
         // }
         // else {
             gl.BindVertexArray(rs.lines_vao)
@@ -538,11 +555,11 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             set_float_uniform(shst, "resolution", f32(20))
             dash_line_start := gs.player_state.dash_start_pos + gs.player_state.dash_dir * 4.5;
             dash_line: [2]Line_Vertex = {{dash_line_start, 0}, {gs.player_state.dash_end_pos, 1}}
-            green := [3]f32{1.0, 0.0, 0.0}
+            green := [3]f32{1.0, 1.0, 0.0}
             set_vec3_uniform(shst, "color", 1, &green)
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
             gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.DYNAMIC_DRAW)
-            gl.LineWidth(2.5)
+            gl.LineWidth(2)
             gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
         // }
     }

@@ -49,7 +49,7 @@ PROGRAM_CONFIGS := [ProgramName]Program{
     .Player_Particle = {
         pipeline = {"particlevertex", "particlefrag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"projection", "player_pos", "i_time"},
+        uniforms = {"projection", "player_pos", "i_time", "radius", "constrain_dir", "dash_time", "dash_end_time"},
         init_proc = proc() {
             // gl.PolygonMode(gl.FRONT, gl.FILL)
         },

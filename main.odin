@@ -19,6 +19,7 @@ FULLSCREEN :: true
 TITLE :: "platformer"
 
 EDIT :: #config(EDIT, false)
+PERF_TEST :: #config(PERF_TEST, false)
 
 INIT_PLAYER_POS :: [3]f32 { 0, 0, 0 }
 
