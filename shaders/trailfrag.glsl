@@ -137,7 +137,8 @@ void main()
     vec3 diff = global_pos - player_pos;
 
     float a = atan(diff.x / diff.z) * 5;
-    float uvd = length(global_pos - proj_pt);
+    vec3 planar_diff = proj_pt - global_pos;
+    float uvd = length(planar_diff);
     float d1 = dist + noise(a + time * 100) * .3;
     float dfrac = d1 / uvd;
     float absd = abs(uvd - d1);
@@ -185,26 +186,38 @@ void main()
         1.0 - smoothstep(0.0, v_border, uv.y);
     float border_fact = max(x_border_fact, y_border_fact);
     // vec4 border_col = border_fact * vec4(1.0, 0.0, 0.0, 0.8);
-    vec4 border_col = vec4(1.0, 0.0, 0.0, 0.5);
+    vec4 border_col = vec4(1.0, 1.0, 1.0, 0.7);
     // vec3 border_col = border_fact * vec3(1.0, 1.0, 1.0, 0.8);
 
     // pattern_col = vec3(0.5, 0.5, 0.0);  
 
-    vec3 col = pattern_col + trail_col + impact_col;
-    // vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+    // vec3 col = pattern_col + trail_col + impact_col;
+    vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
 
 
-    float mask = texture(ditherTexture, perspective_uv * 1.0).r;
+    float mask = texture(ditherTexture, perspective_uv * 2.0).r;
     // mask = reshapeUniformToTriangle(mask);
 
-    float visibility = 0.0 + length(diff) * 0.010;
+    float visibility = length(diff) * 0.02;
     visibility = floor((visibility + mask / SHADES) * SHADES) / SHADES;
     // visibility = max(min(visibility, 0.9), 0.2);
 
     // vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
 
+    // vec3 plane_offset = dot(normal_frag, diff) * global_pos;
+    vec3 player_planar_proj = player_pos + normal_frag * dot(normal_frag, diff);
+    vec3 planar_delta = player_planar_proj - global_pos;
+
+    float adjustment_amt = min(length(planar_delta), 20.0);
+    vec3 adjusted_pos = global_pos + normalize(planar_delta) * adjustment_amt;     // float norm = -dot(normalize(diff), normalize(normal_frag));
+    // float norm = -dot(normalize(player_pos - adjusted_planar), normal_frag);
     fragColor = mix(mix(vec4(col, 1.0), vec4(0.0, 0.0, 0.0, 0.0), visibility), border_col, border_fact);
     // fragColor.a = 1.0;
+    // fragColor.a = dot(normal_frag, normalize(player_pos - adjusted_pos));
+    // fragColor = vec4(0, dot(normal_frag, normalize(player_pos - global_pos)), 0, 1);
+    // fragColor = vec4(normal_frag.x, normal_frag.y, normal_frag.z, 1.0);
+    // fragColor = vec4(col, 1.0 - length(diff) * .01);
+    // fragColor.a = -dot(normalize(diff), normalize(normal_frag));
     // fragColor = vec4(col, 0.5) + border_col;
 }
 

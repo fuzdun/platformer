@@ -14,6 +14,7 @@ import tm "core:time"
 import strcnv "core:strconv"
 import ft "shared:freetype"
 import "core:os"
+//import "core:sort"
 
 PLAYER_PARTICLE_STACK_COUNT :: 5
 PLAYER_PARTICLE_SECTOR_COUNT :: 10
@@ -350,7 +351,7 @@ update_vertices :: proc(gs: ^Game_State, rs: ^Render_State) {
         }
     }
     clear(&gs.dirty_entities)
-
+    //slice.sort_by(rs.static_transforms[:], proc(a: glm.mat4, b: glm.mat4) -> bool { return a[3][2] < b[3][2] })
 }
 
 update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) {
@@ -462,16 +463,16 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     }
 
     if !EDIT {
-        //gl.Disable(gl.DEPTH_TEST)
-        //gl.Disable(gl.CULL_FACE)
-        //bqv := BACKGROUND_VERTICES
-        //gl.BindVertexArray(rs.background_vao)
-        //use_shader(shst, rs, .Background)
-        //set_float_uniform(shst, "i_time", f32(time) / 1000)
-        //gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
-        //gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
-        //gl.Enable(gl.DEPTH_TEST)
-        //gl.Enable(gl.CULL_FACE)
+        gl.Disable(gl.DEPTH_TEST)
+        gl.Disable(gl.CULL_FACE)
+        bqv := BACKGROUND_VERTICES
+        gl.BindVertexArray(rs.background_vao)
+        use_shader(shst, rs, .Background)
+        set_float_uniform(shst, "i_time", f32(time) / 1000)
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
+        gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        gl.Enable(gl.DEPTH_TEST)
+        gl.Enable(gl.CULL_FACE)
     }
 
     gl.BindVertexArray(rs.standard_vao)
@@ -491,36 +492,6 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     set_matrix_uniform(shst, "projection", &proj_mat)
     draw_shader_render_queue(rs, shst, gl.TRIANGLES)
 
-    //fmt.println("===")
-    if EDIT {
-        use_shader(shst, rs, .Trail)
-        set_matrix_uniform(shst, "projection", &proj_mat)
-        draw_shader_render_queue(rs, shst, gl.TRIANGLES)
-    } else {
-        gl.Disable(gl.CULL_FACE)
-        gl.Disable(gl.DEPTH_TEST)
-        gl.Enable(gl.ALPHA_TEST)
-        //gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_DST_ALPHA)
-        //gl.BlendEquationSeparate(gl.FUNC_ADD, gl.MAX)
-        //gl.BlendFuncSeparate(gl.ONE, gl.ONE, gl.ONE, gl.ONE)
-        //gl.BlendEquation(gl.MAX)
-        use_shader(shst, rs, .Trail)
-        crunch_pt : glm.vec3 = gs.player_state.crunch_pt
-        player_pos := gs.player_state.position
-        player_trail := interpolated_trail(&gs.player_state, f32(interp_t))
-        set_vec3_uniform(shst, "player_trail", 3, &player_trail[0])
-        set_vec3_uniform(shst, "player_pos", 1, &player_pos)
-        set_vec3_uniform(shst, "crunch_pt", 1, &crunch_pt)
-        set_float_uniform(shst, "crunch_time", f32(gs.player_state.crunch_time) / 1000)
-        set_float_uniform(shst, "time", f32(time) / 1000)
-        set_matrix_uniform(shst, "projection", &proj_mat)
-        gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
-        draw_shader_render_queue(rs, shst, gl.PATCHES)
-        gl.Enable(gl.CULL_FACE)
-        gl.Enable(gl.DEPTH_TEST)
-    }
-
-        
     camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
     camera_right_worldspace = la.normalize(camera_right_worldspace)
     camera_up_worldspace: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
@@ -544,6 +515,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             draw_shader_render_queue(rs, shst, gl.TRIANGLES)
 
             use_shader(shst, rs, .Player_Particle)
+            gl.Enable(gl.BLEND)
             gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
             gl.BindVertexArray(rs.particle_vao)
             pv := PARTICLE_VERTICES
@@ -564,6 +536,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
             gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.DYNAMIC_DRAW) 
             gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
+            gl.Disable(gl.BLEND)
         // }
         // else {
             gl.BindVertexArray(rs.lines_vao)
@@ -581,9 +554,42 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.DYNAMIC_DRAW)
             gl.LineWidth(2)
             gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
-            gl.Disable(gl.BLEND)
         // }
     }
+
+    //fmt.println("===")
+    if EDIT {
+        use_shader(shst, rs, .Trail)
+        set_matrix_uniform(shst, "projection", &proj_mat)
+        draw_shader_render_queue(rs, shst, gl.TRIANGLES)
+    } else {
+        gl.BindVertexArray(rs.standard_vao)
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
+        //gl.Disable(gl.CULL_FACE)
+        //gl.Disable(gl.DEPTH_TEST)
+        gl.Enable(gl.BLEND)
+        gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+        //gl.BlendEquationSeparate(gl.FUNC_ADD, gl.MAX)
+        //gl.BlendFuncSeparate(gl.ONE, gl.ONE, gl.ONE, gl.ONE)
+        //gl.BlendEquation(gl.MAX)
+        use_shader(shst, rs, .Trail)
+        crunch_pt : glm.vec3 = gs.player_state.crunch_pt
+        player_pos := gs.player_state.position
+        player_trail := interpolated_trail(&gs.player_state, f32(interp_t))
+        set_vec3_uniform(shst, "player_trail", 3, &player_trail[0])
+        set_vec3_uniform(shst, "player_pos", 1, &player_pos)
+        set_vec3_uniform(shst, "crunch_pt", 1, &crunch_pt)
+        set_float_uniform(shst, "crunch_time", f32(gs.player_state.crunch_time) / 1000)
+        set_float_uniform(shst, "time", f32(time) / 1000)
+        set_matrix_uniform(shst, "projection", &proj_mat)
+        gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
+        draw_shader_render_queue(rs, shst, gl.PATCHES)
+        gl.Enable(gl.CULL_FACE)
+        gl.Enable(gl.DEPTH_TEST)
+        gl.Disable(gl.BLEND)
+    }
+
+        
 
     // draw geometry connections in editor
     if EDIT && len(gs.editor_state.connections) > 0 {
