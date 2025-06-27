@@ -13,6 +13,7 @@ import rnd "core:math/rand"
 import tm "core:time"
 import strcnv "core:strconv"
 import ft "shared:freetype"
+import "core:os"
 
 PLAYER_PARTICLE_STACK_COUNT :: 5
 PLAYER_PARTICLE_SECTOR_COUNT :: 10
@@ -103,6 +104,8 @@ Render_State :: struct {
     transforms_ssbo: u32,
     z_widths_ssbo: u32,
 
+    dither_tex: u32,
+
     static_transforms: [dynamic]glm.mat4,
     player_particle_poss: [dynamic]glm.vec3,
     z_widths: [dynamic]f32,
@@ -173,13 +176,9 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        // fmt.println("before:", rs.face.glyph)
         if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
-        // fmt.println()
-        // fmt.println("after:", rs.face.glyph)
-        // fmt.println(rs.face.glyph.bitmap)
         new_tex: u32 
         gl.GenTextures(1, &new_tex)
         gl.BindTexture(gl.TEXTURE_2D, new_tex)
@@ -228,6 +227,7 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.GenVertexArrays(1, &rs.background_vao)
     gl.GenVertexArrays(1, &rs.lines_vao)
     gl.GenVertexArrays(1, &rs.text_vao)
+    gl.GenTextures(1, &rs.dither_tex)
 
     gl.BindVertexArray(rs.standard_vao)
     gl.PatchParameteri(gl.PATCH_VERTICES, 3);
@@ -280,15 +280,24 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     gl.BindVertexArray(0)
 
+    if dither_bin, read_success := os.read_entire_file("textures/blue_noise_64.png"); read_success {
+        defer delete(dither_bin)
+        gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
+        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+        gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 64, 64, 0, gl.RGBA, gl.UNSIGNED_BYTE, &dither_bin[0])
+    }
+
     gl.Enable(gl.CULL_FACE)
     gl.Enable(gl.DEPTH_TEST)
 
     gl.LineWidth(5)
 
-    gl.Enable(gl.BLEND)
-    gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    //gl.BlendFunc(gl.ONE, gl.ONE)
+    //gl.BlendEquationSeparate(gl.ADD, gl.MAX)
 
-    // gl.TexParameteri(gl.TEXTURE_2D, gl.GENERATE_MIPMAP, 0)
     return true
 }
 
@@ -453,16 +462,16 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     }
 
     if !EDIT {
-        gl.Disable(gl.DEPTH_TEST)
-        gl.Disable(gl.CULL_FACE)
-        bqv := BACKGROUND_VERTICES
-        gl.BindVertexArray(rs.background_vao)
-        use_shader(shst, rs, .Background)
-        set_float_uniform(shst, "i_time", f32(time) / 1000)
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
-        gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
-        gl.Enable(gl.DEPTH_TEST)
-        gl.Enable(gl.CULL_FACE)
+        //gl.Disable(gl.DEPTH_TEST)
+        //gl.Disable(gl.CULL_FACE)
+        //bqv := BACKGROUND_VERTICES
+        //gl.BindVertexArray(rs.background_vao)
+        //use_shader(shst, rs, .Background)
+        //set_float_uniform(shst, "i_time", f32(time) / 1000)
+        //gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
+        //gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        //gl.Enable(gl.DEPTH_TEST)
+        //gl.Enable(gl.CULL_FACE)
     }
 
     gl.BindVertexArray(rs.standard_vao)
@@ -488,6 +497,13 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         set_matrix_uniform(shst, "projection", &proj_mat)
         draw_shader_render_queue(rs, shst, gl.TRIANGLES)
     } else {
+        gl.Disable(gl.CULL_FACE)
+        gl.Disable(gl.DEPTH_TEST)
+        gl.Enable(gl.ALPHA_TEST)
+        //gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_DST_ALPHA)
+        //gl.BlendEquationSeparate(gl.FUNC_ADD, gl.MAX)
+        //gl.BlendFuncSeparate(gl.ONE, gl.ONE, gl.ONE, gl.ONE)
+        //gl.BlendEquation(gl.MAX)
         use_shader(shst, rs, .Trail)
         crunch_pt : glm.vec3 = gs.player_state.crunch_pt
         player_pos := gs.player_state.position
@@ -498,7 +514,10 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         set_float_uniform(shst, "crunch_time", f32(gs.player_state.crunch_time) / 1000)
         set_float_uniform(shst, "time", f32(time) / 1000)
         set_matrix_uniform(shst, "projection", &proj_mat)
+        gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
         draw_shader_render_queue(rs, shst, gl.PATCHES)
+        gl.Enable(gl.CULL_FACE)
+        gl.Enable(gl.DEPTH_TEST)
     }
 
         
@@ -525,6 +544,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             draw_shader_render_queue(rs, shst, gl.TRIANGLES)
 
             use_shader(shst, rs, .Player_Particle)
+            gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
             gl.BindVertexArray(rs.particle_vao)
             pv := PARTICLE_VERTICES
             for &pv in pv {
@@ -561,6 +581,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
             gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.DYNAMIC_DRAW)
             gl.LineWidth(2)
             gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
+            gl.Disable(gl.BLEND)
         // }
     }
 

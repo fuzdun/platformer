@@ -15,7 +15,10 @@ uniform vec3[3] player_trail;
 uniform vec3 crunch_pt;
 uniform float crunch_time;
 
+uniform sampler2D ditherTexture;
+
 #define TWOPI 6.2831853
+#define SHADES 8.0
 
 float colormap_red(float x) {
     if (x < 0.0) {
@@ -116,11 +119,17 @@ float jaggy(float x)
     return abs(mod(x, 1) - .5) - .5;
 }
 
+float reshapeUniformToTriangle(float v) {
+    v = v * 2.0 - 1.0;
+    v = sign(v) * (1.0 - sqrt(max(0.0, 1.0 - abs(v)))); // [-1, 1], max prevents NaNs
+    return v + 0.5; // [-0.5, 1.5]
+}
+
 void main()
 {
     // vec2 uv = in_view == 1 ? affine_uv : perspective_uv;
     vec2 uv = perspective_uv;
-    uv = floor(uv * 50.0) / 50.0;
+    uv = floor(uv * 64.0) / 64.0;
     float plane_off = dot(normal_frag, global_pos);
     float dist = dot(normal_frag, player_pos) - plane_off;
     vec3 proj_pt = player_pos - dist * normal_frag;
@@ -138,7 +147,8 @@ void main()
     vec3 proximity_shadow_col = d1 < uvd ? vec3(.5, .15, max(1.0 - (d1 / uvd) * .5, 0.6)) : vec3(.25, .45, 0.6);
 
     float shade = pattern(uv);
-    vec3 pattern_col = vec3(colormap(shade).rgb) * 0.5;
+    // vec3 pattern_col = vec3(colormap(shade).rgb) * 0.5;
+    vec3 pattern_col = vec3(colormap(shade).rgb);
 
     vec3 trail_col = vec3(0.0, 0, 0);
     vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);
@@ -174,11 +184,27 @@ void main()
     float y_border_fact = smoothstep(1.0 - v_border, 1.0, uv.y) +
         1.0 - smoothstep(0.0, v_border, uv.y);
     float border_fact = max(x_border_fact, y_border_fact);
-    // vec3 border_col = border_fact * vec3(1.0, 0.8, 1.0);
-    // vec3 col = mix(pattern_col + border_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
-    vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+    // vec4 border_col = border_fact * vec4(1.0, 0.0, 0.0, 0.8);
+    vec4 border_col = vec4(1.0, 0.0, 0.0, 0.5);
+    // vec3 border_col = border_fact * vec3(1.0, 1.0, 1.0, 0.8);
 
-    fragColor = vec4(col, 1.0);
-    // fragColor = vec4(0.0, 0.0, 1.0, 1.0);
+    // pattern_col = vec3(0.5, 0.5, 0.0);  
+
+    vec3 col = pattern_col + trail_col + impact_col;
+    // vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+
+
+    float mask = texture(ditherTexture, perspective_uv * 1.0).r;
+    // mask = reshapeUniformToTriangle(mask);
+
+    float visibility = 0.0 + length(diff) * 0.010;
+    visibility = floor((visibility + mask / SHADES) * SHADES) / SHADES;
+    // visibility = max(min(visibility, 0.9), 0.2);
+
+    // vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+
+    fragColor = mix(mix(vec4(col, 1.0), vec4(0.0, 0.0, 0.0, 0.0), visibility), border_col, border_fact);
+    // fragColor.a = 1.0;
+    // fragColor = vec4(col, 0.5) + border_col;
 }
 
