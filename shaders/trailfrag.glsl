@@ -18,7 +18,7 @@ uniform float crunch_time;
 uniform sampler2D ditherTexture;
 
 #define TWOPI 6.2831853
-#define SHADES 8.0
+#define SHADES 2.0
 
 float colormap_red(float x) {
     if (x < 0.0) {
@@ -129,7 +129,7 @@ void main()
 {
     // vec2 uv = in_view == 1 ? affine_uv : perspective_uv;
     vec2 uv = perspective_uv;
-    uv = floor(uv * 64.0) / 64.0;
+    uv = floor(uv * 512.0) / 512.0;
     float plane_off = dot(normal_frag, global_pos);
     float dist = dot(normal_frag, player_pos) - plane_off;
     vec3 proj_pt = player_pos - dist * normal_frag;
@@ -195,11 +195,11 @@ void main()
     vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
 
 
-    float mask = texture(ditherTexture, perspective_uv * 2.0).r;
+    float mask = texture(ditherTexture, perspective_uv * 8.0).r;
     // mask = reshapeUniformToTriangle(mask);
 
-    float visibility = length(diff) * 0.02;
-    visibility = floor((visibility + mask / SHADES) * SHADES) / SHADES;
+    float visibility = length(diff) * 0.025;
+    visibility = min(1.0, floor((visibility + mask / SHADES) * SHADES) / SHADES);
     // visibility = max(min(visibility, 0.9), 0.2);
 
     // vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
@@ -211,7 +211,10 @@ void main()
     float adjustment_amt = min(length(planar_delta), 20.0);
     vec3 adjusted_pos = global_pos + normalize(planar_delta) * adjustment_amt;     // float norm = -dot(normalize(diff), normalize(normal_frag));
     // float norm = -dot(normalize(player_pos - adjusted_planar), normal_frag);
-    fragColor = mix(mix(vec4(col, 1.0), vec4(0.0, 0.0, 0.0, 0.0), visibility), border_col, border_fact);
+    fragColor = mix(mix(vec4(col, 1.0), vec4(0.0, 0.2, 0.0, 0.25), visibility), border_col, border_fact);
+    if (fragColor.a < 0.25) {
+      discard;
+    }
     // fragColor.a = 1.0;
     // fragColor.a = dot(normal_frag, normalize(player_pos - adjusted_pos));
     // fragColor = vec4(0, dot(normal_frag, normalize(player_pos - global_pos)), 0, 1);

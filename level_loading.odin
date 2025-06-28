@@ -73,7 +73,7 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_Sta
             rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
             //shape: SHAPES = rnd.choice([]SHAPES{.CUBE, .WEIRD})
             //shader: ProgramName = rnd.choice([]ProgramName{.Trail, .Simple})
-            shape: SHAPES = .CUBE
+            shape: SHAPE = .CUBE
             shader: ProgramName = .Trail
             lg: Level_Geometry
             lg.shape = shape
@@ -158,7 +158,7 @@ add_geometry_to_renderer :: proc(gs: ^Game_State, rs: ^Render_State, ps: ^Physic
         loaded_shaders: Active_Shaders = EDIT ? {.Simple} : lg.shaders
         for shader in loaded_shaders {
             last_offsets_idx := len(rs.render_group_offsets) - 1
-            group_offsets_idx := int(shader) * len(SHAPE_NAMES) + int(lg.shape)
+            group_offsets_idx := int(shader) * len(SHAPE_FILENAME) + int(lg.shape)
             in_last_group := group_offsets_idx == last_offsets_idx
             group_start_idx := rs.render_group_offsets[group_offsets_idx]
             nxt_group_start_idx := in_last_group ? u32(len(rs.static_transforms)) : rs.render_group_offsets[group_offsets_idx + 1]

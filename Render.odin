@@ -22,12 +22,12 @@ PLAYER_PARTICLE_SECTOR_COUNT :: 10
 PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT + 2
 I_MAT :: glm.mat4(1.0)
 
-SHAPES :: enum{
+SHAPE :: enum{
     CUBE,
     WEIRD,
 }
 
-SHAPE_NAMES := [SHAPES]string {
+SHAPE_FILENAME := [SHAPE]string {
     .CUBE = "basic_cube",
     .WEIRD = "weird"
 }
@@ -75,8 +75,8 @@ PARTICLE_VERTICES :: [4]Quad_Vertex {
     {{0.7, 0.7, 0.0}, {1, 1}},
 }
 
-Vertex_Offsets :: [len(SHAPES)]u32
-Index_Offsets :: [len(SHAPES)]u32
+Vertex_Offsets :: [len(SHAPE)]u32
+Index_Offsets :: [len(SHAPE)]u32
 
 Render_State :: struct {
     ft_lib: ft.Library,
@@ -116,7 +116,7 @@ Render_State :: struct {
     index_offsets: Index_Offsets,
     player_vertex_offset: u32,
     player_index_offset: u32,
-    render_group_offsets: [len(ProgramName) * len(SHAPES)]u32
+    render_group_offsets: [len(ProgramName) * len(SHAPE)]u32
 }
 
 Renderable :: struct{
@@ -127,7 +127,7 @@ Renderable :: struct{
 Shader_Render_Queues :: [ProgramName][dynamic]gl.DrawElementsIndirectCommand
 
 load_geometry_data :: proc(gs: ^Game_State, ps: ^Physics_State) {
-    for shape in SHAPES {
+    for shape in SHAPE {
         if ok := load_blender_model(shape, gs, ps); ok {
             fmt.println("loaded", shape) 
         }
@@ -305,7 +305,7 @@ init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
 init_level_render_data :: proc(gs: ^Game_State, rs: ^Render_State) {
     vertices := make([dynamic]Vertex); defer delete(vertices)
     indices := make([dynamic]u32); defer delete(indices)
-    for shape in SHAPES {
+    for shape in SHAPE {
         rs.vertex_offsets[int(shape)] = u32(len(vertices))
         rs.index_offsets[int(shape)] = u32(len(indices))
         sd := gs.level_resources[shape]
@@ -428,8 +428,8 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         next_off := idx == len(rs.render_group_offsets) - 1 ? u32(len(gs.level_geometry)) : rs.render_group_offsets[idx + 1]
         count := next_off - g_off
         if count == 0 do continue
-        shader := ProgramName(idx / len(SHAPES))
-        shape := SHAPES(idx % len(SHAPES))
+        shader := ProgramName(idx / len(SHAPE))
+        shape := SHAPE(idx % len(SHAPE))
         sd := gs.level_resources[shape] 
         command: gl.DrawElementsIndirectCommand = {
             u32(len(sd.indices)),
@@ -463,16 +463,16 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     }
 
     if !EDIT {
-        gl.Disable(gl.DEPTH_TEST)
-        gl.Disable(gl.CULL_FACE)
-        bqv := BACKGROUND_VERTICES
-        gl.BindVertexArray(rs.background_vao)
-        use_shader(shst, rs, .Background)
-        set_float_uniform(shst, "i_time", f32(time) / 1000)
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
-        gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
-        gl.Enable(gl.DEPTH_TEST)
-        gl.Enable(gl.CULL_FACE)
+        //gl.Disable(gl.DEPTH_TEST)
+        //gl.Disable(gl.CULL_FACE)
+        //bqv := BACKGROUND_VERTICES
+        //gl.BindVertexArray(rs.background_vao)
+        //use_shader(shst, rs, .Background)
+        //set_float_uniform(shst, "i_time", f32(time) / 1000)
+        //gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
+        //gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        //gl.Enable(gl.DEPTH_TEST)
+        //gl.Enable(gl.CULL_FACE)
     }
 
     gl.BindVertexArray(rs.standard_vao)
@@ -565,13 +565,9 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     } else {
         gl.BindVertexArray(rs.standard_vao)
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
-        //gl.Disable(gl.CULL_FACE)
-        //gl.Disable(gl.DEPTH_TEST)
+        gl.Disable(gl.CULL_FACE)
         gl.Enable(gl.BLEND)
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-        //gl.BlendEquationSeparate(gl.FUNC_ADD, gl.MAX)
-        //gl.BlendFuncSeparate(gl.ONE, gl.ONE, gl.ONE, gl.ONE)
-        //gl.BlendEquation(gl.MAX)
         use_shader(shst, rs, .Trail)
         crunch_pt : glm.vec3 = gs.player_state.crunch_pt
         player_pos := gs.player_state.position
@@ -585,7 +581,6 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
         gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
         draw_shader_render_queue(rs, shst, gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
-        gl.Enable(gl.DEPTH_TEST)
         gl.Disable(gl.BLEND)
     }
 

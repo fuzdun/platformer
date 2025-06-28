@@ -11,7 +11,7 @@ OBJ_SCALE_SPD :: 0.3
 MAX_DRAW_GEOMETRY_DIST :: 350
 MAX_DRAW_GEOMETRY_DIST2 :: MAX_DRAW_GEOMETRY_DIST * MAX_DRAW_GEOMETRY_DIST
 
-SSBO_Registry :: [len(SHAPES) * len(ProgramName)][dynamic]int
+SSBO_Registry :: [len(SHAPE) * len(ProgramName)][dynamic]int
 
 Editor_State :: struct {
     selected_entity: int,
@@ -120,13 +120,13 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
         cur_shape_idx := int(selected_obj.shape)
         nxt_shape := 0
         if is.lt_pressed {
-            nxt_shape = cur_shape_idx == 0 ? len(SHAPES) - 1 : cur_shape_idx - 1
+            nxt_shape = cur_shape_idx == 0 ? len(SHAPE) - 1 : cur_shape_idx - 1
         } else {
-            nxt_shape = (cur_shape_idx + 1) % len(SHAPES)
+            nxt_shape = (cur_shape_idx + 1) % len(SHAPE)
         }
         new_lg := selected_obj^
-        new_lg.shape = SHAPES(nxt_shape)
-        new_lg.collider = SHAPES(nxt_shape)
+        new_lg.shape = SHAPE(nxt_shape)
+        new_lg.collider = SHAPE(nxt_shape)
         ordered_remove_soa(&gs.level_geometry, es.selected_entity) 
         append(&gs.level_geometry, new_lg)
         es.selected_entity = len(gs.level_geometry) - 1

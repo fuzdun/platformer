@@ -25,7 +25,7 @@ INIT_PLAYER_POS :: [3]f32 { 0, 0, 0 }
 
 Game_State :: struct {
     player_geometry: Shape_Data,
-    level_resources: [SHAPES]Shape_Data,
+    level_resources: [SHAPE]Shape_Data,
     level_geometry: Level_Geometry_State,
     player_state: Player_State,
     input_state: Input_State,

@@ -13,7 +13,7 @@ Physics_State :: struct{
         vertices: [dynamic]Vertex,
         indices: [ProgramName][dynamic]u16
     },
-    level_colliders: [SHAPES]Collider_Data,
+    level_colliders: [SHAPE]Collider_Data,
     static_collider_vertices: [dynamic][3]f32,
 }
 
