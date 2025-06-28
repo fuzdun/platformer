@@ -65,15 +65,12 @@ load_blender_model :: proc(shape: SHAPES, gs: ^Game_State, ps: ^Physics_State) -
 
     sd := read_mesh_data_from_binary(buffer_views, bin_data, 0)
     gs.level_resources[shape] = sd
-    if len(json_obj["scenes"].(json.Array)[0].(json.Object)["nodes"].(json.Array)) == 2 {
-        coll := read_coll_data_from_binary(buffer_views, bin_data, 1)   
-        ps.level_colliders[shape] = coll
-    } else {
-        coll := read_coll_data_from_binary(buffer_views, bin_data, 0)
-        ps.level_colliders[shape] = coll
-    }
+    separate_collider_mesh := (len(json_obj["scenes"].(json.Array)[0].(json.Object)["nodes"].(json.Array)) == 2) 
+    ps.level_colliders[shape] = read_coll_data_from_binary(buffer_views, bin_data, separate_collider_mesh ? 1 : 0)
     return true
 }
+
+// SHOULD TRY SWITCHING THIS TO JSON UNMARSHAL
 
 read_mesh_data_from_binary :: proc(buffer_views: json.Array, binary_data: []u8, i: int) -> (sd: Shape_Data) {
     idx := i * 4
