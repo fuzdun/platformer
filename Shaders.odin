@@ -94,24 +94,24 @@ PROGRAM_CONFIGS := [ProgramName]Program{
     },
 }
 
-ShaderState :: struct {
+Shader_State :: struct {
     active_programs: map[ProgramName]ActiveProgram,
     loaded_program: u32,
     loaded_program_name: ProgramName
 }
 
-shader_state_init :: proc(shst: ^ShaderState) {
+shader_state_init :: proc(shst: ^Shader_State) {
     shst.active_programs = make(map[ProgramName]ActiveProgram)
 }
 
-shader_state_free :: proc(shst: ^ShaderState) {
+free_shader_state :: proc(shst: ^Shader_State) {
     for _, ap in shst.active_programs {
         delete(ap.locations)
     }
     delete(shst.active_programs)
 }
 
-init_shaders :: proc(sh: ^ShaderState) -> bool {
+init_shaders :: proc(sh: ^Shader_State) -> bool {
     for config, program in PROGRAM_CONFIGS {
         shaders := make([]u32, len(config.pipeline))
         defer delete(shaders)
@@ -158,7 +158,7 @@ shader_program_from_file :: proc(filename: string, type: gl.Shader_Type) -> (u32
     return shader_id, true
 }
 
-use_shader :: proc(sh: ^ShaderState, rs: ^Render_State, name: ProgramName) {
+use_shader :: proc(sh: ^Shader_State, rs: ^Render_State, name: ProgramName) {
     if name in sh.active_programs {
         gl.UseProgram(sh.active_programs[name].id)
         sh.loaded_program = sh.active_programs[name].id
@@ -168,15 +168,15 @@ use_shader :: proc(sh: ^ShaderState, rs: ^Render_State, name: ProgramName) {
     }
 }
 
-set_matrix_uniform :: proc(sh: ^ShaderState, name: string, data: ^glm.mat4) {
+set_matrix_uniform :: proc(sh: ^Shader_State, name: string, data: ^glm.mat4) {
     gl.UniformMatrix4fv(sh.active_programs[sh.loaded_program_name].locations[name], 1, gl.FALSE, &data[0, 0])
 }
 
-set_float_uniform :: proc(sh: ^ShaderState, name: string, data: f32) {
+set_float_uniform :: proc(sh: ^Shader_State, name: string, data: f32) {
     gl.Uniform1f(sh.active_programs[sh.loaded_program_name].locations[name], data)
 }
 
-set_vec3_uniform :: proc(sh: ^ShaderState, name: string, count: i32, data: ^glm.vec3) {
+set_vec3_uniform :: proc(sh: ^Shader_State, name: string, count: i32, data: ^glm.vec3) {
     gl.Uniform3fv(sh.active_programs[sh.loaded_program_name].locations[name], count, &data[0])
 }
 

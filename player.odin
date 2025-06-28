@@ -95,6 +95,8 @@ Player_State :: struct {
     tgt_particle_displacement: [3]f32
 }
 
+free_player_state :: proc(ps: ^Player_State) {}
+
 update_player_velocity :: proc(gs: ^Game_State, elapsed_time: f64, delta_time: f32) {
     ps := &gs.player_state
     is := &gs.input_state

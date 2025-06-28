@@ -126,14 +126,6 @@ Renderable :: struct{
 
 Shader_Render_Queues :: [ProgramName][dynamic]gl.DrawElementsIndirectCommand
 
-load_geometry_data :: proc(gs: ^Game_State, ps: ^Physics_State) {
-    for shape in SHAPE {
-        if ok := load_blender_model(shape, gs, ps); ok {
-            fmt.println("loaded", shape) 
-        }
-    }
-}
-
 init_render_buffers :: proc(gs: ^Game_State, rs: ^Render_State) {
     for shader in ProgramName {
         rs.shader_render_queues[shader] = make([dynamic]gl.DrawElementsIndirectCommand)
@@ -158,7 +150,7 @@ clear_render_queues :: proc(rs: ^Render_State) {
     }
 }
 
-free_render_buffers :: proc(rs: ^Render_State) {
+free_render_state :: proc(rs: ^Render_State) {
     for shader in ProgramName {
         delete(rs.shader_render_queues[shader])
     }
@@ -169,7 +161,7 @@ free_render_buffers :: proc(rs: ^Render_State) {
     delete(rs.char_tex_map)
 }
 
-init_draw :: proc(rs: ^Render_State, ss: ^ShaderState) -> bool {
+init_draw :: proc(rs: ^Render_State, ss: ^Shader_State) -> bool {
     ft.init_free_type(&rs.ft_lib)
     ft.new_face(rs.ft_lib, "fonts/0xProtoNerdFont-Bold.ttf", 0, &rs.face)
     rs.char_tex_map = make(map[rune]Char_Tex)
@@ -420,7 +412,7 @@ easeout :: proc(n: f32) -> f32 {
     return math.sin(n * math.PI / 2.0);
 }
 
-render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Physics_State, time: f64, interp_t: f64) {
+render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^Shader_State, ps: ^Physics_State, time: f64, interp_t: f64) {
     clear_render_queues(rs)
 
     // add level geometry to command queues
@@ -612,7 +604,7 @@ render :: proc(gs: ^Game_State, rs: ^Render_State, shst: ^ShaderState, ps: ^Phys
     }
 }
 
-render_text :: proc(shst: ^ShaderState, rs: ^Render_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
+render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
     x: f32 = 0
     trans_mat: = la.matrix4_translate(pos)
     set_matrix_uniform(shst, "transform", &trans_mat)
@@ -641,7 +633,7 @@ render_text :: proc(shst: ^ShaderState, rs: ^Render_State, text: string, pos: [3
     } 
 }
 
-draw_shader_render_queue :: proc(rs: ^Render_State, shst: ^ShaderState, mode: u32) {
+draw_shader_render_queue :: proc(rs: ^Render_State, shst: ^Shader_State, mode: u32) {
     queue := rs.shader_render_queues[shst.loaded_program_name]
     //fmt.println(queue)
     if len(queue) > 0 {
