@@ -100,9 +100,9 @@ Shader_State :: struct {
     loaded_program_name: ProgramName
 }
 
-shader_state_init :: proc(shst: ^Shader_State) {
-    shst.active_programs = make(map[ProgramName]ActiveProgram)
-}
+//shader_state_init :: proc(shst: ^Shader_State) {
+    //shst.active_programs = make(map[ProgramName]ActiveProgram)
+//}
 
 free_shader_state :: proc(shst: ^Shader_State) {
     for _, ap in shst.active_programs {

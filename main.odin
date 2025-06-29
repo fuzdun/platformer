@@ -8,6 +8,7 @@ import gl "vendor:OpenGL"
 import la "core:math/linalg"
 import "core:mem"
 import "core:os"
+import glm "core:math/linalg/glsl"
 
 WIDTH :: 1920.0
 HEIGHT :: 1080.0
@@ -22,46 +23,6 @@ EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
 
 INIT_PLAYER_POS :: [3]f32 { 0, 0, 0 }
-
-Game_State :: struct {
-    player_geometry: Shape_Data,
-    level_resources: [SHAPE]Shape_Data,
-    level_geometry: Level_Geometry_State,
-    player_state: Player_State,
-    input_state: Input_State,
-    camera_state: Camera_State,
-    editor_state: Editor_State,
-    dirty_entities: [dynamic]int,
-    time_mult: f32
-}
-
-free_gamestate :: proc(gs: ^Game_State) {
-    delete_soa(gs.level_geometry)
-    delete(gs.dirty_entities)
-    delete(gs.editor_state.connections)
-    delete(gs.player_geometry.vertices)
-    delete(gs.player_geometry.indices)
-    for sd in gs.level_resources {
-        delete(sd.indices) 
-        delete(sd.vertices)
-    }
-}
-
-
-gamestate_init :: proc(gs: ^Game_State) {
-    gs.level_geometry = make(Level_Geometry_State)
-    ring_buffer_init(&gs.player_state.trail, [3]f32{0, 0, 0})
-    gs.player_state.state = .IN_AIR
-    gs.player_state.position = INIT_PLAYER_POS
-    gs.player_state.can_press_dash = true
-    gs.player_state.can_press_jump = false
-    gs.camera_state.position = {10, 60, 300}
-    gs.dirty_entities = make([dynamic]int)
-    gs.editor_state.y_rot = -.25
-    gs.editor_state.zoom = 400
-    gs.editor_state.connections = make([dynamic]Connection)
-    gs.time_mult = 1
-}
 
 controller : ^SDL.GameController
 
@@ -120,45 +81,78 @@ main :: proc () {
     gl.load_up_to(4, 6, SDL.gl_set_proc_address)
 
     // allocate / defer deallocate state structs
-    gs:  Game_State;    defer free_gamestate(&gs)
-    ps:  Physics_State; defer free_physics_state(&ps)
-    ss:  Shader_State;  defer free_shader_state(&ss)
-    rs:  Render_State;  defer free_render_state(&rs)
-    pls: Player_State;  defer free_player_state(&pls)
+    gs:  Game_State;      defer free_gamestate(&gs)
+    phs: Physics_State;   defer free_physics_state(&phs)
+    shs: Shader_State;    defer free_shader_state(&shs)
+    rs:  Render_State;    defer free_render_state(&rs)
+    pls: Player_State;    defer free_player_state(&pls)
+    lrs: Level_Resources; defer free_level_resources(&lrs)
 
-    gamestate_init(&gs) 
-    gs.player_state.ground_x = {1, 0, 0}
-    gs.player_state.ground_z = {0, 0, -1}
+    // init game state
+    gs.level_geometry = make(Level_Geometry_State)
+    gs.camera_state.position = {10, 60, 300}
+    gs.dirty_entities = make([dynamic]int)
+    gs.editor_state.y_rot = -.25
+    gs.editor_state.zoom = 400
+    gs.editor_state.connections = make([dynamic]Connection)
+    gs.time_mult = 1
 
-    //init_physics_state(&ps); defer free_physics_state(&ps)
-    ps.collisions = make([dynamic]Collision)
-    ps.debug_render_queue.vertices = make([dynamic]Vertex)
-    //ps.level_colliders = make(map[string]Collider_Data)
-    ps.static_collider_vertices = make([dynamic][3]f32)
+    // init physics state
+    phs.collisions = make([dynamic]Collision)
+    phs.debug_render_queue.vertices = make([dynamic]Vertex)
+    phs.static_collider_vertices = make([dynamic][3]f32)
     for pn in ProgramName {
-        ps.debug_render_queue.indices[pn] = make([dynamic]u16)
+        phs.debug_render_queue.indices[pn] = make([dynamic]u16)
     }
 
+    // init shaders state
+    shs.active_programs = make(map[ProgramName]ActiveProgram)
+
+    // init render state, load indices/vertices into buffers
+    for shader in ProgramName {
+        rs.shader_render_queues[shader] = make([dynamic]gl.DrawElementsIndirectCommand)
+    }
+    rs.static_transforms = make([dynamic]glm.mat4)
+    rs.z_widths = make([dynamic]f32)
+    rs.player_particle_poss = make([dynamic]glm.vec3)
+    add_player_sphere_data(&rs)
+    {
+        vertices := make([dynamic]Vertex); defer delete(vertices)
+        indices := make([dynamic]u32); defer delete(indices)
+        for shape in SHAPE {
+            rs.vertex_offsets[int(shape)] = u32(len(vertices))
+            rs.index_offsets[int(shape)] = u32(len(indices))
+        }
+        rs.player_vertex_offset = u32(len(vertices))
+        rs.player_index_offset = u32(len(indices))
+    }
+
+    // init player state
+    pls.state = .IN_AIR
+    pls.position = INIT_PLAYER_POS
+    pls.can_press_dash = true
+    pls.can_press_jump = false
+    pls.ground_x = {1, 0, 0}
+    pls.ground_z = {0, 0, -1}
+    ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
+
+    // load blender meshes
     for shape in SHAPE {
-        if ok := load_blender_model(shape, &gs, &ps); ok {
+        if ok := load_blender_model(shape, &lrs, &phs); ok {
             fmt.println("loaded", shape) 
         }
     }
 
-    shader_state_init(&ss) 
-
-    init_render_buffers(&gs, &rs)
-
     // initialize OpenGL state
-    if !init_draw(&rs, &ss) {
+    if !init_draw(&rs, lrs, &shs) {
         fmt.eprintln("init draw failed")
         return
     }
 
-    load_level_geometry(&gs, &ps, &rs, "test_level")
-    init_level_render_data(&gs, &rs)
+    // load level data
+    load_level_geometry(&gs, lrs, &phs, &rs, "test_level")
 
     // start frame loop
-    frame_loop(window, &gs, &rs, &ss, &ps)
+    frame_loop(window, &gs, lrs, &pls, &rs, &shs, &phs)
 }
 

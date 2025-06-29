@@ -21,15 +21,6 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     aos_level_data := make([dynamic]Level_Geometry)
     defer delete(aos_level_data)
 
-    //rot := la.quaternion_from_euler_angles_f32(0, 0, 0, .XYZ)
-    //lg: Level_Geometry
-    //lg.shape = .CUBE
-    //lg.collider = .CUBE
-    //lg.shaders = {.Trail}
-    //lg.transform = {{0, 0, 0},{10, 10, 10}, rot}
-    //lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-    //append(&aos_level_data, lg)
-
     for lg in lgs {
         append(&aos_level_data, lg)
     }
@@ -39,7 +30,7 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     os.write_entire_file("levels/test_level.bin", bin)
 }
 
-load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_State, filename: string) {
+load_level_geometry :: proc(gs: ^Game_State, lrs: Level_Resources, ps: ^Physics_State, rs: ^Render_State, filename: string) {
     level_filename := str.concatenate({"levels/", filename, ".bin"})
     defer delete(level_filename)
     level_bin, read_err := os.read_entire_file(level_filename)
@@ -71,8 +62,6 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_Sta
         loaded_level_geometry = make(#soa[]Level_Geometry, 500)
         for i in 0..<500 {
             rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
-            //shape: SHAPES = rnd.choice([]SHAPES{.CUBE, .WEIRD})
-            //shader: ProgramName = rnd.choice([]ProgramName{.Trail, .Simple})
             shape: SHAPE = .CUBE
             shader: ProgramName = .Trail
             lg: Level_Geometry
@@ -93,10 +82,10 @@ load_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_Sta
 
     add_geometry_to_physics(ps, loaded_level_geometry)
     add_geometry_to_renderer(gs, rs, ps, loaded_level_geometry)
-    init_level_render_data(gs, rs)
+    init_level_render_data(lrs, rs)
 }
 
-editor_reload_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_State) {
+editor_reload_level_geometry :: proc(gs: ^Game_State, lrs: Level_Resources, ps: ^Physics_State, rs: ^Render_State) {
     current_level_geometry := make(#soa[]Level_Geometry, len(gs.level_geometry))
     defer delete_soa(current_level_geometry)
     for lg, idx in gs.level_geometry {
@@ -105,20 +94,12 @@ editor_reload_level_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^R
     clear_soa(&gs.level_geometry)
     clear_render_state(rs)
     add_geometry_to_renderer(gs, rs, ps, current_level_geometry[:])
-    init_level_render_data(gs, rs)
+    init_level_render_data(lrs, rs)
 }
 
 lg_get_transformed_collider_vertices :: proc(lg: Level_Geometry, trans_mat: matrix[4, 4]f32, ps: Physics_State, out: [][3]f32) {
     vertices := ps.level_colliders[lg.shape].vertices
     for v, vi in vertices {
-        out[vi] = (trans_mat * [4]f32{v[0], v[1], v[2], 1.0}).xyz    
-    }
-}
-
-lg_get_transformed_render_vertices :: proc(lg: Level_Geometry, gs: ^Game_State, trans_mat: matrix[4, 4]f32, out: [][3]f32) {
-    vertices := gs.level_resources[lg.shape].vertices
-    for vertex, vi in vertices {
-        v := vertex.pos
         out[vi] = (trans_mat * [4]f32{v[0], v[1], v[2], 1.0}).xyz    
     }
 }

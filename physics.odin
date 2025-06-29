@@ -96,15 +96,15 @@ construct_aabb :: proc(vertices: [][3]f32) -> AABB {
     return {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
 }
 
-get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, elapsed_time: f32) {
+get_collisions :: proc(gs: ^Game_State, pls: ^Player_State, ps: ^Physics_State, delta_time: f32, elapsed_time: f32) {
     clear_physics_state(ps)
 
     filter: bit_set[Level_Geometry_Component_Name; u64] = { .Collider, .Transform }
-    ppos := gs.player_state.position
+    ppos := pls.position
     ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])
     player_sq_radius := f32(SPHERE_RADIUS * SPHERE_RADIUS)
-    player_velocity := gs.player_state.velocity * delta_time
+    player_velocity := pls.velocity * delta_time
     player_velocity_len := la.length(player_velocity)
 
     got_contact_ray_col := false
@@ -135,7 +135,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                     tri_vertex0 := vertices[tri_indices[0]]
                     tri_vertex1 := vertices[tri_indices[1]]
                     tri_vertex2 := vertices[tri_indices[2]]
-                    velocity_normal := la.normalize(gs.player_state.velocity)
+                    velocity_normal := la.normalize(pls.velocity)
                     normal, plane_dist := triangle_normal_dist(tri_vertex0, tri_vertex1, tri_vertex2)
                     if la.dot(normal, velocity_normal) <= 0 {
                         intercept_t: f32
@@ -149,7 +149,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                         }
                         if did_intercept {
                             if pt_inside_triangle(tri_vertex0, tri_vertex1, tri_vertex2, intercept_pt) {
-                                gs.player_state.bunny_hop_y = max(f32)
+                                pls.bunny_hop_y = max(f32)
                                 append(&ps.collisions, Collision{
                                     id = id,
                                     normal = normal,
@@ -161,7 +161,7 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                                 closest_pt := closest_triangle_edge_pt(tri_vertex0, tri_vertex1, tri_vertex2, intercept_pt)
                                 if sphere_t, sphere_q, sphere_hit := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); sphere_hit {
                                     if sphere_t = sphere_t / player_velocity_len; sphere_t <= 1 {
-                                        gs.player_state.bunny_hop_y = max(f32)
+                                        pls.bunny_hop_y = max(f32)
                                         append(&ps.collisions, Collision{
                                             id = id,
                                             normal = normal,
@@ -174,11 +174,11 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
                             }
                         }
                     }
-                    if plane_t, plane_q, plane_hit := ray_plane_intersection(ppos32, gs.player_state.contact_ray, normal, plane_dist); plane_hit {
+                    if plane_t, plane_q, plane_hit := ray_plane_intersection(ppos32, pls.contact_ray, normal, plane_dist); plane_hit {
                         closest_pt := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, plane_q)
                         if la.length2(closest_pt - plane_q) < GROUNDED_RADIUS2 {
                             got_contact_ray_col = true
-                            if gs.player_state.state == .ON_GROUND {
+                            if pls.state == .ON_GROUND {
                                 //gs.player_state.position = plane_q + normal * GROUND_OFFSET 
                             }
                         }
@@ -189,18 +189,18 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
         tv_offset += len(coll.vertices)
     }
 
-    p_state := gs.player_state.state
+    p_state := pls.state
     if (p_state == .ON_GROUND || p_state == .ON_WALL || p_state == .ON_SLOPE) && !got_contact_ray_col {
-        gs.player_state.state = .IN_AIR
+        pls.state = .IN_AIR
     }
     if p_state == .ON_GROUND {
-        gs.player_state.left_ground = elapsed_time
+        pls.left_ground = elapsed_time
     }
     if p_state == .ON_SLOPE {
-        gs.player_state.left_slope = elapsed_time
+        pls.left_slope = elapsed_time
     }
     if p_state == .ON_WALL {
-        gs.player_state.left_wall = elapsed_time
+        pls.left_wall = elapsed_time
     }
 
     best_plane_normal: [3]f32 = {100, 100, 100}
@@ -224,31 +224,31 @@ get_collisions :: proc(gs: ^Game_State, ps: ^Physics_State, delta_time: f32, ela
         ground_x := [3]f32{1, 0, 0}
         ground_z := [3]f32{0, 0, -1}
         if best_plane_normal.y >= 0.85{
-            if gs.player_state.state != .ON_GROUND {
-                gs.player_state.touch_pt = gs.player_state.position - {0, 0, 0.5}
-                gs.player_state.touch_time = elapsed_time
+            if pls.state != .ON_GROUND {
+                pls.touch_pt = pls.position - {0, 0, 0.5}
+                pls.touch_time = elapsed_time
             }
-            //gs.player_state.position = best_plane_intersection + best_plane_normal * GROUND_OFFSET 
-            gs.player_state.ground_x = la.normalize(ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal)
-            gs.player_state.ground_z = la.normalize(ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal)
-            gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
-            gs.player_state.state = .ON_GROUND
+            //pls.position = best_plane_intersection + best_plane_normal * GROUND_OFFSET 
+            pls.ground_x = la.normalize(ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal)
+            pls.ground_z = la.normalize(ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal)
+            pls.contact_ray = -best_plane_normal * GROUND_RAY_LEN
+            pls.state = .ON_GROUND
         } else if .2 <= best_plane_normal.y && best_plane_normal.y < .85 {
-            if gs.player_state.state != .ON_SLOPE {
-                gs.player_state.touch_pt = gs.player_state.position - {0, 0, 0.5}
-                gs.player_state.touch_time = elapsed_time
-                gs.player_state.ground_x = ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal
-                gs.player_state.ground_z = ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal
-                gs.player_state.state = .ON_SLOPE
+            if pls.state != .ON_SLOPE {
+                pls.touch_pt = pls.position - {0, 0, 0.5}
+                pls.touch_time = elapsed_time
+                pls.ground_x = ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal
+                pls.ground_z = ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal
+                pls.state = .ON_SLOPE
             }
-            gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
-        } else if best_plane_normal.y < .2 && gs.player_state.state != .ON_GROUND {
-            if gs.player_state.state != .ON_WALL {
-                gs.player_state.touch_pt = gs.player_state.position - {0, 0, 0.5}
-                gs.player_state.touch_time = elapsed_time
+            pls.contact_ray = -best_plane_normal * GROUND_RAY_LEN
+        } else if best_plane_normal.y < .2 && pls.state != .ON_GROUND {
+            if pls.state != .ON_WALL {
+                pls.touch_pt = pls.position - {0, 0, 0.5}
+                pls.touch_time = elapsed_time
             }
-            gs.player_state.state = .ON_WALL
-            gs.player_state.contact_ray = -best_plane_normal * GROUND_RAY_LEN
+            pls.state = .ON_WALL
+            pls.contact_ray = -best_plane_normal * GROUND_RAY_LEN
         }
     }
 }

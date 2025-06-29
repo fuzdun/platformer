@@ -9,7 +9,7 @@ import "core:math"
 @(private="file")
 quit_app := false
 
-frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: ^Shader_State, ps: ^Physics_State) {
+frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, lrs: Level_Resources, pls: ^Player_State, rs: ^Render_State, ss: ^Shader_State, ps: ^Physics_State) {
      //TARGET_FRAME_RATE :: 240.0
     TARGET_FRAME_RATE :: 60.0
     // TARGET_FRAME_RATE :: 60.0
@@ -37,7 +37,6 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
 
     for !quit_app {
         if quit_app do break
-        // update_start := time.now()
 
         elapsed_time := f64(SDL.GetTicks())
         //elapsed_time := f64(SDL.GetTicks()) * 0.1
@@ -81,30 +80,20 @@ frame_loop :: proc(window: ^SDL.Window, gs: ^Game_State, rs: ^Render_State, ss: 
 
         for accumulator >= target_frame_clocks {
             // Fixed update
-            //fmt.println("update")
-            game_update(gs, ps, rs, elapsed_time, FIXED_DELTA_TIME * gs.time_mult)
+            game_update(gs, lrs, pls, ps, rs, elapsed_time, FIXED_DELTA_TIME * gs.time_mult)
             accumulator -= target_frame_clocks 
         }
-        //gs.time_mult = 0.25
-        //time_mult = f32(math.sin(elapsed_time / 100) + 2.0)
 
         // Render
         gl.Viewport(0, 0, WIDTH, HEIGHT)
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         
-        // fmt.println("update time:", time.since(update_start))
-        //draw_start := time.now()
+        update_vertices(gs, lrs, rs)
+        update_player_particles(rs, pls^, f32(elapsed_time))
+        render(gs, lrs, pls^, rs, ss, ps, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
 
-        update_vertices(gs, rs)
-        update_player_particles(rs, gs.player_state, f32(elapsed_time))
-        render(gs, rs, ss, ps, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
-
-        //swap_start := time.now()
         SDL.GL_SwapWindow(window)
-        //fmt.println("draw time:", time.since(draw_start))
-        //fmt.println("swap time", time.since(swap_start))
-        //fmt.println("frame time", time.since(update_start))
     }
 }
 

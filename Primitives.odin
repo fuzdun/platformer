@@ -15,6 +15,14 @@ Particle_Vertex :: struct{
     uv: glm.vec2
 }
 
+Level_Resources :: [SHAPE]Shape_Data
+
+free_level_resources :: proc(lr: ^Level_Resources) {
+    for sd in lr {
+        delete(sd.indices) 
+        delete(sd.vertices)
+    }
+}
 
 Shape_Data :: struct{
     vertices: []Vertex,
@@ -36,7 +44,7 @@ SPHERE_STACK_COUNT :: 30
 SPHERE_V_COUNT :: (SPHERE_STACK_COUNT + 1) * (SPHERE_SECTOR_COUNT + 1)
 SPHERE_I_COUNT :: (SPHERE_STACK_COUNT - 1) * SPHERE_SECTOR_COUNT * 6 
 
-add_player_sphere_data :: proc(gs: ^Game_State) {
+add_player_sphere_data :: proc(rs: ^Render_State) {
     vertical_count := SPHERE_STACK_COUNT
     horizontal_count := SPHERE_SECTOR_COUNT
     x, y, z, xz: f32
@@ -48,8 +56,8 @@ add_player_sphere_data :: proc(gs: ^Game_State) {
     vertical_step := PI / f32(vertical_count)
     horizontal_step := (2 * PI) / f32(horizontal_count)
 
-    gs.player_geometry.vertices = make([]Vertex, SPHERE_V_COUNT)
-    vertices := &gs.player_geometry.vertices
+    rs.player_geometry.vertices = make([]Vertex, SPHERE_V_COUNT)
+    vertices := &rs.player_geometry.vertices
     for i in 0..=vertical_count {
         vertical_angle = PI / 2.0 - f32(i) * vertical_step 
         xz := CORE_RADIUS * math.cos(vertical_angle)
@@ -69,8 +77,8 @@ add_player_sphere_data :: proc(gs: ^Game_State) {
     }
 
     ind := 0
-    gs.player_geometry.indices = make([]u32, SPHERE_I_COUNT)
-    indices := &gs.player_geometry.indices
+    rs.player_geometry.indices = make([]u32, SPHERE_I_COUNT)
+    indices := &rs.player_geometry.indices
     for i in 0..<vertical_count {
         vr1 = u32(i * (horizontal_count + 1))
         vr2 = vr1 + u32(horizontal_count) + 1

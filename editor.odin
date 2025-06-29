@@ -94,7 +94,7 @@ editor_move_camera :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^C
     cs.position = math.lerp(cs.position, tgt, f32(0.075))
 }
 
-editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, ps: ^Physics_State, rs: ^Render_State, delta_time: f32) {
+editor_move_object :: proc(gs: ^Game_State, lrs: Level_Resources, es: ^Editor_State, is: Input_State, ps: ^Physics_State, rs: ^Render_State, delta_time: f32) {
     lgs := &gs.level_geometry
     selected_obj := &lgs[es.selected_entity]
     rotating := is.r_pressed
@@ -112,7 +112,7 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
         for &idx in new_lg.ssbo_indexes {
             idx = -1
         }
-        add_geometry(gs, ps, rs, es, new_lg)
+        add_geometry(gs, lrs, ps, rs, es, new_lg)
     }
     es.can_add = !is.q_pressed
 
@@ -131,12 +131,12 @@ editor_move_object :: proc(gs: ^Game_State, es: ^Editor_State, is: Input_State, 
         append(&gs.level_geometry, new_lg)
         es.selected_entity = len(gs.level_geometry) - 1
         fmt.println(es.selected_entity)
-        editor_reload_level_geometry(gs, ps, rs)
+        editor_reload_level_geometry(gs, lrs, ps, rs)
     }
     es.can_swap = !(is.lt_pressed || is.gt_pressed)
 
     if is.bck_pressed && es.can_delete {
-        remove_geometry(gs, ps, rs, es)
+        remove_geometry(gs, lrs, ps, rs, es)
     }
     es.can_delete = !is.bck_pressed
 
@@ -253,16 +253,16 @@ editor_save_changes :: proc(lgs:^Level_Geometry_State, is: Input_State, es: ^Edi
     }
 }
 
-remove_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_State, es: ^Editor_State) {
+remove_geometry :: proc(gs: ^Game_State, lrs: Level_Resources, ps: ^Physics_State, rs: ^Render_State, es: ^Editor_State) {
     ordered_remove_soa(&gs.level_geometry, es.selected_entity) 
     es.selected_entity = max(0, min(len(gs.level_geometry) - 1, es.selected_entity - 1))
-    editor_reload_level_geometry(gs, ps, rs)
+    editor_reload_level_geometry(gs, lrs, ps, rs)
 }
 
-add_geometry :: proc(gs: ^Game_State, ps: ^Physics_State, rs: ^Render_State, es: ^Editor_State, lg_in: Level_Geometry) {
+add_geometry :: proc(gs: ^Game_State, lrs: Level_Resources, ps: ^Physics_State, rs: ^Render_State, es: ^Editor_State, lg_in: Level_Geometry) {
     lg := lg_in
     es.selected_entity = len(gs.level_geometry)
     append(&gs.level_geometry, lg)
-    editor_reload_level_geometry(gs, ps, rs)
+    editor_reload_level_geometry(gs, lrs, ps, rs)
 }
 
