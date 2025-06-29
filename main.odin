@@ -108,7 +108,7 @@ main :: proc () {
     // init shaders state
     shs.active_programs = make(map[ProgramName]ActiveProgram)
 
-    // init render state, load indices/vertices into buffers
+    // init render state
     for shader in ProgramName {
         rs.shader_render_queues[shader] = make([dynamic]gl.DrawElementsIndirectCommand)
     }
