@@ -2,22 +2,6 @@ package main
 
 import glm "core:math/linalg/glsl"
 
-Game_State :: struct {
-    //level_resources: [SHAPE]Shape_Data,
-    level_geometry: Level_Geometry_State,
-    input_state: Input_State,
-    camera_state: Camera_State,
-    editor_state: Editor_State,
-    dirty_entities: [dynamic]int,
-    time_mult: f32
-}
-
-free_gamestate :: proc(gs: ^Game_State) {
-    delete_soa(gs.level_geometry)
-    delete(gs.dirty_entities)
-    delete(gs.editor_state.connections)
-}
-
 Player_State :: struct {
     state: Player_States,
     dash_start_pos: [3]f32,

@@ -2,6 +2,7 @@ package main
 import glm "core:math/linalg/glsl"
 import "core:math"
 import "core:fmt"
+import enm "state/enums"
 
 Vertex :: struct{
     pos: glm.vec3,
@@ -15,7 +16,7 @@ Particle_Vertex :: struct{
     uv: glm.vec2
 }
 
-Level_Resources :: [SHAPE]Shape_Data
+Level_Resources :: [enm.SHAPE]Shape_Data
 
 free_level_resources :: proc(lr: ^Level_Resources) {
     for sd in lr {

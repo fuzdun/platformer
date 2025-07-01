@@ -6,14 +6,16 @@ import "core:math"
 import "core:slice"
 import "core:sort"
 import "core:time"
+import st "state"
+import enm "state/enums"
 
 Physics_State :: struct{
     collisions: [dynamic]Collision,
     debug_render_queue: struct {
         vertices: [dynamic]Vertex,
-        indices: [ProgramName][dynamic]u16
+        indices: [enm.ProgramName][dynamic]u16
     },
-    level_colliders: [SHAPE]Collider_Data,
+    level_colliders: [enm.SHAPE]Collider_Data,
     static_collider_vertices: [dynamic][3]f32,
 }
 
@@ -25,15 +27,15 @@ Collision :: struct{
     t: f32
 }
 
-AABB :: struct{
-    x0: f32,
-    y0: f32,
-    z0: f32,
-    x1: f32,
-    y1: f32,
-    z1: f32
-}
-
+//AABB :: struct{
+//    x0: f32,
+//    y0: f32,
+//    z0: f32,
+//    x1: f32,
+//    y1: f32,
+//    z1: f32
+//}
+//
 AABB_INDICES :: []u16 {0, 1, 0, 3, 1, 2, 2, 3, 3, 7, 2, 6, 4, 5, 4, 7, 6, 7, 6, 5, 4, 0, 5, 1}
 
 aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1: f32, aabbz1: f32,) -> [8]Vertex {
@@ -55,7 +57,7 @@ init_physics_state :: proc(ps: ^Physics_State) {
     ps.debug_render_queue.vertices = make([dynamic]Vertex)
     //ps.level_colliders = make(map[string]Collider_Data)
     ps.static_collider_vertices = make([dynamic][3]f32)
-    for pn in ProgramName {
+    for pn in enm.ProgramName {
         ps.debug_render_queue.indices[pn] = make([dynamic]u16)
     }
 }
@@ -82,7 +84,7 @@ free_physics_state :: proc(ps: ^Physics_State) {
     delete(ps.static_collider_vertices)
 }
 
-construct_aabb :: proc(vertices: [][3]f32) -> AABB {
+construct_aabb :: proc(vertices: [][3]f32) -> st.AABB {
     aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
     aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
     for v in vertices {
@@ -96,10 +98,10 @@ construct_aabb :: proc(vertices: [][3]f32) -> AABB {
     return {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
 }
 
-get_collisions :: proc(gs: ^Game_State, pls: ^Player_State, ps: ^Physics_State, delta_time: f32, elapsed_time: f32) {
+get_collisions :: proc(gs: ^st.Game_State, pls: ^Player_State, ps: ^Physics_State, delta_time: f32, elapsed_time: f32) {
     clear_physics_state(ps)
 
-    filter: bit_set[Level_Geometry_Component_Name; u64] = { .Collider, .Transform }
+    filter: bit_set[st.Level_Geometry_Component_Name; u64] = { .Collider, .Transform }
     ppos := pls.position
     ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])

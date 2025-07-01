@@ -4,18 +4,19 @@ import str "core:strings"
 import "core:os"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
+import enm "state/enums"
 
-ProgramName :: enum{
-    Player,
-    Trail,
-    Simple,
-    Background,
-    Player_Particle,
-    Outline,
-    Text,
-    Line
-}
-
+//ProgramName :: enum{
+//    Player,
+//    Trail,
+//    Simple,
+//    Background,
+//    Player_Particle,
+//    Outline,
+//    Text,
+//    Line
+//}
+//
 Program :: struct{
     pipeline: []string,
     uniforms: []string,
@@ -29,7 +30,7 @@ ActiveProgram :: struct{
     locations: map[string]i32
 }
 
-PROGRAM_CONFIGS := [ProgramName]Program{
+PROGRAM_CONFIGS := [enm.ProgramName]Program{
     .Trail = {
         pipeline = EDIT ? {"simplevertex", "simplefrag"} : {"thumpervertex", "tessellationctrl", "tessellationeval", "thumpergeometry", "trailfrag"},
         shader_types = EDIT ? {.VERTEX_SHADER, .FRAGMENT_SHADER} : {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
@@ -95,9 +96,9 @@ PROGRAM_CONFIGS := [ProgramName]Program{
 }
 
 Shader_State :: struct {
-    active_programs: map[ProgramName]ActiveProgram,
+    active_programs: map[enm.ProgramName]ActiveProgram,
     loaded_program: u32,
-    loaded_program_name: ProgramName
+    loaded_program_name: enm.ProgramName
 }
 
 //shader_state_init :: proc(shst: ^Shader_State) {
@@ -158,7 +159,7 @@ shader_program_from_file :: proc(filename: string, type: gl.Shader_Type) -> (u32
     return shader_id, true
 }
 
-use_shader :: proc(sh: ^Shader_State, rs: ^Render_State, name: ProgramName) {
+use_shader :: proc(sh: ^Shader_State, rs: ^Render_State, name: enm.ProgramName) {
     if name in sh.active_programs {
         gl.UseProgram(sh.active_programs[name].id)
         sh.loaded_program = sh.active_programs[name].id

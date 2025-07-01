@@ -3,6 +3,7 @@ import "core:math"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import "core:fmt"
+import st "state"
 
 // move speed
 MAX_PLAYER_SPEED: f32: 50.0
@@ -49,7 +50,7 @@ TGT_PARTICLE_DISPLACEMENT_LERP :: 0.4
 
 
 
-update_player_velocity :: proc(gs: ^Game_State, pls: ^Player_State, elapsed_time: f64, delta_time: f32) {
+update_player_velocity :: proc(gs: ^st.Game_State, pls: ^Player_State, elapsed_time: f64, delta_time: f32) {
     is := &gs.input_state
 
     // update trail
@@ -242,7 +243,7 @@ update_player_velocity :: proc(gs: ^Game_State, pls: ^Player_State, elapsed_time
 
 }
 
-move_player :: proc(gs: ^Game_State, pls: ^Player_State, phs: ^Physics_State, elapsed_time: f32, delta_time: f32) {
+move_player :: proc(gs: ^st.Game_State, pls: ^Player_State, phs: ^Physics_State, elapsed_time: f32, delta_time: f32) {
     //pls := &gs.player_state
     pls.prev_position = pls.position
 

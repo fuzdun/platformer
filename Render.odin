@@ -14,7 +14,8 @@ import tm "core:time"
 import strcnv "core:strconv"
 import ft "shared:freetype"
 import "core:os"
-//import "core:sort"
+import st "state"
+import enm "state/enums"
 
 PLAYER_PARTICLE_STACK_COUNT :: 5
 PLAYER_PARTICLE_SECTOR_COUNT :: 10
@@ -22,12 +23,12 @@ PLAYER_PARTICLE_SECTOR_COUNT :: 10
 PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT + 2
 I_MAT :: glm.mat4(1.0)
 
-SHAPE :: enum{
-    CUBE,
-    WEIRD,
-}
+//SHAPE :: enum{
+//    CUBE,
+//    WEIRD,
+//}
 
-SHAPE_FILENAME := [SHAPE]string {
+SHAPE_FILENAME := [enm.SHAPE]string {
     .CUBE = "basic_cube",
     .WEIRD = "weird"
 }
@@ -75,8 +76,8 @@ PARTICLE_VERTICES :: [4]Quad_Vertex {
     {{0.7, 0.7, 0.0}, {1, 1}},
 }
 
-Vertex_Offsets :: [len(SHAPE)]u32
-Index_Offsets :: [len(SHAPE)]u32
+Vertex_Offsets :: [len(enm.SHAPE)]u32
+Index_Offsets :: [len(enm.SHAPE)]u32
 
 Render_State :: struct {
     ft_lib: ft.Library,
@@ -116,7 +117,7 @@ Render_State :: struct {
     index_offsets: Index_Offsets,
     player_vertex_offset: u32,
     player_index_offset: u32,
-    render_group_offsets: [len(ProgramName) * len(SHAPE)]u32,
+    render_group_offsets: [len(enm.ProgramName) * len(enm.SHAPE)]u32,
 
     player_geometry: Shape_Data,
 }
@@ -126,7 +127,7 @@ Renderable :: struct{
     z_width: f32
 }
 
-Shader_Render_Queues :: [ProgramName][dynamic]gl.DrawElementsIndirectCommand
+Shader_Render_Queues :: [enm.ProgramName][dynamic]gl.DrawElementsIndirectCommand
 
 //init_render_buffers :: proc(gs: ^Game_State, rs: ^Render_State) {
 //    for shader in ProgramName {
@@ -147,13 +148,13 @@ clear_render_state :: proc(rs: ^Render_State) {
 }
 
 clear_render_queues :: proc(rs: ^Render_State) {
-    for shader in ProgramName {
+    for shader in enm.ProgramName {
         clear(&rs.shader_render_queues[shader])
     }
 }
 
 free_render_state :: proc(rs: ^Render_State) {
-    for shader in ProgramName {
+    for shader in enm.ProgramName {
         delete(rs.shader_render_queues[shader])
     }
     delete(rs.static_transforms)
@@ -165,173 +166,7 @@ free_render_state :: proc(rs: ^Render_State) {
     delete(rs.player_geometry.indices)
 }
 
-init_draw :: proc(rs: ^Render_State, lrs: Level_Resources, ss: ^Shader_State) -> bool {
-    ft.init_free_type(&rs.ft_lib)
-    ft.new_face(rs.ft_lib, "fonts/0xProtoNerdFont-Bold.ttf", 0, &rs.face)
-    rs.char_tex_map = make(map[rune]Char_Tex)
-    ft.set_pixel_sizes(rs.face, 0, 256)
-    gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
-    
-    for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
-            fmt.eprintln(char_load_err)
-        }
-        new_tex: u32 
-        gl.GenTextures(1, &new_tex)
-        gl.BindTexture(gl.TEXTURE_2D, new_tex)
-        gl.TexImage2D(
-            gl.TEXTURE_2D,
-            0,
-            gl.RED,
-            i32(rs.face.glyph.bitmap.width),
-            i32(rs.face.glyph.bitmap.rows),
-            0,
-            gl.RED,
-            gl.UNSIGNED_BYTE,
-            rs.face.glyph.bitmap.buffer
-        )
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        ct: Char_Tex = {
-            id = new_tex,
-            size = {i32(rs.face.glyph.bitmap.width), i32(rs.face.glyph.bitmap.rows)},
-            bearing = {i32(rs.face.glyph.bitmap_left), i32(rs.face.glyph.bitmap_top)},
-            next = u32(rs.face.glyph.advance.x)
-        }
-        // fmt.println(ct)
-        rs.char_tex_map[rune(c)] = ct
-    } 
-
-    if !init_shaders(ss) {
-        fmt.eprintln("shader init failed")
-        return false
-    }
-
-    gl.GenBuffers(1, &rs.standard_vbo)
-    gl.GenBuffers(1, &rs.standard_ebo)
-    gl.GenBuffers(1, &rs.indirect_buffer)
-    gl.GenBuffers(1, &rs.transforms_ssbo)
-    gl.GenBuffers(1, &rs.z_widths_ssbo)
-    gl.GenBuffers(1, &rs.particle_vbo)
-    gl.GenBuffers(1, &rs.particle_pos_vbo)
-    gl.GenBuffers(1, &rs.background_vbo)
-    gl.GenBuffers(1, &rs.text_vbo)
-    gl.GenBuffers(1, &rs.editor_lines_vbo)
-    gl.GenVertexArrays(1, &rs.standard_vao)
-    gl.GenVertexArrays(1, &rs.particle_vao)
-    gl.GenVertexArrays(1, &rs.background_vao)
-    gl.GenVertexArrays(1, &rs.lines_vao)
-    gl.GenVertexArrays(1, &rs.text_vao)
-    gl.GenTextures(1, &rs.dither_tex)
-
-    gl.BindVertexArray(rs.standard_vao)
-    gl.PatchParameteri(gl.PATCH_VERTICES, 3);
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
-    gl.EnableVertexAttribArray(0)
-    gl.EnableVertexAttribArray(1)
-    gl.EnableVertexAttribArray(2)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, b_uv))
-    gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, normal))
-
-    gl.BindVertexArray(rs.particle_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
-    gl.EnableVertexAttribArray(0)
-    gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, position))
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
-    gl.EnableVertexAttribArray(2)
-    gl.VertexAttribPointer(2, 4, gl.FLOAT, false, 0, 0)
-    gl.VertexAttribDivisor(0, 0)
-    gl.VertexAttribDivisor(1, 0)
-    gl.VertexAttribDivisor(2, 1)
-
-    bv := BACKGROUND_VERTICES
-    gl.BindVertexArray(rs.background_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, size_of(bv[0]) * len(bv), &bv[0], gl.STATIC_DRAW)
-    gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, position))
-    gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
-
-    // tv := TEXT_VERTICES
-    gl.BindVertexArray(rs.text_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.text_vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, size_of(Quad_Vertex4) * 4, nil, gl.DYNAMIC_DRAW);
-    gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(Quad_Vertex4), offset_of(Quad_Vertex4, position))
-    gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex4), offset_of(Quad_Vertex4, uv))
-
-    gl.BindVertexArray(rs.lines_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
-    gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Line_Vertex), offset_of(Line_Vertex, position))
-    gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 1, gl.FLOAT, false, size_of(Line_Vertex), offset_of(Line_Vertex, t))
-
-    gl.BindBuffer(gl.ARRAY_BUFFER, 0)
-    gl.BindVertexArray(0)
-
-    if dither_bin, read_success := os.read_entire_file("textures/blue_noise_64.png"); read_success {
-        defer delete(dither_bin)
-        gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-        gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 64, 64, 0, gl.RGBA, gl.UNSIGNED_BYTE, &dither_bin[0])
-    }
-
-    vertices := make([dynamic]Vertex); defer delete(vertices)
-    indices := make([dynamic]u32); defer delete(indices)
-    for shape in SHAPE {
-        sd := lrs[shape]
-        append(&indices, ..sd.indices)
-        append(&vertices, ..sd.vertices)
-    }
-    append(&indices, ..rs.player_geometry.indices)
-    append(&vertices, ..rs.player_geometry.vertices)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices[0]) * len(vertices), raw_data(vertices), gl.STATIC_DRAW) 
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
-    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
-
-
-    gl.Enable(gl.CULL_FACE)
-    gl.Enable(gl.DEPTH_TEST)
-
-    gl.LineWidth(5)
-
-    return true
-}
-
-init_level_render_data :: proc(lrs: Level_Resources, rs: ^Render_State) {
-    vertices := make([dynamic]Vertex); defer delete(vertices)
-    indices := make([dynamic]u32); defer delete(indices)
-    for shape in SHAPE {
-        //rs.vertex_offsets[int(shape)] = u32(len(vertices))
-        //rs.index_offsets[int(shape)] = u32(len(indices))
-        sd := lrs[shape]
-        append(&indices, ..sd.indices)
-        append(&vertices, ..sd.vertices)
-    }
-    rs.player_vertex_offset = u32(len(vertices))
-    rs.player_index_offset = u32(len(indices))
-    append(&indices, ..rs.player_geometry.indices)
-    append(&vertices, ..rs.player_geometry.vertices)
-
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices[0]) * len(vertices), raw_data(vertices), gl.STATIC_DRAW) 
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
-    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
-}
-
-update_vertices :: proc(gs: ^Game_State, lrs: Level_Resources, rs: ^Render_State) {
+update_vertices :: proc(gs: ^st.Game_State, lrs: Level_Resources, rs: ^Render_State) {
     if len(gs.dirty_entities) > 0 {
         for lg_idx in gs.dirty_entities {
             lg := gs.level_geometry[lg_idx]
@@ -424,11 +259,16 @@ update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) 
     slice.sort_by(rs.player_particles[:], z_sort)
 }
 
-easeout :: proc(n: f32) -> f32 {
-    return math.sin(n * math.PI / 2.0);
-}
-
-render :: proc(gs: ^Game_State, lrs: Level_Resources, pls: Player_State, rs: ^Render_State, shst: ^Shader_State, ps: ^Physics_State, time: f64, interp_t: f64) {
+render :: proc(
+    gs: ^st.Game_State,
+    lrs: Level_Resources,
+    pls: Player_State,
+    rs: ^Render_State,
+    shst: ^Shader_State,
+    ps: ^Physics_State,
+    time: f64,
+    interp_t: f64
+) {
     clear_render_queues(rs)
 
     // add level geometry to command queues
@@ -436,8 +276,8 @@ render :: proc(gs: ^Game_State, lrs: Level_Resources, pls: Player_State, rs: ^Re
         next_off := idx == len(rs.render_group_offsets) - 1 ? u32(len(gs.level_geometry)) : rs.render_group_offsets[idx + 1]
         count := next_off - g_off
         if count == 0 do continue
-        shader := ProgramName(idx / len(SHAPE))
-        shape := SHAPE(idx % len(SHAPE))
+        shader := enm.ProgramName(idx / len(enm.SHAPE))
+        shape := enm.SHAPE(idx % len(enm.SHAPE))
         sd := lrs[shape] 
         command: gl.DrawElementsIndirectCommand = {
             u32(len(sd.indices)),

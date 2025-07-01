@@ -6,6 +6,8 @@ import "core:encoding/json"
 import "core:encoding/endian"
 import "core:bytes"
 import gl "vendor:OpenGL"
+import st "state"
+import enm "state/enums"
 
 model_json_struct :: struct {
     bufferViews: []struct {
@@ -41,7 +43,7 @@ free_model_json_struct :: proc(js: model_json_struct) {
     delete(js.meshes)
 }
 
-load_blender_model :: proc(shape: SHAPE, lrs: ^Level_Resources, ps: ^Physics_State) -> bool {
+load_blender_model :: proc(shape: enm.SHAPE, lrs: ^Level_Resources, ps: ^Physics_State) -> bool {
     // read binary data
     filename := SHAPE_FILENAME[shape]
     binary_filename := str.concatenate({"models/", filename, ".glb"})
