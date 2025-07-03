@@ -11,31 +11,19 @@ import "core:os"
 import glm "core:math/linalg/glsl"
 import str "core:strings"
 import ft "shared:freetype"
+
 import st "state"
 import enm "state/enums"
-
-WIDTH :: 1920.0
-HEIGHT :: 1080.0
-FULLSCREEN :: true
-TARGET_FRAME_RATE :: 240.0
-FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
-// WIDTH :: 900
-// HEIGHT :: 900
-// FULLSCREEN :: false
-
-TITLE :: "platformer"
+import const "state/constants"
 
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
-
-INIT_PLAYER_POS :: [3]f32 { 0, 0, 0 }
-
-controller : ^SDL.GameController
 
 @(private="file")
 quit_app := false
 
 main :: proc () {
+    controller : ^SDL.GameController
     // debug mem leak detector
     when ODIN_DEBUG {
         track: mem.Tracking_Allocator
@@ -73,12 +61,19 @@ main :: proc () {
             controller = SDL.GameControllerOpen(i)
         }
     }
-    window := SDL.CreateWindow(TITLE, SDL.WINDOWPOS_UNDEFINED, SDL.WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, {.OPENGL})
+    window := SDL.CreateWindow(
+        const.TITLE,
+        SDL.WINDOWPOS_UNDEFINED,
+        SDL.WINDOWPOS_UNDEFINED,
+        const.WIDTH,
+        const.HEIGHT,
+        {.OPENGL}
+    )
     if window == nil {
         fmt.eprintln("Failed to create window")
     }
     defer SDL.DestroyWindow(window)
-    if FULLSCREEN {
+    if const.FULLSCREEN {
         SDL.SetWindowFullscreen(window, SDL.WINDOW_FULLSCREEN)
     }
 
@@ -138,7 +133,7 @@ main :: proc () {
 
     // init player state
     pls.state = .IN_AIR
-    pls.position = INIT_PLAYER_POS
+    pls.position = const.INIT_PLAYER_POS
     pls.can_press_dash = true
     pls.can_press_jump = false
     pls.ground_x = {1, 0, 0}
@@ -329,7 +324,7 @@ main :: proc () {
 
     // start frame loop
     clocks_per_second := i64(SDL.GetPerformanceFrequency())
-    target_frame_clocks := clocks_per_second / TARGET_FRAME_RATE
+    target_frame_clocks := clocks_per_second / const.TARGET_FRAME_RATE
     max_deviation := clocks_per_second / 5000
 
     snap_hz: i64 = 60
@@ -394,12 +389,12 @@ main :: proc () {
 
         for accumulator >= target_frame_clocks {
             // Fixed update
-            game_update(&gs, lrs, &pls, &phs, &rs, elapsed_time, FIXED_DELTA_TIME * gs.time_mult)
+            game_update(&gs, lrs, &pls, &phs, &rs, elapsed_time, const.FIXED_DELTA_TIME * gs.time_mult)
             accumulator -= target_frame_clocks 
         }
 
         // Render
-        gl.Viewport(0, 0, WIDTH, HEIGHT)
+        gl.Viewport(0, 0, const.WIDTH, const.HEIGHT)
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         

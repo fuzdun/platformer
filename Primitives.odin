@@ -1,21 +1,16 @@
 package main
+
 import glm "core:math/linalg/glsl"
 import "core:math"
 import "core:fmt"
+
 import st "state"
 import enm "state/enums"
-
-CORE_RADIUS :: 1.0
-SPHERE_RADIUS :: 1.0
-SPHERE_SQ_RADIUS :: SPHERE_RADIUS * SPHERE_RADIUS
-SPHERE_SECTOR_COUNT :: 30 
-SPHERE_STACK_COUNT :: 30 
-SPHERE_V_COUNT :: (SPHERE_STACK_COUNT + 1) * (SPHERE_SECTOR_COUNT + 1)
-SPHERE_I_COUNT :: (SPHERE_STACK_COUNT - 1) * SPHERE_SECTOR_COUNT * 6 
+import const "state/constants"
 
 add_player_sphere_data :: proc(rs: ^st.Render_State) {
-    vertical_count := SPHERE_STACK_COUNT
-    horizontal_count := SPHERE_SECTOR_COUNT
+    vertical_count := const.SPHERE_STACK_COUNT
+    horizontal_count := const.SPHERE_SECTOR_COUNT
     x, y, z, xz: f32
     horizontal_angle, vertical_angle: f32
     s, t: f32
@@ -25,12 +20,12 @@ add_player_sphere_data :: proc(rs: ^st.Render_State) {
     vertical_step := PI / f32(vertical_count)
     horizontal_step := (2 * PI) / f32(horizontal_count)
 
-    rs.player_geometry.vertices = make([]st.Vertex, SPHERE_V_COUNT)
+    rs.player_geometry.vertices = make([]st.Vertex, const.SPHERE_V_COUNT)
     vertices := &rs.player_geometry.vertices
     for i in 0..=vertical_count {
         vertical_angle = PI / 2.0 - f32(i) * vertical_step 
-        xz := CORE_RADIUS * math.cos(vertical_angle)
-        y = CORE_RADIUS * math.sin(vertical_angle)
+        xz := const.CORE_RADIUS * math.cos(vertical_angle)
+        y = const.CORE_RADIUS * math.sin(vertical_angle)
 
         for j in 0..=horizontal_count {
             v : st.Vertex
@@ -46,7 +41,7 @@ add_player_sphere_data :: proc(rs: ^st.Render_State) {
     }
 
     ind := 0
-    rs.player_geometry.indices = make([]u32, SPHERE_I_COUNT)
+    rs.player_geometry.indices = make([]u32, const.SPHERE_I_COUNT)
     indices := &rs.player_geometry.indices
     for i in 0..<vertical_count {
         vr1 = u32(i * (horizontal_count + 1))

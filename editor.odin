@@ -4,34 +4,12 @@ import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
 import "core:slice"
+
 import st "state"
 import enm "state/enums"
-
-OBJ_MOVE_SPD :: 30.0
-OBJ_ROT_SPD :: 1.0
-OBJ_SCALE_SPD :: 0.3
-MAX_DRAW_GEOMETRY_DIST :: 350
-MAX_DRAW_GEOMETRY_DIST2 :: MAX_DRAW_GEOMETRY_DIST * MAX_DRAW_GEOMETRY_DIST
+import const "state/constants"
 
 SSBO_Registry :: [len(enm.SHAPE) * len(enm.ProgramName)][dynamic]int
-
-//Editor_State :: struct {
-//    selected_entity: int,
-//    saved: bool,
-//    can_add: bool,
-//    can_delete: bool,
-//    can_switch: bool,
-//    can_swap: bool,
-//    x_rot: f32,
-//    y_rot: f32,
-//    zoom: f32,
-//    connections: [dynamic]Connection
-//}
-//
-//Connection :: struct {
-//    poss: [2][3]f32,
-//    dist: int
-//}
 
 get_selected_geometry_dists :: proc(es: ^st.Editor_State, ps: st.Physics_State, lgs: st.Level_Geometry_State) {
     clear(&es.connections)
@@ -41,7 +19,7 @@ get_selected_geometry_dists :: proc(es: ^st.Editor_State, ps: st.Physics_State, 
             continue
         } 
         lg_dist := la.length2(selected_geometry.transform.position - lg.transform.position)
-        if lg_dist > MAX_DRAW_GEOMETRY_DIST2 {
+        if lg_dist > const.MAX_DRAW_GEOMETRY_DIST2 {
             continue
         }
         s0, s1, dist := get_geometry_dist(ps, selected_geometry, lg)
@@ -155,67 +133,67 @@ editor_move_object :: proc(gs: ^st.Game_State, lrs: st.Level_Resources, es: ^st.
     }
     if is.up_pressed {
         if rotating {
-            rot_x -= OBJ_ROT_SPD * delta_time
+            rot_x -= const.OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
             selected_obj.transform.scale.z += 0.1;
         } else {
-            selected_obj.transform.position.z -=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position.z -=  const.OBJ_MOVE_SPD * delta_time
         }
         append(&gs.dirty_entities, es.selected_entity)
     }
     if is.down_pressed {
         if rotating {
-            rot_x += OBJ_ROT_SPD * delta_time
+            rot_x += const.OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
             selected_obj.transform.scale.z -= 0.1;
         } else {
-            selected_obj.transform.position.z +=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position.z +=  const.OBJ_MOVE_SPD * delta_time
         }
         append(&gs.dirty_entities, es.selected_entity)
     }
     if is.left_pressed {
         if rotating {
-            rot_z += OBJ_ROT_SPD * delta_time
+            rot_z += const.OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
             selected_obj.transform.scale.x -= 0.1;
         } else {
-            selected_obj.transform.position.x -=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position.x -=  const.OBJ_MOVE_SPD * delta_time
         }
         append(&gs.dirty_entities, es.selected_entity)
     }
     if is.right_pressed {
         if rotating {
-            rot_z -= OBJ_ROT_SPD * delta_time
+            rot_z -= const.OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
             selected_obj.transform.scale.x += 0.1;
         } else {
-            selected_obj.transform.position.x +=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position.x +=  const.OBJ_MOVE_SPD * delta_time
         }
         append(&gs.dirty_entities, es.selected_entity)
     }
     if is.pg_up_pressed {
         if rotating {
-            rot_y -= OBJ_ROT_SPD * delta_time
+            rot_y -= const.OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
             selected_obj.transform.scale.y += 0.1;
         } else {
-            selected_obj.transform.position.y +=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position.y +=  const.OBJ_MOVE_SPD * delta_time
         }
         append(&gs.dirty_entities, es.selected_entity)
     }
     if is.pg_down_pressed {
         if rotating {
-            rot_y += OBJ_ROT_SPD * delta_time
+            rot_y += const.OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
             selected_obj.transform.scale.y -= 0.1;
         } else {
-            selected_obj.transform.position.y -=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position.y -=  const.OBJ_MOVE_SPD * delta_time
         }
         append(&gs.dirty_entities, es.selected_entity)
     }

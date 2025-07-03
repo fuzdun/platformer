@@ -12,8 +12,6 @@ import st "state"
 import enm "state/enums"
 import const "state/constants"
 
-AABB_INDICES :: []u16 {0, 1, 0, 3, 1, 2, 2, 3, 3, 7, 2, 6, 4, 5, 4, 7, 6, 7, 6, 5, 4, 0, 5, 1}
-
 aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1: f32, aabbz1: f32,) -> [8]st.Vertex {
     return {
         {{aabbx0, aabby1, aabbz0}, {0, 0}, {0, 0}, {0, 0, 0}},
@@ -57,7 +55,7 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^st.Player_State, ps: ^st.Physic
     ppos := pls.position
     ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])
-    player_sq_radius := f32(SPHERE_RADIUS * SPHERE_RADIUS)
+    player_sq_radius := f32(const.SPHERE_RADIUS * const.SPHERE_RADIUS)
     player_velocity := pls.velocity * delta_time
     player_velocity_len := la.length(player_velocity)
 
@@ -95,10 +93,10 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^st.Player_State, ps: ^st.Physic
                         intercept_t: f32
                         intercept_pt: [3]f32
                         did_intercept := false
-                        if intercept_pt, did_intercept = sphere_intersects_plane(ppos32, SPHERE_RADIUS, normal, plane_dist); did_intercept {
+                        if intercept_pt, did_intercept = sphere_intersects_plane(ppos32, const.SPHERE_RADIUS, normal, plane_dist); did_intercept {
                             intercept_t = 0
                         } else {
-                            sphere_contact_pt := ppos32 - normal * SPHERE_RADIUS
+                            sphere_contact_pt := ppos32 - normal * const.SPHERE_RADIUS
                             intercept_t, intercept_pt, did_intercept = ray_plane_intersection(sphere_contact_pt, player_velocity, normal, plane_dist);
                         }
                         if did_intercept {
@@ -282,7 +280,7 @@ closest_line_pt :: proc(l0: [3]f32, l1: [3]f32, p: [3]f32) -> [3]f32{
 ray_sphere_intersect :: proc(origin: [3]f32, dir: [3]f32, ppos: [3]f32) -> (t: f32, q: [3]f32, ok: bool) {
     m := origin - ppos 
     b := la.dot(m, dir)
-    c := la.dot(m, m) - SPHERE_SQ_RADIUS
+    c := la.dot(m, m) - const.SPHERE_SQ_RADIUS
     if c > 0 && b > 0 {
         ok = false
         return

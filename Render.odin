@@ -14,8 +14,10 @@ import tm "core:time"
 import strcnv "core:strconv"
 import ft "shared:freetype"
 import "core:os"
+
 import st "state"
 import enm "state/enums"
+import const "state/constants"
 
 I_MAT :: glm.mat4(1.0)
 
@@ -87,8 +89,8 @@ update_player_particles :: proc(rs: ^st.Render_State, ps: st.Player_State, time:
     // sphere_rotate := la.matrix3_from_euler_angles(f32(0), f32(0), f32(0), .XYZ)
     for i in 0..<vertical_count {
         vertical_angle = PI / 2.0 - f32(i + 1) * vertical_step
-        xz := SPHERE_RADIUS * math.cos(vertical_angle)
-        y = SPHERE_RADIUS * math.sin(vertical_angle)
+        xz := const.SPHERE_RADIUS * math.cos(vertical_angle)
+        y = const.SPHERE_RADIUS * math.sin(vertical_angle)
         for j in 0..<horizontal_count {
             id := i * horizontal_count + j
             horizontal_angle = f32(j) * horizontal_step
@@ -108,8 +110,8 @@ update_player_particles :: proc(rs: ^st.Render_State, ps: st.Player_State, time:
         }
     }
     end_idx := vertical_count * horizontal_count
-    top_pt: [4]f32 = {0, SPHERE_RADIUS * 2.0, 0, f32(end_idx)}
-    bot_pt: [4]f32 = {0, -SPHERE_RADIUS * 2.0, 0, f32(end_idx + 1)}
+    top_pt: [4]f32 = {0, const.SPHERE_RADIUS * 2.0, 0, f32(end_idx)}
+    bot_pt: [4]f32 = {0, -const.SPHERE_RADIUS * 2.0, 0, f32(end_idx + 1)}
     top_pt.xyz = sphere_rotate * top_pt.xyz
     bot_pt.xyz = sphere_rotate * bot_pt.xyz
     rs.player_particles[end_idx] = top_pt

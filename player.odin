@@ -195,7 +195,7 @@ update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapse
 
     // handle reset
     if is.r_pressed {
-        pls.position = INIT_PLAYER_POS
+        pls.position = const.INIT_PLAYER_POS
         pls.velocity = [3]f32 {0, 0, 0}
     }
 
