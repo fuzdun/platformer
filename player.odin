@@ -7,14 +7,15 @@ import "core:fmt"
 
 import st "state"
 import const "constants"
+import typ "datatypes"
 
 update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapsed_time: f64, delta_time: f32) {
     is := &gs.input_state
 
     // update trail
-    st.ring_buffer_push(&pls.trail, [3]f32 {f32(pls.position.x), f32(pls.position.y), f32(pls.position.z)})
+    typ.ring_buffer_push(&pls.trail, [3]f32 {f32(pls.position.x), f32(pls.position.y), f32(pls.position.z)})
     pls.prev_trail_sample = pls.trail_sample
-    pls.trail_sample = {st.ring_buffer_at(pls.trail, -4), st.ring_buffer_at(pls.trail, -8), st.ring_buffer_at(pls.trail, -12)}
+    pls.trail_sample = {typ.ring_buffer_at(pls.trail, -4), typ.ring_buffer_at(pls.trail, -8), typ.ring_buffer_at(pls.trail, -12)}
 
     move_spd := const.P_ACCEL
     if pls.state == .ON_SLOPE {

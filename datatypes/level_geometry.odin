@@ -20,14 +20,23 @@ Transform :: struct{
     scale: Scale,
     rotation: Rotation
 }
+
 Position :: la.Vector3f32 
+
 Scale :: la.Vector3f32
+
 Rotation :: quaternion128
+
 Angular_Velocity :: la.Vector3f32
+
 Shape :: enm.SHAPE
+
 Collider :: enm.SHAPE
+
 Active_Shaders :: bit_set[enm.ProgramName; u64]
+
 Level_Geometry_Attributes :: bit_set[enm.Level_Geometry_Component_Name; u64]
+
 Aabb :: struct{
     x0: f32,
     y0: f32,

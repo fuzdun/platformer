@@ -4,6 +4,7 @@ import glm "core:math/linalg/glsl"
 
 import enm "../enums"
 import const "../constants"
+import typ "../datatypes"
 
 Player_State :: struct {
     state: enm.Player_States,
@@ -38,7 +39,7 @@ Player_State :: struct {
 
     trail_sample: [3]glm.vec3,
     prev_trail_sample: [3]glm.vec3,
-    trail: RingBuffer(const.TRAIL_SIZE, [3]f32),
+    trail: typ.RingBuffer(const.TRAIL_SIZE, [3]f32),
 
     particle_displacement: [3]f32,
     tgt_particle_displacement: [3]f32

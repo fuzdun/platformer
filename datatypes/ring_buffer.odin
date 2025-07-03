@@ -1,4 +1,4 @@
-package state
+package datatypes
 
 RingBuffer :: struct($N: int, $T: typeid) {
     insert_at : int,

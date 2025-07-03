@@ -15,16 +15,6 @@ Physics_State :: struct{
     static_collider_vertices: [dynamic][3]f32,
 }
 
-Init_physics_state :: proc(ps: ^Physics_State) {
-    ps.collisions = make([dynamic]typ.Collision)
-    ps.debug_render_queue.vertices = make([dynamic]typ.Vertex)
-    //ps.level_colliders = make(map[string]Collider_Data)
-    ps.static_collider_vertices = make([dynamic][3]f32)
-    for pn in enm.ProgramName {
-        ps.debug_render_queue.indices[pn] = make([dynamic]u16)
-    }
-}
-
 free_physics_state :: proc(ps: ^Physics_State) {
     delete(ps.collisions)
     delete(ps.debug_render_queue.vertices)

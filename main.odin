@@ -129,20 +129,21 @@ main :: proc () {
     pls.can_press_jump = false
     pls.ground_x = {1, 0, 0}
     pls.ground_z = {0, 0, -1}
-    st.ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
+    typ.ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
 
-    // load blender meshes
+    // init level resources
     for shape in enm.SHAPE {
         if ok := load_blender_model(shape, &lrs, &phs); ok {
             fmt.println("loaded", shape) 
         }
     }
 
-    // initialize OpenGL state
     //if !init_draw(&rs, lrs, &shs) {
     //    fmt.eprintln("init draw failed")
     //    return
     //}
+
+    // init shader programs
     for config, program in PROGRAM_CONFIGS {
         shaders := make([]u32, len(config.pipeline))
         defer delete(shaders)
@@ -169,6 +170,8 @@ main :: proc () {
     }
 
     //return true
+
+    // init text rendering
     ft.init_free_type(&rs.ft_lib)
     ft.new_face(rs.ft_lib, "fonts/0xProtoNerdFont-Bold.ttf", 0, &rs.face)
     rs.char_tex_map = make(map[rune]typ.Char_Tex)
@@ -212,6 +215,7 @@ main :: proc () {
     //    return false
     //}
 
+    // init mesh rendering
     gl.GenBuffers(1, &rs.standard_vbo)
     gl.GenBuffers(1, &rs.standard_ebo)
     gl.GenBuffers(1, &rs.indirect_buffer)
@@ -311,7 +315,6 @@ main :: proc () {
 
     gl.Enable(gl.CULL_FACE)
     gl.Enable(gl.DEPTH_TEST)
-
     gl.LineWidth(5)
 
     // load level data
@@ -330,8 +333,8 @@ main :: proc () {
     snap_hz = i64(clocks_per_second) / snap_hz
     snap_vals : [8]i64 = { snap_hz, snap_hz * 2, snap_hz * 3, snap_hz * 4, snap_hz * 5, snap_hz * 6, snap_hz * 7, snap_hz * 8 }
     
-    frame_time_buffer : st.RingBuffer(4, i64)
-    st.ring_buffer_init(&frame_time_buffer, target_frame_clocks)
+    frame_time_buffer : typ.RingBuffer(4, i64)
+    typ.ring_buffer_init(&frame_time_buffer, target_frame_clocks)
 
     current_time, previous_time, delta_time, averager_res, accumulator : i64
     previous_time = i64(SDL.GetPerformanceCounter())
@@ -361,8 +364,8 @@ main :: proc () {
             }
         }
 
-        st.ring_buffer_push(&frame_time_buffer, delta_time)
-        delta_time = st.ring_buffer_average(frame_time_buffer)
+        typ.ring_buffer_push(&frame_time_buffer, delta_time)
+        delta_time = typ.ring_buffer_average(frame_time_buffer)
         averager_res += delta_time % 4 
         delta_time += averager_res / 4
         averager_res %= 4
