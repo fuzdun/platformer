@@ -9,7 +9,7 @@ import "core:math"
 import st "state"
 import enm "state/enums"
 
-transformed_vertex :: proc(vertex: Vertex, trns: st.Transform) -> Vertex {
+transformed_vertex :: proc(vertex: st.Vertex, trns: st.Transform) -> st.Vertex {
     pos := la.quaternion128_mul_vector3(trns.rotation, vertex.pos.xyz * trns.scale) + trns.position
     norm := la.quaternion128_mul_vector3(trns.rotation, vertex.normal)
     return {{pos[0], pos[1], pos[2]}, vertex.uv, vertex.b_uv, norm}

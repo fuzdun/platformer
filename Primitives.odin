@@ -2,14 +2,8 @@ package main
 import glm "core:math/linalg/glsl"
 import "core:math"
 import "core:fmt"
+import st "state"
 import enm "state/enums"
-
-Vertex :: struct{
-    pos: glm.vec3,
-    uv: glm.vec2,
-    b_uv: glm.vec2,
-    normal: glm.vec3
-}
 
 Particle_Vertex :: struct{
     pos: glm.vec4,
@@ -26,15 +20,10 @@ free_level_resources :: proc(lr: ^Level_Resources) {
 }
 
 Shape_Data :: struct{
-    vertices: []Vertex,
+    vertices: []st.Vertex,
     indices: []u32
 }
 
-
-Collider_Data :: struct{
-    vertices: [][3]f32,
-    indices: []u16
-}
 
 // CORE_RADIUS :: 0.5
 CORE_RADIUS :: 1.0
@@ -57,7 +46,7 @@ add_player_sphere_data :: proc(rs: ^Render_State) {
     vertical_step := PI / f32(vertical_count)
     horizontal_step := (2 * PI) / f32(horizontal_count)
 
-    rs.player_geometry.vertices = make([]Vertex, SPHERE_V_COUNT)
+    rs.player_geometry.vertices = make([]st.Vertex, SPHERE_V_COUNT)
     vertices := &rs.player_geometry.vertices
     for i in 0..=vertical_count {
         vertical_angle = PI / 2.0 - f32(i) * vertical_step 
@@ -65,7 +54,7 @@ add_player_sphere_data :: proc(rs: ^Render_State) {
         y = CORE_RADIUS * math.sin(vertical_angle)
 
         for j in 0..=horizontal_count {
-            v : Vertex
+            v : st.Vertex
             horizontal_angle = f32(j) * horizontal_step 
             x = xz * math.cos(horizontal_angle)
             z = xz * math.sin(horizontal_angle)

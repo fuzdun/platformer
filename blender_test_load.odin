@@ -43,7 +43,7 @@ free_model_json_struct :: proc(js: model_json_struct) {
     delete(js.meshes)
 }
 
-load_blender_model :: proc(shape: enm.SHAPE, lrs: ^Level_Resources, ps: ^Physics_State) -> bool {
+load_blender_model :: proc(shape: enm.SHAPE, lrs: ^Level_Resources, ps: ^st.Physics_State) -> bool {
     // read binary data
     filename := SHAPE_FILENAME[shape]
     binary_filename := str.concatenate({"models/", filename, ".glb"})
@@ -95,11 +95,11 @@ load_blender_model :: proc(shape: enm.SHAPE, lrs: ^Level_Resources, ps: ^Physics
 
     collider_mesh_idx := len(js.scenes[0].nodes) == 2 ? 1 : 0
     lrs[shape] = read_mesh_data_from_binary(js, bin_data, 0, false).(Shape_Data)
-    ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true).(Collider_Data)
+    ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true).(st.Collider_Data)
     return true
 }
 
-Model_Data :: union{Shape_Data, Collider_Data}
+Model_Data :: union{Shape_Data, st.Collider_Data}
 
 read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: []u8, i: int, collider: bool) -> Model_Data {
     pos_idx := model_data.meshes[i].primitives[0].attributes["POSITION"]
@@ -132,7 +132,7 @@ read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: [
         uv_data := (cast([^][2]f32)uv_start_ptr)[:uv_bytes_len]
 
         sd: Shape_Data
-        sd.vertices = make([]Vertex, len(pos_data))
+        sd.vertices = make([]st.Vertex, len(pos_data))
         sd.indices = make([]u32, len(indices_data))
         for pos, pi in pos_data {
             sd.vertices[pi] = {{pos[0], pos[1], pos[2]}, uv_data[pi], uv_data[pi], norm_data[pi]}
@@ -142,7 +142,7 @@ read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: [
         }
         return sd
     }
-    coll: Collider_Data
+    coll: st.Collider_Data
     coll.vertices = make([][3]f32, len(pos_data)) 
     coll.indices = make([]u16, len(indices_data))
     for pos, pi in pos_data {

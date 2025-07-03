@@ -9,24 +9,6 @@ import "core:time"
 import st "state"
 import enm "state/enums"
 
-Physics_State :: struct{
-    collisions: [dynamic]Collision,
-    debug_render_queue: struct {
-        vertices: [dynamic]Vertex,
-        indices: [enm.ProgramName][dynamic]u16
-    },
-    level_colliders: [enm.SHAPE]Collider_Data,
-    static_collider_vertices: [dynamic][3]f32,
-}
-
-Collision :: struct{
-    id: int,
-    normal: [3]f32,
-    plane_dist: f32,
-    contact_dist: f32,
-    t: f32
-}
-
 //AABB :: struct{
 //    x0: f32,
 //    y0: f32,
@@ -38,7 +20,7 @@ Collision :: struct{
 //
 AABB_INDICES :: []u16 {0, 1, 0, 3, 1, 2, 2, 3, 3, 7, 2, 6, 4, 5, 4, 7, 6, 7, 6, 5, 4, 0, 5, 1}
 
-aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1: f32, aabbz1: f32,) -> [8]Vertex {
+aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1: f32, aabbz1: f32,) -> [8]st.Vertex {
     return {
         {{aabbx0, aabby1, aabbz0}, {0, 0}, {0, 0}, {0, 0, 0}},
         {{aabbx0, aabby0, aabbz0}, {0, 1}, {0, 0}, {0, 0, 0}},
@@ -52,36 +34,12 @@ aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1
     }
 }
 
-init_physics_state :: proc(ps: ^Physics_State) {
-    ps.collisions = make([dynamic]Collision)
-    ps.debug_render_queue.vertices = make([dynamic]Vertex)
-    //ps.level_colliders = make(map[string]Collider_Data)
-    ps.static_collider_vertices = make([dynamic][3]f32)
-    for pn in enm.ProgramName {
-        ps.debug_render_queue.indices[pn] = make([dynamic]u16)
-    }
-}
-
-clear_physics_state :: proc(ps: ^Physics_State) {
+clear_physics_state :: proc(ps: ^st.Physics_State) {
     clear(&ps.collisions)
     clear(&ps.debug_render_queue.vertices)
     for &iq in ps.debug_render_queue.indices {
         clear(&iq)
     }
-}
-
-free_physics_state :: proc(ps: ^Physics_State) {
-    delete(ps.collisions)
-    delete(ps.debug_render_queue.vertices)
-    for &iq in ps.debug_render_queue.indices {
-        delete(iq)
-    }
-    for coll in ps.level_colliders {
-        delete(coll.indices) 
-        delete(coll.vertices)
-    }
-    //delete(ps.level_colliders)
-    delete(ps.static_collider_vertices)
 }
 
 construct_aabb :: proc(vertices: [][3]f32) -> st.AABB {
@@ -98,7 +56,7 @@ construct_aabb :: proc(vertices: [][3]f32) -> st.AABB {
     return {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
 }
 
-get_collisions :: proc(gs: ^st.Game_State, pls: ^Player_State, ps: ^Physics_State, delta_time: f32, elapsed_time: f32) {
+get_collisions :: proc(gs: ^st.Game_State, pls: ^Player_State, ps: ^st.Physics_State, delta_time: f32, elapsed_time: f32) {
     clear_physics_state(ps)
 
     filter: bit_set[st.Level_Geometry_Component_Name; u64] = { .Collider, .Transform }
@@ -152,7 +110,7 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^Player_State, ps: ^Physics_Stat
                         if did_intercept {
                             if pt_inside_triangle(tri_vertex0, tri_vertex1, tri_vertex2, intercept_pt) {
                                 pls.bunny_hop_y = max(f32)
-                                append(&ps.collisions, Collision{
+                                append(&ps.collisions, st.Collision{
                                     id = id,
                                     normal = normal,
                                     contact_dist = 0,
@@ -164,7 +122,7 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^Player_State, ps: ^Physics_Stat
                                 if sphere_t, sphere_q, sphere_hit := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); sphere_hit {
                                     if sphere_t = sphere_t / player_velocity_len; sphere_t <= 1 {
                                         pls.bunny_hop_y = max(f32)
-                                        append(&ps.collisions, Collision{
+                                        append(&ps.collisions, st.Collision{
                                             id = id,
                                             normal = normal,
                                             contact_dist = la.length2(closest_pt - intercept_pt),
@@ -206,7 +164,7 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^Player_State, ps: ^Physics_Stat
     }
 
     best_plane_normal: [3]f32 = {100, 100, 100}
-    most_horizontal_coll: Collision = {} 
+    most_horizontal_coll: st.Collision = {} 
     best_plane_intersection: [3]f32 = {0, 0, 0}
     for coll in ps.collisions {
         contact_ray := -coll.normal * player_velocity_len

@@ -90,8 +90,8 @@ main :: proc () {
     gl.load_up_to(4, 6, SDL.gl_set_proc_address)
 
     // allocate / defer deallocate state structs
-    gs:  st.Game_State;   defer st.free_gamestate(&gs)
-    phs: Physics_State;   defer free_physics_state(&phs)
+    gs:  st.Game_State;    defer st.free_gamestate(&gs)
+    phs: st.Physics_State; defer st.free_physics_state(&phs)
     shs: Shader_State;    defer free_shader_state(&shs)
     rs:  Render_State;    defer free_render_state(&rs)
     pls: Player_State;    defer free_player_state(&pls)
@@ -107,8 +107,8 @@ main :: proc () {
     gs.time_mult = 1
 
     // init physics state
-    phs.collisions = make([dynamic]Collision)
-    phs.debug_render_queue.vertices = make([dynamic]Vertex)
+    phs.collisions = make([dynamic]st.Collision)
+    phs.debug_render_queue.vertices = make([dynamic]st.Vertex)
     phs.static_collider_vertices = make([dynamic][3]f32)
     for pn in enm.ProgramName {
         phs.debug_render_queue.indices[pn] = make([dynamic]u16)
@@ -126,7 +126,7 @@ main :: proc () {
     rs.player_particle_poss = make([dynamic]glm.vec3)
     add_player_sphere_data(&rs)
     {
-        vertices := make([dynamic]Vertex); defer delete(vertices)
+        vertices := make([dynamic]st.Vertex); defer delete(vertices)
         indices := make([dynamic]u32); defer delete(indices)
         for shape in enm.SHAPE {
             rs.vertex_offsets[int(shape)] = u32(len(vertices))
@@ -249,9 +249,9 @@ main :: proc () {
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
     gl.EnableVertexAttribArray(2)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, b_uv))
-    gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, normal))
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(st.Vertex), offset_of(st.Vertex, pos))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(st.Vertex), offset_of(st.Vertex, b_uv))
+    gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(st.Vertex), offset_of(st.Vertex, normal))
 
     gl.BindVertexArray(rs.particle_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
@@ -304,7 +304,7 @@ main :: proc () {
     }
 
     {
-        vertices := make([dynamic]Vertex); defer delete(vertices)
+        vertices := make([dynamic]st.Vertex); defer delete(vertices)
         indices := make([dynamic]u32); defer delete(indices)
         for shape in enm.SHAPE {
             sd := lrs[shape]

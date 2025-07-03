@@ -265,7 +265,7 @@ render :: proc(
     pls: Player_State,
     rs: ^Render_State,
     shst: ^Shader_State,
-    ps: ^Physics_State,
+    ps: ^st.Physics_State,
     time: f64,
     interp_t: f64
 ) {

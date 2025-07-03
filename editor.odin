@@ -33,7 +33,7 @@ SSBO_Registry :: [len(enm.SHAPE) * len(enm.ProgramName)][dynamic]int
 //    dist: int
 //}
 
-get_selected_geometry_dists :: proc(es: ^st.Editor_State, ps: Physics_State, lgs: st.Level_Geometry_State) {
+get_selected_geometry_dists :: proc(es: ^st.Editor_State, ps: st.Physics_State, lgs: st.Level_Geometry_State) {
     clear(&es.connections)
     selected_geometry := lgs[es.selected_entity]
     for lg, idx in lgs {
@@ -49,7 +49,7 @@ get_selected_geometry_dists :: proc(es: ^st.Editor_State, ps: Physics_State, lgs
     }
 }
 
-get_geometry_dist :: proc(ps: Physics_State, lga: st.Level_Geometry, lgb: st.Level_Geometry) -> (s0: [3]f32, s1: [3]f32, shortest_dist := max(f32)) {
+get_geometry_dist :: proc(ps: st.Physics_State, lga: st.Level_Geometry, lgb: st.Level_Geometry) -> (s0: [3]f32, s1: [3]f32, shortest_dist := max(f32)) {
     shape_data_a := ps.level_colliders[lga.shape]
     shape_data_b := ps.level_colliders[lgb.shape]
     mat_a := trans_to_mat4(lga.transform)
@@ -96,7 +96,7 @@ editor_move_camera :: proc(lgs: ^st.Level_Geometry_State, es: ^st.Editor_State, 
     cs.position = math.lerp(cs.position, tgt, f32(0.075))
 }
 
-editor_move_object :: proc(gs: ^st.Game_State, lrs: Level_Resources, es: ^st.Editor_State, is: st.Input_State, ps: ^Physics_State, rs: ^Render_State, delta_time: f32) {
+editor_move_object :: proc(gs: ^st.Game_State, lrs: Level_Resources, es: ^st.Editor_State, is: st.Input_State, ps: ^st.Physics_State, rs: ^Render_State, delta_time: f32) {
     lgs := &gs.level_geometry
     selected_obj := &lgs[es.selected_entity]
     rotating := is.r_pressed
@@ -255,14 +255,14 @@ editor_save_changes :: proc(lgs:^st.Level_Geometry_State, is: st.Input_State, es
     }
 }
 
-remove_geometry :: proc(gs: ^st.Game_State, lrs: Level_Resources, ps: ^Physics_State, rs: ^Render_State, es: ^st.Editor_State) {
+remove_geometry :: proc(gs: ^st.Game_State, lrs: Level_Resources, ps: ^st.Physics_State, rs: ^Render_State, es: ^st.Editor_State) {
     es := &gs.editor_state
     ordered_remove_soa(&gs.level_geometry, es.selected_entity) 
     es.selected_entity = max(0, min(len(gs.level_geometry) - 1, es.selected_entity - 1))
     editor_reload_level_geometry(gs, lrs, ps, rs)
 }
 
-add_geometry :: proc(gs: ^st.Game_State, lrs: Level_Resources, ps: ^Physics_State, rs: ^Render_State, lg_in: st.Level_Geometry) {
+add_geometry :: proc(gs: ^st.Game_State, lrs: Level_Resources, ps: ^st.Physics_State, rs: ^Render_State, lg_in: st.Level_Geometry) {
     es := &gs.editor_state
     lg := lg_in
     es.selected_entity = len(gs.level_geometry)
