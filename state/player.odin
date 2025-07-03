@@ -2,7 +2,7 @@ package state
 
 import glm "core:math/linalg/glsl"
 
-TRAIL_SIZE :: 50 
+import const "constants"
 
 Player_State :: struct {
     state: Player_States,
@@ -37,7 +37,7 @@ Player_State :: struct {
 
     trail_sample: [3]glm.vec3,
     prev_trail_sample: [3]glm.vec3,
-    trail: RingBuffer(TRAIL_SIZE, [3]f32),
+    trail: RingBuffer(const.TRAIL_SIZE, [3]f32),
 
     particle_displacement: [3]f32,
     tgt_particle_displacement: [3]f32

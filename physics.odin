@@ -1,4 +1,5 @@
 package main
+
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 import "core:fmt"
@@ -6,8 +7,10 @@ import "core:math"
 import "core:slice"
 import "core:sort"
 import "core:time"
+
 import st "state"
 import enm "state/enums"
+import const "state/constants"
 
 AABB_INDICES :: []u16 {0, 1, 0, 3, 1, 2, 2, 3, 3, 7, 2, 6, 4, 5, 4, 7, 6, 7, 6, 5, 4, 0, 5, 1}
 
@@ -127,7 +130,7 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^st.Player_State, ps: ^st.Physic
                     }
                     if plane_t, plane_q, plane_hit := ray_plane_intersection(ppos32, pls.contact_ray, normal, plane_dist); plane_hit {
                         closest_pt := closest_triangle_pt(tri_vertex0, tri_vertex1, tri_vertex2, plane_q)
-                        if la.length2(closest_pt - plane_q) < GROUNDED_RADIUS2 {
+                        if la.length2(closest_pt - plane_q) < const.GROUNDED_RADIUS2 {
                             got_contact_ray_col = true
                             if pls.state == .ON_GROUND {
                                 //gs.player_state.position = plane_q + normal * GROUND_OFFSET 
@@ -161,7 +164,7 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^st.Player_State, ps: ^st.Physic
         contact_ray := -coll.normal * player_velocity_len
         plane_t, plane_q, plane_ok := ray_plane_intersection(ppos32, contact_ray, coll.normal, coll.plane_dist);
         //if plane_ok && la.length2(coll.closest_pt - plane_q) < GROUNDED_RADIUS2 {
-        if coll.contact_dist < GROUNDED_RADIUS2 {
+        if coll.contact_dist < const.GROUNDED_RADIUS2 {
             // ground_ray close enough to surface
             if abs(coll.normal.y) < best_plane_normal.y {
                 best_plane_normal = coll.normal
@@ -182,7 +185,7 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^st.Player_State, ps: ^st.Physic
             //pls.position = best_plane_intersection + best_plane_normal * GROUND_OFFSET 
             pls.ground_x = la.normalize(ground_x - la.dot(ground_x, best_plane_normal) * best_plane_normal)
             pls.ground_z = la.normalize(ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal)
-            pls.contact_ray = -best_plane_normal * GROUND_RAY_LEN
+            pls.contact_ray = -best_plane_normal * const.GROUND_RAY_LEN
             pls.state = .ON_GROUND
         } else if .2 <= best_plane_normal.y && best_plane_normal.y < .85 {
             if pls.state != .ON_SLOPE {
@@ -192,14 +195,14 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^st.Player_State, ps: ^st.Physic
                 pls.ground_z = ground_z - la.dot(ground_z, best_plane_normal) * best_plane_normal
                 pls.state = .ON_SLOPE
             }
-            pls.contact_ray = -best_plane_normal * GROUND_RAY_LEN
+            pls.contact_ray = -best_plane_normal * const.GROUND_RAY_LEN
         } else if best_plane_normal.y < .2 && pls.state != .ON_GROUND {
             if pls.state != .ON_WALL {
                 pls.touch_pt = pls.position - {0, 0, 0.5}
                 pls.touch_time = elapsed_time
             }
             pls.state = .ON_WALL
-            pls.contact_ray = -best_plane_normal * GROUND_RAY_LEN
+            pls.contact_ray = -best_plane_normal * const.GROUND_RAY_LEN
         }
     }
 }

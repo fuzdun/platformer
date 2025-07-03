@@ -1,9 +1,12 @@
 package main
+
 import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
+
 import st "state"
+import const "state/constants"
 
 CAMERA_PLAYER_Y_OFFSET :: 15
 CAMERA_PLAYER_Z_OFFSET :: 40 
@@ -28,7 +31,7 @@ move_camera :: proc(ps: st.Player_State, cs: ^st.Camera_State, elapsed_time: f64
     cs.prev_target = cs.target
     ppos := ps.position
     if ps.dashing {
-        dash_t := (f32(elapsed_time) - ps.dash_time) / DASH_LEN
+        dash_t := (f32(elapsed_time) - ps.dash_time) / const.DASH_LEN
         dash_delta := ps.dash_end_pos - ps.dash_start_pos
         ppos = ps.dash_start_pos + dash_delta * dash_t
     }

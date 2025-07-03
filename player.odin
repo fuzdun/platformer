@@ -1,51 +1,12 @@
 package main
+
 import "core:math"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import "core:fmt"
+
 import st "state"
-
-// move speed
-MAX_PLAYER_SPEED: f32: 50.0
-MAX_FALL_SPEED: f32: 60.0
-AIR_SPEED :: 100.0
-SLOPE_SPEED :: 80.0 
-P_ACCEL: f32: 150.0
-GROUND_BUNNY_V_SPEED: f32: 70
-GROUND_BUNNY_H_SPEED: f32: 30
-MIN_BUNNY_XZ_VEL: f32: 20.0
-
-// jump
-P_JUMP_SPEED: f32: 60.0
-WALL_JUMP_FORCE :: 25 
-SLOPE_V_JUMP_FORCE :: 50 
-SLOPE_JUMP_FORCE :: 40
-
-// forces
-GROUND_FRICTION :: 0.05
-GRAV: f32: 135
-WALL_GRAV: f32: 20 
-SLOPE_GRAV: f32: 60 
-
-// input
-COYOTE_TIME ::  150
-BUNNY_DASH_DEBOUNCE: f32: 400
-BUNNY_WINDOW: f32: 100
-
-// dash
-DASH_SPD: f32: 75.0
-DASH_LEN: f32: 175 
-DASH_DIST: f32: 15.0
-
-// physics
-GROUND_RAY_LEN ::  2.0
-GROUNDED_RADIUS: f32: 0.01 
-GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
-GROUND_OFFSET: f32 = 1.0 
-
-// rendering
-PARTICLE_DISPLACEMENT_LERP :: 0.25
-TGT_PARTICLE_DISPLACEMENT_LERP :: 0.4
+import const "state/constants"
 
 update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapsed_time: f64, delta_time: f32) {
     is := &gs.input_state
@@ -55,11 +16,11 @@ update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapse
     pls.prev_trail_sample = pls.trail_sample
     pls.trail_sample = {st.ring_buffer_at(pls.trail, -4), st.ring_buffer_at(pls.trail, -8), st.ring_buffer_at(pls.trail, -12)}
 
-    move_spd := P_ACCEL
+    move_spd := const.P_ACCEL
     if pls.state == .ON_SLOPE {
-        move_spd = SLOPE_SPEED 
+        move_spd = const.SLOPE_SPEED 
     } else if pls.state == .IN_AIR {
-        move_spd = AIR_SPEED
+        move_spd = const.AIR_SPEED
     }
 
     // process directional input
@@ -104,25 +65,25 @@ update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapse
     }
 
     // clamp xz velocity
-    clamped_xz := la.clamp_length(pls.velocity.xz, MAX_PLAYER_SPEED)
+    clamped_xz := la.clamp_length(pls.velocity.xz, const.MAX_PLAYER_SPEED)
     pls.velocity.xz = math.lerp(pls.velocity.xz, clamped_xz, f32(0.05))
-    pls.velocity.y = math.clamp(pls.velocity.y, -MAX_FALL_SPEED, MAX_FALL_SPEED)
+    pls.velocity.y = math.clamp(pls.velocity.y, -const.MAX_FALL_SPEED, const.MAX_FALL_SPEED)
 
     // apply ground friction
     if pls.state == .ON_GROUND && !got_dir_input {
-        pls.velocity *= math.pow(GROUND_FRICTION, delta_time)
+        pls.velocity *= math.pow(const.GROUND_FRICTION, delta_time)
     }
 
     // apply gravity
     if pls.state != .ON_GROUND {
         down: [3]f32 = {0, -1, 0}
         norm_contact := la.normalize(pls.contact_ray)
-        grav_force := GRAV
+        grav_force := const.GRAV
         if pls.state == .ON_SLOPE {
-            grav_force = SLOPE_GRAV
+            grav_force = const.SLOPE_GRAV
         }
         if pls.state == .ON_WALL {
-            grav_force = WALL_GRAV
+            grav_force = const.WALL_GRAV
         }
         if pls.state == .ON_WALL || pls.state == .ON_SLOPE {
             down -= la.dot(norm_contact, down) * norm_contact
@@ -131,15 +92,15 @@ update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapse
     }
 
     // bunny hop
-    can_bunny_hop := f32(elapsed_time) - pls.last_dash > BUNNY_DASH_DEBOUNCE
-    got_bunny_hop_input := pls.state != .IN_AIR && math.abs(pls.touch_time - pls.jump_pressed_time) < BUNNY_WINDOW
+    can_bunny_hop := f32(elapsed_time) - pls.last_dash > const.BUNNY_DASH_DEBOUNCE
+    got_bunny_hop_input := pls.state != .IN_AIR && math.abs(pls.touch_time - pls.jump_pressed_time) < const.BUNNY_WINDOW
     if got_bunny_hop_input && can_bunny_hop {
         pls.can_press_dash = true
         pls.bunny_hop_y = pls.position.y
         pls.state = .IN_AIR
-        pls.velocity.y = GROUND_BUNNY_V_SPEED
-        if la.length(pls.velocity.xz) > MIN_BUNNY_XZ_VEL {
-            pls.velocity.xz += la.normalize(pls.velocity.xz) * GROUND_BUNNY_H_SPEED
+        pls.velocity.y = const.GROUND_BUNNY_V_SPEED
+        if la.length(pls.velocity.xz) > const.MIN_BUNNY_XZ_VEL {
+            pls.velocity.xz += la.normalize(pls.velocity.xz) * const.GROUND_BUNNY_H_SPEED
         }
         pls.crunch_pt = pls.position - {0, 0, 0.5}
         pls.crunch_time = f32(elapsed_time)
@@ -148,26 +109,26 @@ update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapse
 
     // jumps
     pressed_jump := is.z_pressed && pls.can_press_jump
-    ground_jumped := pressed_jump && (pls.state == .ON_GROUND || (f32(elapsed_time) - pls.left_ground < COYOTE_TIME))
-    slope_jumped := pressed_jump && (pls.state == .ON_SLOPE || (f32(elapsed_time) - pls.left_slope < COYOTE_TIME))
-    wall_jumped := pressed_jump && (pls.state == .ON_WALL || (f32(elapsed_time) - pls.left_wall < COYOTE_TIME))
+    ground_jumped := pressed_jump && (pls.state == .ON_GROUND || (f32(elapsed_time) - pls.left_ground < const.COYOTE_TIME))
+    slope_jumped := pressed_jump && (pls.state == .ON_SLOPE || (f32(elapsed_time) - pls.left_slope < const.COYOTE_TIME))
+    wall_jumped := pressed_jump && (pls.state == .ON_WALL || (f32(elapsed_time) - pls.left_wall < const.COYOTE_TIME))
 
 
     // normal jump
     if ground_jumped {
-        pls.velocity.y = P_JUMP_SPEED
+        pls.velocity.y = const.P_JUMP_SPEED
         pls.state = .IN_AIR
 
     // slope jump
     } else if slope_jumped {
-        pls.velocity += -la.normalize(pls.contact_ray) * SLOPE_JUMP_FORCE
-        pls.velocity.y = SLOPE_V_JUMP_FORCE
+        pls.velocity += -la.normalize(pls.contact_ray) * const.SLOPE_JUMP_FORCE
+        pls.velocity.y = const.SLOPE_V_JUMP_FORCE
         pls.state = .IN_AIR
 
     // wall jump
     } else if wall_jumped {
-        pls.velocity.y = P_JUMP_SPEED
-        pls.velocity += -pls.contact_ray * WALL_JUMP_FORCE 
+        pls.velocity.y = const.P_JUMP_SPEED
+        pls.velocity += -pls.contact_ray * const.WALL_JUMP_FORCE 
         pls.state = .IN_AIR
     }
 
@@ -178,10 +139,10 @@ update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapse
     }
 
     // lerp particle displacement toward target
-    pls.particle_displacement = la.lerp(pls.particle_displacement, pls.tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
-    pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, pls.velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
+    pls.particle_displacement = la.lerp(pls.particle_displacement, pls.tgt_particle_displacement, const.PARTICLE_DISPLACEMENT_LERP)
+    pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, pls.velocity, const.TGT_PARTICLE_DISPLACEMENT_LERP)
 
-    // dash
+    // dash 
     pressed_dash := is.x_pressed && pls.can_press_dash
     if pressed_dash && pls.velocity != 0 {
         pls.can_press_dash = false
@@ -189,24 +150,24 @@ update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapse
         pls.dash_start_pos = pls.position
         dash_input := input_dir == 0 ? la.normalize0(pls.velocity.xz) : input_dir
         pls.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
-        pls.dash_end_pos = pls.position + DASH_DIST * pls.dash_dir
+        pls.dash_end_pos = pls.position + const.DASH_DIST * pls.dash_dir
         pls.dash_time = f32(elapsed_time)
     }
 
     //end dash
     hit_surface := pls.state == .ON_WALL || grounded
-    dash_expired := f32(elapsed_time) > pls.dash_time + DASH_LEN
+    dash_expired := f32(elapsed_time) > pls.dash_time + const.DASH_LEN
     if pls.dashing && (hit_surface || dash_expired){
         pls.dash_end_time = f32(elapsed_time)
         pls.dashing = false
-        pls.velocity = la.normalize(pls.dash_end_pos - pls.dash_start_pos) * DASH_SPD
+        pls.velocity = la.normalize(pls.dash_end_pos - pls.dash_start_pos) * const.DASH_SPD
         pls.position = pls.dash_end_pos
     }
      
     // dashing
     if pls.dashing {
         pls.velocity = 0
-        dash_t := (f32(elapsed_time) - pls.dash_time) / DASH_LEN
+        dash_t := (f32(elapsed_time) - pls.dash_time) / const.DASH_LEN
         dash_delta := pls.dash_end_pos - pls.dash_start_pos
         pls.position = pls.dash_start_pos; //pls.dash_start_pos + dash_delta * dash_t
     }
@@ -214,7 +175,7 @@ update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapse
     // bunny hop time dilation
     if pls.state != .ON_GROUND && f32(elapsed_time) - pls.crunch_time < 1000 {
         if pls.position.y > pls.bunny_hop_y {
-            fact := abs(pls.velocity.y) / GROUND_BUNNY_V_SPEED
+            fact := abs(pls.velocity.y) / const.GROUND_BUNNY_V_SPEED
             gs.time_mult = clamp(fact * fact * 4.5, 1.15, 1.5)
         } else {
             gs.time_mult = f32(math.lerp(gs.time_mult, 1, f32(0.05)))
