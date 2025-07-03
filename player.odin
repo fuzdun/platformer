@@ -44,19 +44,16 @@ GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
 GROUND_OFFSET: f32 = 1.0 
 
 // rendering
-TRAIL_SIZE :: 50 
 PARTICLE_DISPLACEMENT_LERP :: 0.25
 TGT_PARTICLE_DISPLACEMENT_LERP :: 0.4
 
-
-
-update_player_velocity :: proc(gs: ^st.Game_State, pls: ^Player_State, elapsed_time: f64, delta_time: f32) {
+update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapsed_time: f64, delta_time: f32) {
     is := &gs.input_state
 
     // update trail
-    ring_buffer_push(&pls.trail, [3]f32 {f32(pls.position.x), f32(pls.position.y), f32(pls.position.z)})
+    st.ring_buffer_push(&pls.trail, [3]f32 {f32(pls.position.x), f32(pls.position.y), f32(pls.position.z)})
     pls.prev_trail_sample = pls.trail_sample
-    pls.trail_sample = {ring_buffer_at(pls.trail, -4), ring_buffer_at(pls.trail, -8), ring_buffer_at(pls.trail, -12)}
+    pls.trail_sample = {st.ring_buffer_at(pls.trail, -4), st.ring_buffer_at(pls.trail, -8), st.ring_buffer_at(pls.trail, -12)}
 
     move_spd := P_ACCEL
     if pls.state == .ON_SLOPE {
@@ -243,7 +240,7 @@ update_player_velocity :: proc(gs: ^st.Game_State, pls: ^Player_State, elapsed_t
 
 }
 
-move_player :: proc(gs: ^st.Game_State, pls: ^Player_State, phs: ^st.Physics_State, elapsed_time: f32, delta_time: f32) {
+move_player :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: ^st.Physics_State, elapsed_time: f32, delta_time: f32) {
     //pls := &gs.player_state
     pls.prev_position = pls.position
 
@@ -282,15 +279,15 @@ move_player :: proc(gs: ^st.Game_State, pls: ^Player_State, phs: ^st.Physics_Sta
     }
 }
 
-interpolated_player_pos :: proc(ps: Player_State, t: f32) -> [3]f32 {
+interpolated_player_pos :: proc(ps: st.Player_State, t: f32) -> [3]f32 {
     return math.lerp(ps.prev_position, ps.position, t) 
 }
 
-interpolated_trail :: proc(ps: Player_State, t: f32) -> [3]glm.vec3 {
+interpolated_trail :: proc(ps: st.Player_State, t: f32) -> [3]glm.vec3 {
     return math.lerp(ps.prev_trail_sample, ps.trail_sample, t)
 }
 
-interpolated_player_matrix :: proc(ps: Player_State, t: f32) -> matrix[4, 4]f32 {
+interpolated_player_matrix :: proc(ps: st.Player_State, t: f32) -> matrix[4, 4]f32 {
     i_pos := math.lerp(ps.prev_position, ps.position, t) 
     rot := I_MAT
     offset := glm.mat4Translate({f32(i_pos.x), f32(i_pos.y), f32(i_pos.z)})

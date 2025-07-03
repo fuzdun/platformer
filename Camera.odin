@@ -21,14 +21,7 @@ CAMERA_Z_LERP :: 0.15
 
 CAMERA_PLAYER_X_OFFSET :: 0 
 
-//Camera_State :: struct {
-//    position: [3]f32,
-//    target: [3]f32,
-//    prev_target: [3]f32,
-//    prev_position: [3]f32,
-//}
-
-move_camera :: proc(ps: Player_State, cs: ^st.Camera_State, elapsed_time: f64, delta_time: f32) {
+move_camera :: proc(ps: st.Player_State, cs: ^st.Camera_State, elapsed_time: f64, delta_time: f32) {
     //bef_thresh := ps.prev_position.z >= -750 || ps.prev_position.y < - 950
     // bef_thresh := true
     cs.prev_position = cs.position

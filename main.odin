@@ -94,7 +94,7 @@ main :: proc () {
     phs: st.Physics_State; defer st.free_physics_state(&phs)
     shs: Shader_State;    defer free_shader_state(&shs)
     rs:  Render_State;    defer free_render_state(&rs)
-    pls: Player_State;    defer free_player_state(&pls)
+    pls: st.Player_State;    defer st.free_player_state(&pls)
     lrs: Level_Resources; defer free_level_resources(&lrs)
 
     // init game state
@@ -143,7 +143,7 @@ main :: proc () {
     pls.can_press_jump = false
     pls.ground_x = {1, 0, 0}
     pls.ground_z = {0, 0, -1}
-    ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
+    st.ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
 
     // load blender meshes
     for shape in enm.SHAPE {
@@ -340,8 +340,8 @@ main :: proc () {
     snap_hz = i64(clocks_per_second) / snap_hz
     snap_vals : [8]i64 = { snap_hz, snap_hz * 2, snap_hz * 3, snap_hz * 4, snap_hz * 5, snap_hz * 6, snap_hz * 7, snap_hz * 8 }
     
-    frame_time_buffer : RingBuffer(4, i64)
-    ring_buffer_init(&frame_time_buffer, target_frame_clocks)
+    frame_time_buffer : st.RingBuffer(4, i64)
+    st.ring_buffer_init(&frame_time_buffer, target_frame_clocks)
 
     current_time, previous_time, delta_time, averager_res, accumulator : i64
     previous_time = i64(SDL.GetPerformanceCounter())
@@ -371,8 +371,8 @@ main :: proc () {
             }
         }
 
-        ring_buffer_push(&frame_time_buffer, delta_time)
-        delta_time = ring_buffer_average(frame_time_buffer)
+        st.ring_buffer_push(&frame_time_buffer, delta_time)
+        delta_time = st.ring_buffer_average(frame_time_buffer)
         averager_res += delta_time % 4 
         delta_time += averager_res / 4
         averager_res %= 4

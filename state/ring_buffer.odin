@@ -1,4 +1,4 @@
-package main
+package state
 
 RingBuffer :: struct($N: int, $T: typeid) {
     insert_at : int,

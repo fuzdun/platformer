@@ -3,21 +3,6 @@ package state
 import la "core:math/linalg"
 import enm "enums"
 
-CAMERA_PLAYER_X_OFFSET :: 0 
-CAMERA_PLAYER_Y_OFFSET :: 15
-CAMERA_PLAYER_Z_OFFSET :: 40 
-CAMERA_POS_LERP :: 0.03
-CAMERA_X_LERP :: 0.20
-CAMERA_Y_LERP :: 0.07
-CAMERA_Z_LERP :: 0.15
-
-// CAMERA_PLAYER_Y_OFFSET :: 00
-// CAMERA_PLAYER_Z_OFFSET :: 20 
-// CAMERA_POS_LERP :: 1.00
-// CAMERA_X_LERP :: 1.00
-// CAMERA_Y_LERP :: 1.00
-// CAMERA_Z_LERP :: 1.00
-
 Game_State :: struct {
     level_geometry: Level_Geometry_State,
     input_state: Input_State,

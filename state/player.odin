@@ -1,6 +1,8 @@
-package main
+package state
 
 import glm "core:math/linalg/glsl"
+
+TRAIL_SIZE :: 50 
 
 Player_State :: struct {
     state: Player_States,

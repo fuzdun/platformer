@@ -197,7 +197,7 @@ update_vertices :: proc(gs: ^st.Game_State, lrs: Level_Resources, rs: ^Render_St
     //slice.sort_by(rs.static_transforms[:], proc(a: glm.mat4, b: glm.mat4) -> bool { return a[3][2] < b[3][2] })
 }
 
-update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) {
+update_player_particles :: proc(rs: ^Render_State, ps: st.Player_State, time: f32) {
     vertical_count := PLAYER_PARTICLE_STACK_COUNT
     horizontal_count := PLAYER_PARTICLE_SECTOR_COUNT
     x, y, z, xz: f32
@@ -262,7 +262,7 @@ update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) 
 render :: proc(
     gs: ^st.Game_State,
     lrs: Level_Resources,
-    pls: Player_State,
+    pls: st.Player_State,
     rs: ^Render_State,
     shst: ^Shader_State,
     ps: ^st.Physics_State,
