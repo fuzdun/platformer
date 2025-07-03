@@ -22,13 +22,6 @@ Collision :: struct{
     t: f32
 }
 
-Vertex :: struct{
-    pos: glm.vec3,
-    uv: glm.vec2,
-    b_uv: glm.vec2,
-    normal: glm.vec3
-}
-
 Collider_Data :: struct{
     vertices: [][3]f32,
     indices: []u16

@@ -28,7 +28,7 @@ generate_index_range :: proc(count: int, out: ^[dynamic]u32) {
     }  
 }
 
-get_ssbo_idx :: proc(lg: st.Level_Geometry, shader: enm.ProgramName, rs: Render_State) -> int {
+get_ssbo_idx :: proc(lg: st.Level_Geometry, shader: enm.ProgramName, rs: st.Render_State) -> int {
     group_idx := int(shader) * len(enm.SHAPE) + int(lg.shape)
     group_offset := rs.render_group_offsets[group_idx]
     return int(group_offset) + lg.ssbo_indexes[shader]

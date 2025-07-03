@@ -2,7 +2,7 @@ package main
 import "core:fmt"
 import st "state"
 
-game_update :: proc(gs: ^st.Game_State, lrs: Level_Resources, pls: ^st.Player_State, ps: ^st.Physics_State, rs: ^Render_State, elapsed_time: f64, delta_time: f32) {
+game_update :: proc(gs: ^st.Game_State, lrs: Level_Resources, pls: ^st.Player_State, ps: ^st.Physics_State, rs: ^st.Render_State, elapsed_time: f64, delta_time: f32) {
     //fmt.println("============update===========")
     if EDIT {
         get_selected_geometry_dists(&gs.editor_state, ps^, gs.level_geometry)

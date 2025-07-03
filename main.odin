@@ -92,10 +92,10 @@ main :: proc () {
     // allocate / defer deallocate state structs
     gs:  st.Game_State;    defer st.free_gamestate(&gs)
     phs: st.Physics_State; defer st.free_physics_state(&phs)
-    shs: Shader_State;    defer free_shader_state(&shs)
-    rs:  Render_State;    defer free_render_state(&rs)
-    pls: st.Player_State;    defer st.free_player_state(&pls)
-    lrs: Level_Resources; defer free_level_resources(&lrs)
+    shs: Shader_State;     defer free_shader_state(&shs)
+    rs:  st.Render_State;  defer st.free_render_state(&rs)
+    pls: st.Player_State;  defer st.free_player_state(&pls)
+    lrs: Level_Resources;  defer free_level_resources(&lrs)
 
     // init game state
     gs.level_geometry = make(st.Level_Geometry_State)
@@ -185,7 +185,7 @@ main :: proc () {
     //return true
     ft.init_free_type(&rs.ft_lib)
     ft.new_face(rs.ft_lib, "fonts/0xProtoNerdFont-Bold.ttf", 0, &rs.face)
-    rs.char_tex_map = make(map[rune]Char_Tex)
+    rs.char_tex_map = make(map[rune]st.Char_Tex)
     ft.set_pixel_sizes(rs.face, 0, 256)
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
@@ -211,7 +211,7 @@ main :: proc () {
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        ct: Char_Tex = {
+        ct: st.Char_Tex = {
             id = new_tex,
             size = {i32(rs.face.glyph.bitmap.width), i32(rs.face.glyph.bitmap.rows)},
             bearing = {i32(rs.face.glyph.bitmap_left), i32(rs.face.glyph.bitmap_top)},
@@ -257,8 +257,8 @@ main :: proc () {
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, position))
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(st.Quad_Vertex), offset_of(st.Quad_Vertex, position))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(st.Quad_Vertex), offset_of(st.Quad_Vertex, uv))
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
     gl.EnableVertexAttribArray(2)
     gl.VertexAttribPointer(2, 4, gl.FLOAT, false, 0, 0)
@@ -271,24 +271,24 @@ main :: proc () {
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(bv[0]) * len(bv), &bv[0], gl.STATIC_DRAW)
     gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, position))
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(st.Quad_Vertex), offset_of(st.Quad_Vertex, position))
     gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(st.Quad_Vertex), offset_of(st.Quad_Vertex, uv))
 
     gl.BindVertexArray(rs.text_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.text_vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, size_of(Quad_Vertex4) * 4, nil, gl.DYNAMIC_DRAW);
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(st.Quad_Vertex4) * 4, nil, gl.DYNAMIC_DRAW);
     gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(Quad_Vertex4), offset_of(Quad_Vertex4, position))
+    gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(st.Quad_Vertex4), offset_of(st.Quad_Vertex4, position))
     gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex4), offset_of(Quad_Vertex4, uv))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(st.Quad_Vertex4), offset_of(st.Quad_Vertex4, uv))
 
     gl.BindVertexArray(rs.lines_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
     gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Line_Vertex), offset_of(Line_Vertex, position))
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(st.Line_Vertex), offset_of(st.Line_Vertex, position))
     gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 1, gl.FLOAT, false, size_of(Line_Vertex), offset_of(Line_Vertex, t))
+    gl.VertexAttribPointer(1, 1, gl.FLOAT, false, size_of(st.Line_Vertex), offset_of(st.Line_Vertex, t))
 
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     gl.BindVertexArray(0)

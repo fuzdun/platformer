@@ -10,7 +10,7 @@ Particle_Vertex :: struct{
     uv: glm.vec2
 }
 
-Level_Resources :: [enm.SHAPE]Shape_Data
+Level_Resources :: [enm.SHAPE]st.Shape_Data
 
 free_level_resources :: proc(lr: ^Level_Resources) {
     for sd in lr {
@@ -18,12 +18,6 @@ free_level_resources :: proc(lr: ^Level_Resources) {
         delete(sd.vertices)
     }
 }
-
-Shape_Data :: struct{
-    vertices: []st.Vertex,
-    indices: []u32
-}
-
 
 // CORE_RADIUS :: 0.5
 CORE_RADIUS :: 1.0
@@ -34,7 +28,7 @@ SPHERE_STACK_COUNT :: 30
 SPHERE_V_COUNT :: (SPHERE_STACK_COUNT + 1) * (SPHERE_SECTOR_COUNT + 1)
 SPHERE_I_COUNT :: (SPHERE_STACK_COUNT - 1) * SPHERE_SECTOR_COUNT * 6 
 
-add_player_sphere_data :: proc(rs: ^Render_State) {
+add_player_sphere_data :: proc(rs: ^st.Render_State) {
     vertical_count := SPHERE_STACK_COUNT
     horizontal_count := SPHERE_SECTOR_COUNT
     x, y, z, xz: f32

@@ -6,6 +6,8 @@ import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import enm "state/enums"
 
+import st "state"
+
 //ProgramName :: enum{
 //    Player,
 //    Trail,
@@ -159,7 +161,7 @@ shader_program_from_file :: proc(filename: string, type: gl.Shader_Type) -> (u32
     return shader_id, true
 }
 
-use_shader :: proc(sh: ^Shader_State, rs: ^Render_State, name: enm.ProgramName) {
+use_shader :: proc(sh: ^Shader_State, rs: ^st.Render_State, name: enm.ProgramName) {
     if name in sh.active_programs {
         gl.UseProgram(sh.active_programs[name].id)
         sh.loaded_program = sh.active_programs[name].id

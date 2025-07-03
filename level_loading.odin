@@ -33,7 +33,7 @@ encode_test_level_cbor :: proc(lgs: ^st.Level_Geometry_State) {
     os.write_entire_file("levels/test_level.bin", bin)
 }
 
-load_level_geometry :: proc(gs: ^st.Game_State, lrs: Level_Resources, ps: ^st.Physics_State, rs: ^Render_State, filename: string) {
+load_level_geometry :: proc(gs: ^st.Game_State, lrs: Level_Resources, ps: ^st.Physics_State, rs: ^st.Render_State, filename: string) {
     level_filename := str.concatenate({"levels/", filename, ".bin"})
     defer delete(level_filename)
     level_bin, read_err := os.read_entire_file(level_filename)
@@ -88,14 +88,14 @@ load_level_geometry :: proc(gs: ^st.Game_State, lrs: Level_Resources, ps: ^st.Ph
     init_level_render_data(lrs, rs)
 }
 
-editor_reload_level_geometry :: proc(gs: ^st.Game_State, lrs: Level_Resources, ps: ^st.Physics_State, rs: ^Render_State) {
+editor_reload_level_geometry :: proc(gs: ^st.Game_State, lrs: Level_Resources, ps: ^st.Physics_State, rs: ^st.Render_State) {
     current_level_geometry := make(#soa[]st.Level_Geometry, len(gs.level_geometry))
     defer delete_soa(current_level_geometry)
     for lg, idx in gs.level_geometry {
         current_level_geometry[idx] = lg
     }
     clear_soa(&gs.level_geometry)
-    clear_render_state(rs)
+    st.clear_render_state(rs)
     add_geometry_to_renderer(gs, rs, ps, current_level_geometry[:])
     init_level_render_data(lrs, rs)
 }
@@ -120,9 +120,9 @@ add_geometry_to_physics :: proc(ps: ^st.Physics_State, lgs_in: #soa[]st.Level_Ge
     }
 }
 
-add_geometry_to_renderer :: proc(gs: ^st.Game_State, rs: ^Render_State, ps: ^st.Physics_State, lgs_in: #soa[]st.Level_Geometry) {
+add_geometry_to_renderer :: proc(gs: ^st.Game_State, rs: ^st.Render_State, ps: ^st.Physics_State, lgs_in: #soa[]st.Level_Geometry) {
     // initialize ssbo_indexes
-    clear_render_state(rs)
+    st.clear_render_state(rs)
     for &lg in lgs_in {
         for &idx in lg.ssbo_indexes {
             idx = -1 
@@ -160,7 +160,7 @@ add_geometry_to_renderer :: proc(gs: ^st.Game_State, rs: ^Render_State, ps: ^st.
     }
 }
 
-init_level_render_data :: proc(lrs: Level_Resources, rs: ^Render_State) {
+init_level_render_data :: proc(lrs: Level_Resources, rs: ^st.Render_State) {
     vertices := make([dynamic]st.Vertex); defer delete(vertices)
     indices := make([dynamic]u32); defer delete(indices)
     for shape in enm.SHAPE {

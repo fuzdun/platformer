@@ -17,156 +17,31 @@ import "core:os"
 import st "state"
 import enm "state/enums"
 
-PLAYER_PARTICLE_STACK_COUNT :: 5
-PLAYER_PARTICLE_SECTOR_COUNT :: 10
-
-PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT + 2
 I_MAT :: glm.mat4(1.0)
-
-//SHAPE :: enum{
-//    CUBE,
-//    WEIRD,
-//}
 
 SHAPE_FILENAME := [enm.SHAPE]string {
     .CUBE = "basic_cube",
     .WEIRD = "weird"
 }
-
-Char_Tex :: struct {
-    id: u32,
-    size: glm.ivec2,
-    bearing: glm.ivec2,
-    next: u32
-}
-
-Quad_Vertex :: struct {
-    position: glm.vec3,
-    uv: glm.vec2
-}
-
-Line_Vertex :: struct {
-    position: glm.vec3,
-    t: f32
-}
-
-Quad_Vertex4 :: struct {
-    position: glm.vec4,
-    uv: glm.vec2
-}
-
-TEXT_VERTICES :: [4]Quad_Vertex4 {
+TEXT_VERTICES :: [4]st.Quad_Vertex4 {
     {{-1, -1, 0, 1}, {0, 0}},
     {{1, -1, 0, 1}, {1, 0}},
     {{-1, 1, 0, 1}, {0, 1}},
     {{1, 1, 0, 1}, {1, 1}}
 }
-
-BACKGROUND_VERTICES :: [4]Quad_Vertex {
+BACKGROUND_VERTICES :: [4]st.Quad_Vertex {
     {{-1, -1, -1}, {0, 0}},
     {{1, -1, -1}, {1, 0}},
     {{-1, 1, -1}, {0, 1}},
     {{1, 1, -1}, {1, 1}},
 }
-
-PARTICLE_VERTICES :: [4]Quad_Vertex {
+PARTICLE_VERTICES :: [4]st.Quad_Vertex {
     {{-0.7, -0.7, 0.0}, {0, 0}},
     {{0.7, -0.7, 0.0}, {1, 0}},
     {{-0.7, 0.7, 0.0}, {0, 1}},
     {{0.7, 0.7, 0.0}, {1, 1}},
 }
-
-Vertex_Offsets :: [len(enm.SHAPE)]u32
-Index_Offsets :: [len(enm.SHAPE)]u32
-
-Render_State :: struct {
-    ft_lib: ft.Library,
-    face: ft.Face,
-
-    char_tex_map: map[rune]Char_Tex,
-
-    standard_vao: u32,
-    particle_vao: u32,
-    background_vao: u32,
-    lines_vao: u32,
-    text_vao: u32,
-
-    standard_ebo: u32,
-    background_ebo: u32,
-
-    standard_vbo: u32,
-    particle_vbo: u32,
-    particle_pos_vbo: u32,
-    background_vbo: u32,
-    editor_lines_vbo: u32,
-    text_vbo: u32,
-
-    indirect_buffer: u32,
-
-    transforms_ssbo: u32,
-    z_widths_ssbo: u32,
-
-    dither_tex: u32,
-
-    static_transforms: [dynamic]glm.mat4,
-    player_particle_poss: [dynamic]glm.vec3,
-    z_widths: [dynamic]f32,
-    shader_render_queues: Shader_Render_Queues,
-    player_particles: [PLAYER_PARTICLE_COUNT][4]f32,
-    vertex_offsets: Vertex_Offsets,
-    index_offsets: Index_Offsets,
-    player_vertex_offset: u32,
-    player_index_offset: u32,
-    render_group_offsets: [len(enm.ProgramName) * len(enm.SHAPE)]u32,
-
-    player_geometry: Shape_Data,
-}
-
-Renderable :: struct{
-    transform: glm.mat4,
-    z_width: f32
-}
-
-Shader_Render_Queues :: [enm.ProgramName][dynamic]gl.DrawElementsIndirectCommand
-
-//init_render_buffers :: proc(gs: ^Game_State, rs: ^Render_State) {
-//    for shader in ProgramName {
-//        rs.shader_render_queues[shader] = make([dynamic]gl.DrawElementsIndirectCommand)
-//    }
-//    rs.static_transforms = make([dynamic]glm.mat4)
-//    rs.z_widths = make([dynamic]f32)
-//    rs.player_particle_poss = make([dynamic]glm.vec3)
-//    add_player_sphere_data(gs)
-//}
-
-clear_render_state :: proc(rs: ^Render_State) {
-    clear(&rs.static_transforms)
-    clear(&rs.z_widths)
-    for &off in rs.render_group_offsets {
-        off = 0
-    }
-}
-
-clear_render_queues :: proc(rs: ^Render_State) {
-    for shader in enm.ProgramName {
-        clear(&rs.shader_render_queues[shader])
-    }
-}
-
-free_render_state :: proc(rs: ^Render_State) {
-    for shader in enm.ProgramName {
-        delete(rs.shader_render_queues[shader])
-    }
-    delete(rs.static_transforms)
-    delete(rs.z_widths)
-    ft.done_face(rs.face)
-    ft.done_free_type(rs.ft_lib)
-    delete(rs.char_tex_map)
-    delete(rs.player_geometry.vertices)
-    delete(rs.player_geometry.indices)
-}
-
-update_vertices :: proc(gs: ^st.Game_State, lrs: Level_Resources, rs: ^Render_State) {
+update_vertices :: proc(gs: ^st.Game_State, lrs: Level_Resources, rs: ^st.Render_State) {
     if len(gs.dirty_entities) > 0 {
         for lg_idx in gs.dirty_entities {
             lg := gs.level_geometry[lg_idx]
@@ -197,9 +72,9 @@ update_vertices :: proc(gs: ^st.Game_State, lrs: Level_Resources, rs: ^Render_St
     //slice.sort_by(rs.static_transforms[:], proc(a: glm.mat4, b: glm.mat4) -> bool { return a[3][2] < b[3][2] })
 }
 
-update_player_particles :: proc(rs: ^Render_State, ps: st.Player_State, time: f32) {
-    vertical_count := PLAYER_PARTICLE_STACK_COUNT
-    horizontal_count := PLAYER_PARTICLE_SECTOR_COUNT
+update_player_particles :: proc(rs: ^st.Render_State, ps: st.Player_State, time: f32) {
+    vertical_count := st.PLAYER_PARTICLE_STACK_COUNT
+    horizontal_count := st.PLAYER_PARTICLE_SECTOR_COUNT
     x, y, z, xz: f32
     horizontal_angle, vertical_angle: f32
     s, t: f32
@@ -263,13 +138,13 @@ render :: proc(
     gs: ^st.Game_State,
     lrs: Level_Resources,
     pls: st.Player_State,
-    rs: ^Render_State,
+    rs: ^st.Render_State,
     shst: ^Shader_State,
     ps: ^st.Physics_State,
     time: f64,
     interp_t: f64
 ) {
-    clear_render_queues(rs)
+    st.clear_render_queues(rs)
 
     // add level geometry to command queues
     for g_off, idx in rs.render_group_offsets {
@@ -383,7 +258,7 @@ render :: proc(
             gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), &pv[0], gl.DYNAMIC_DRAW) 
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
             gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.DYNAMIC_DRAW) 
-            gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
+            gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, st.PLAYER_PARTICLE_COUNT)
             gl.Disable(gl.BLEND)
         // }
         // else {
@@ -396,7 +271,7 @@ render :: proc(
             set_float_uniform(shst, "dash_time", pls.dash_time)
             set_float_uniform(shst, "resolution", f32(20))
             dash_line_start := pls.dash_start_pos + pls.dash_dir * 4.5;
-            dash_line: [2]Line_Vertex = {{dash_line_start, 0}, {pls.dash_end_pos, 1}}
+            dash_line: [2]st.Line_Vertex = {{dash_line_start, 0}, {pls.dash_end_pos, 1}}
             green := [3]f32{1.0, 1.0, 0.0}
             set_vec3_uniform(shst, "color", 1, &green)
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
@@ -440,9 +315,9 @@ render :: proc(
         gl.BindVertexArray(rs.text_vao)
         use_shader(shst, rs, .Text)
         set_matrix_uniform(shst, "projection", &proj_mat)
-        connection_vertices := make([dynamic]Line_Vertex); defer delete(connection_vertices)
+        connection_vertices := make([dynamic]st.Line_Vertex); defer delete(connection_vertices)
         for el in gs.editor_state.connections {
-            append(&connection_vertices, Line_Vertex{el.poss[0], 0}, Line_Vertex{el.poss[1], 1})
+            append(&connection_vertices, st.Line_Vertex{el.poss[0], 0}, st.Line_Vertex{el.poss[1], 1})
             avg_pos := el.poss[0] + (el.poss[1] - el.poss[0]) / 2
             dist_txt_buf: [3]byte            
             strcnv.itoa(dist_txt_buf[:], el.dist)
@@ -461,7 +336,7 @@ render :: proc(
     }
 }
 
-render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
+render_text :: proc(shst: ^Shader_State, rs: ^st.Render_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
     x: f32 = 0
     trans_mat: = la.matrix4_translate(pos)
     set_matrix_uniform(shst, "transform", &trans_mat)
@@ -472,7 +347,7 @@ render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [
         w := f32(char_tex.size.x) * scale
         h := f32(char_tex.size.y) * scale
 
-        vertices := [4]Quad_Vertex4 {
+        vertices := [4]st.Quad_Vertex4 {
             {{x_off,     y_off,     0, 1},     {0, 1}},
             {{x_off + w, y_off,     0, 1},     {1, 1}},
             {{x_off,     y_off + h, 0, 1},     {0, 0}},
@@ -490,7 +365,7 @@ render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [
     } 
 }
 
-draw_shader_render_queue :: proc(rs: ^Render_State, shst: ^Shader_State, mode: u32) {
+draw_shader_render_queue :: proc(rs: ^st.Render_State, shst: ^Shader_State, mode: u32) {
     queue := rs.shader_render_queues[shst.loaded_program_name]
     //fmt.println(queue)
     if len(queue) > 0 {

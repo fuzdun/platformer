@@ -94,12 +94,12 @@ load_blender_model :: proc(shape: enm.SHAPE, lrs: ^Level_Resources, ps: ^st.Phys
     defer free_model_json_struct(js) 
 
     collider_mesh_idx := len(js.scenes[0].nodes) == 2 ? 1 : 0
-    lrs[shape] = read_mesh_data_from_binary(js, bin_data, 0, false).(Shape_Data)
+    lrs[shape] = read_mesh_data_from_binary(js, bin_data, 0, false).(st.Shape_Data)
     ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true).(st.Collider_Data)
     return true
 }
 
-Model_Data :: union{Shape_Data, st.Collider_Data}
+Model_Data :: union{st.Shape_Data, st.Collider_Data}
 
 read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: []u8, i: int, collider: bool) -> Model_Data {
     pos_idx := model_data.meshes[i].primitives[0].attributes["POSITION"]
@@ -131,7 +131,7 @@ read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: [
         uv_bytes_len := uv_len / size_of([2]f32)
         uv_data := (cast([^][2]f32)uv_start_ptr)[:uv_bytes_len]
 
-        sd: Shape_Data
+        sd: st.Shape_Data
         sd.vertices = make([]st.Vertex, len(pos_data))
         sd.indices = make([]u32, len(indices_data))
         for pos, pi in pos_data {
