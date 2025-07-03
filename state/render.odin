@@ -5,16 +5,14 @@ import glm "core:math/linalg/glsl"
 import ft "shared:freetype"
 
 import enm "../enums"
-
-PLAYER_PARTICLE_STACK_COUNT :: 5
-PLAYER_PARTICLE_SECTOR_COUNT :: 10
-PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT + 2
+import const "../constants"
+import typ "../datatypes"
 
 Render_State :: struct {
     ft_lib: ft.Library,
     face: ft.Face,
 
-    char_tex_map: map[rune]Char_Tex,
+    char_tex_map: map[rune]typ.Char_Tex,
 
     standard_vao: u32,
     particle_vao: u32,
@@ -42,15 +40,15 @@ Render_State :: struct {
     static_transforms: [dynamic]glm.mat4,
     player_particle_poss: [dynamic]glm.vec3,
     z_widths: [dynamic]f32,
-    shader_render_queues: Shader_Render_Queues,
-    player_particles: [PLAYER_PARTICLE_COUNT][4]f32,
-    vertex_offsets: Vertex_Offsets,
-    index_offsets: Index_Offsets,
+    shader_render_queues: typ.Shader_Render_Queues,
+    player_particles: [const.PLAYER_PARTICLE_COUNT][4]f32,
+    vertex_offsets: typ.Vertex_Offsets,
+    index_offsets: typ.Index_Offsets,
     player_vertex_offset: u32,
     player_index_offset: u32,
     render_group_offsets: [len(enm.ProgramName) * len(enm.SHAPE)]u32,
 
-    player_geometry: Shape_Data,
+    player_geometry: typ.Shape_Data,
 }
 
 clear_render_state :: proc(rs: ^Render_State) {
@@ -78,46 +76,5 @@ free_render_state :: proc(rs: ^Render_State) {
     delete(rs.char_tex_map)
     delete(rs.player_geometry.vertices)
     delete(rs.player_geometry.indices)
-}
-
-
-Shader_Render_Queues :: [enm.ProgramName][dynamic]gl.DrawElementsIndirectCommand
-
-Vertex_Offsets :: [len(enm.SHAPE)]u32
-Index_Offsets :: [len(enm.SHAPE)]u32
-
-
-Char_Tex :: struct {
-    id: u32,
-    size: glm.ivec2,
-    bearing: glm.ivec2,
-    next: u32
-}
-
-Quad_Vertex :: struct {
-    position: glm.vec3,
-    uv: glm.vec2
-}
-
-Line_Vertex :: struct {
-    position: glm.vec3,
-    t: f32
-}
-
-Quad_Vertex4 :: struct {
-    position: glm.vec4,
-    uv: glm.vec2
-}
-
-Vertex :: struct{
-    pos: glm.vec3,
-    uv: glm.vec2,
-    b_uv: glm.vec2,
-    normal: glm.vec3
-}
-
-Renderable :: struct{
-    transform: glm.mat4,
-    z_width: f32
 }
 

@@ -7,6 +7,7 @@ import "core:fmt"
 import st "state"
 import enm "enums"
 import const "constants"
+import typ "datatypes"
 
 add_player_sphere_data :: proc(rs: ^st.Render_State) {
     vertical_count := const.SPHERE_STACK_COUNT
@@ -20,7 +21,7 @@ add_player_sphere_data :: proc(rs: ^st.Render_State) {
     vertical_step := PI / f32(vertical_count)
     horizontal_step := (2 * PI) / f32(horizontal_count)
 
-    rs.player_geometry.vertices = make([]st.Vertex, const.SPHERE_V_COUNT)
+    rs.player_geometry.vertices = make([]typ.Vertex, const.SPHERE_V_COUNT)
     vertices := &rs.player_geometry.vertices
     for i in 0..=vertical_count {
         vertical_angle = PI / 2.0 - f32(i) * vertical_step 
@@ -28,7 +29,7 @@ add_player_sphere_data :: proc(rs: ^st.Render_State) {
         y = const.CORE_RADIUS * math.sin(vertical_angle)
 
         for j in 0..=horizontal_count {
-            v : st.Vertex
+            v : typ.Vertex
             horizontal_angle = f32(j) * horizontal_step 
             x = xz * math.cos(horizontal_angle)
             z = xz * math.sin(horizontal_angle)

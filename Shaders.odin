@@ -8,14 +8,17 @@ import glm "core:math/linalg/glsl"
 import enm "enums"
 
 import st "state"
+import const "constants"
+import typ "datatypes"
 
-PROGRAM_CONFIGS := [enm.ProgramName]st.Program{
+
+PROGRAM_CONFIGS := #partial[enm.ProgramName]typ.Program{
     .Trail = {
-        pipeline = EDIT ? {"simplevertex", "simplefrag"} : {"thumpervertex", "tessellationctrl", "tessellationeval", "thumpergeometry", "trailfrag"},
-        shader_types = EDIT ? {.VERTEX_SHADER, .FRAGMENT_SHADER} : {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = EDIT ? {"projection"} : {"player_trail", "player_pos", "crunch_time", "crunch_pt", "time", "projection", "sonar_time"},
+        pipeline = {"thumpervertex", "tessellationctrl", "tessellationeval", "thumpergeometry", "trailfrag"},
+        shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"player_trail", "player_pos", "crunch_time", "crunch_pt", "time", "projection", "sonar_time"},
         init_proc = proc() {
-            // gl.PolygonMode(gl.FRONT, gl.FILL)
+             //gl.PolygonMode(gl.FRONT, gl.FILL)
         },
     },
     .Player = {
@@ -73,6 +76,7 @@ PROGRAM_CONFIGS := [enm.ProgramName]st.Program{
         init_proc = proc() {}
     },
 }
+
 init_shaders :: proc(sh: ^st.Shader_State) -> bool {
     for config, program in PROGRAM_CONFIGS {
         shaders := make([]u32, len(config.pipeline))

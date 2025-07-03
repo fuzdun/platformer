@@ -2,10 +2,11 @@ package state
 
 import glm "core:math/linalg/glsl"
 
+import enm "../enums"
 import const "../constants"
 
 Player_State :: struct {
-    state: Player_States,
+    state: enm.Player_States,
     dash_start_pos: [3]f32,
     dash_end_pos: [3]f32,
     dash_dir: [3]f32,
@@ -41,14 +42,6 @@ Player_State :: struct {
 
     particle_displacement: [3]f32,
     tgt_particle_displacement: [3]f32
-}
-
-Player_States :: enum {
-    ON_GROUND,
-    ON_WALL,
-    ON_SLOPE,
-    IN_AIR,
-    DASHING 
 }
 
 free_player_state :: proc(ps: ^Player_State) {}

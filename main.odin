@@ -15,6 +15,7 @@ import ft "shared:freetype"
 import st "state"
 import enm "enums"
 import const "constants"
+import typ "datatypes"
 
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
@@ -98,19 +99,19 @@ main :: proc () {
     gs.dirty_entities = make([dynamic]int)
     gs.editor_state.y_rot = -.25
     gs.editor_state.zoom = 400
-    gs.editor_state.connections = make([dynamic]st.Connection)
+    gs.editor_state.connections = make([dynamic]typ.Connection)
     gs.time_mult = 1
 
     // init physics state
-    phs.collisions = make([dynamic]st.Collision)
-    phs.debug_render_queue.vertices = make([dynamic]st.Vertex)
+    phs.collisions = make([dynamic]typ.Collision)
+    phs.debug_render_queue.vertices = make([dynamic]typ.Vertex)
     phs.static_collider_vertices = make([dynamic][3]f32)
     for pn in enm.ProgramName {
         phs.debug_render_queue.indices[pn] = make([dynamic]u16)
     }
 
     // init shaders state
-    shs.active_programs = make(map[enm.ProgramName]st.ActiveProgram)
+    shs.active_programs = make(map[enm.ProgramName]typ.Active_Program)
 
     // init render state
     for shader in enm.ProgramName {
@@ -120,16 +121,6 @@ main :: proc () {
     rs.z_widths = make([dynamic]f32)
     rs.player_particle_poss = make([dynamic]glm.vec3)
     add_player_sphere_data(&rs)
-    {
-        vertices := make([dynamic]st.Vertex); defer delete(vertices)
-        indices := make([dynamic]u32); defer delete(indices)
-        for shape in enm.SHAPE {
-            rs.vertex_offsets[int(shape)] = u32(len(vertices))
-            rs.index_offsets[int(shape)] = u32(len(indices))
-        }
-        rs.player_vertex_offset = u32(len(vertices))
-        rs.player_index_offset = u32(len(indices))
-    }
 
     // init player state
     pls.state = .IN_AIR
@@ -180,7 +171,7 @@ main :: proc () {
     //return true
     ft.init_free_type(&rs.ft_lib)
     ft.new_face(rs.ft_lib, "fonts/0xProtoNerdFont-Bold.ttf", 0, &rs.face)
-    rs.char_tex_map = make(map[rune]st.Char_Tex)
+    rs.char_tex_map = make(map[rune]typ.Char_Tex)
     ft.set_pixel_sizes(rs.face, 0, 256)
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
@@ -206,7 +197,7 @@ main :: proc () {
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        ct: st.Char_Tex = {
+        ct: typ.Char_Tex = {
             id = new_tex,
             size = {i32(rs.face.glyph.bitmap.width), i32(rs.face.glyph.bitmap.rows)},
             bearing = {i32(rs.face.glyph.bitmap_left), i32(rs.face.glyph.bitmap_top)},
@@ -244,16 +235,16 @@ main :: proc () {
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
     gl.EnableVertexAttribArray(2)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(st.Vertex), offset_of(st.Vertex, pos))
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(st.Vertex), offset_of(st.Vertex, b_uv))
-    gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(st.Vertex), offset_of(st.Vertex, normal))
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(typ.Vertex), offset_of(typ.Vertex, pos))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(typ.Vertex), offset_of(typ.Vertex, b_uv))
+    gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(typ.Vertex), offset_of(typ.Vertex, normal))
 
     gl.BindVertexArray(rs.particle_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(st.Quad_Vertex), offset_of(st.Quad_Vertex, position))
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(st.Quad_Vertex), offset_of(st.Quad_Vertex, uv))
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(typ.Quad_Vertex), offset_of(typ.Quad_Vertex, position))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(typ.Quad_Vertex), offset_of(typ.Quad_Vertex, uv))
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
     gl.EnableVertexAttribArray(2)
     gl.VertexAttribPointer(2, 4, gl.FLOAT, false, 0, 0)
@@ -261,29 +252,29 @@ main :: proc () {
     gl.VertexAttribDivisor(1, 0)
     gl.VertexAttribDivisor(2, 1)
 
-    bv := BACKGROUND_VERTICES
+    bv := const.BACKGROUND_VERTICES
     gl.BindVertexArray(rs.background_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(bv[0]) * len(bv), &bv[0], gl.STATIC_DRAW)
     gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(st.Quad_Vertex), offset_of(st.Quad_Vertex, position))
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(typ.Quad_Vertex), offset_of(typ.Quad_Vertex, position))
     gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(st.Quad_Vertex), offset_of(st.Quad_Vertex, uv))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(typ.Quad_Vertex), offset_of(typ.Quad_Vertex, uv))
 
     gl.BindVertexArray(rs.text_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.text_vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, size_of(st.Quad_Vertex4) * 4, nil, gl.DYNAMIC_DRAW);
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(typ.Quad_Vertex4) * 4, nil, gl.DYNAMIC_DRAW);
     gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(st.Quad_Vertex4), offset_of(st.Quad_Vertex4, position))
+    gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(typ.Quad_Vertex4), offset_of(typ.Quad_Vertex4, position))
     gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(st.Quad_Vertex4), offset_of(st.Quad_Vertex4, uv))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(typ.Quad_Vertex4), offset_of(typ.Quad_Vertex4, uv))
 
     gl.BindVertexArray(rs.lines_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
     gl.EnableVertexAttribArray(0)
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(st.Line_Vertex), offset_of(st.Line_Vertex, position))
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(typ.Line_Vertex), offset_of(typ.Line_Vertex, position))
     gl.EnableVertexAttribArray(1)
-    gl.VertexAttribPointer(1, 1, gl.FLOAT, false, size_of(st.Line_Vertex), offset_of(st.Line_Vertex, t))
+    gl.VertexAttribPointer(1, 1, gl.FLOAT, false, size_of(typ.Line_Vertex), offset_of(typ.Line_Vertex, t))
 
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     gl.BindVertexArray(0)
@@ -299,13 +290,17 @@ main :: proc () {
     }
 
     {
-        vertices := make([dynamic]st.Vertex); defer delete(vertices)
+        vertices := make([dynamic]typ.Vertex); defer delete(vertices)
         indices := make([dynamic]u32); defer delete(indices)
         for shape in enm.SHAPE {
             sd := lrs[shape]
+            rs.vertex_offsets[int(shape)] = u32(len(vertices))
+            rs.index_offsets[int(shape)] = u32(len(indices))
             append(&indices, ..sd.indices)
             append(&vertices, ..sd.vertices)
         }
+        rs.player_vertex_offset = u32(len(vertices))
+        rs.player_index_offset = u32(len(indices))
         append(&indices, ..rs.player_geometry.indices)
         append(&vertices, ..rs.player_geometry.vertices)
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)

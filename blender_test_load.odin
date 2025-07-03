@@ -1,4 +1,5 @@
 package main
+
 import str "core:strings"
 import "core:os"
 import "core:fmt"
@@ -6,46 +7,15 @@ import "core:encoding/json"
 import "core:encoding/endian"
 import "core:bytes"
 import gl "vendor:OpenGL"
+
 import st "state"
 import enm "enums"
-
-model_json_struct :: struct {
-    bufferViews: []struct {
-        byteOffset: int,
-        byteLength: int
-    },
-    scenes: []struct {
-        nodes: []int
-    },
-    meshes: []struct {
-        primitives: []struct {
-            indices: int,
-            attributes: map[string]int
-        }
-    }
-}
-
-free_model_json_struct :: proc(js: model_json_struct) {
-    for m in js.meshes {
-        for p in m.primitives {
-            for k, _ in p.attributes {
-                delete(k)
-            }
-            delete(p.attributes)
-        } 
-        delete(m.primitives)
-    }
-    for s in js.scenes {
-        delete(s.nodes)
-    }
-    delete(js.scenes)
-    delete(js.bufferViews)
-    delete(js.meshes)
-}
+import const "constants"
+import typ "datatypes"
 
 load_blender_model :: proc(shape: enm.SHAPE, lrs: ^st.Level_Resources, ps: ^st.Physics_State) -> bool {
     // read binary data
-    filename := SHAPE_FILENAME[shape]
+    filename := const.SHAPE_FILENAME[shape]
     binary_filename := str.concatenate({"models/", filename, ".glb"})
     defer delete(binary_filename)
     data, ok := os.read_entire_file_from_filename(binary_filename)
@@ -89,19 +59,19 @@ load_blender_model :: proc(shape: enm.SHAPE, lrs: ^st.Level_Resources, ps: ^st.P
     // read up to binary data length
     bin_data := bytes.buffer_next(&buf, int(bin_len))
     // get byte offsets/lengths of mesh attributes from json
-    js: model_json_struct
+    js: typ.model_json_struct
     json.unmarshal(json_data, &js)
-    defer free_model_json_struct(js) 
+    defer typ.free_model_json_struct(js) 
 
     collider_mesh_idx := len(js.scenes[0].nodes) == 2 ? 1 : 0
-    lrs[shape] = read_mesh_data_from_binary(js, bin_data, 0, false).(st.Shape_Data)
-    ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true).(st.Collider_Data)
+    lrs[shape] = read_mesh_data_from_binary(js, bin_data, 0, false).(typ.Shape_Data)
+    ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true).(typ.Collider_Data)
     return true
 }
 
-Model_Data :: union{st.Shape_Data, st.Collider_Data}
+Model_Data :: union{typ.Shape_Data, typ.Collider_Data}
 
-read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: []u8, i: int, collider: bool) -> Model_Data {
+read_mesh_data_from_binary :: proc(model_data: typ.model_json_struct, binary_data: []u8, i: int, collider: bool) -> Model_Data {
     pos_idx := model_data.meshes[i].primitives[0].attributes["POSITION"]
     pos_offset := model_data.bufferViews[pos_idx].byteOffset
     pos_len := model_data.bufferViews[pos_idx].byteLength
@@ -131,8 +101,8 @@ read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: [
         uv_bytes_len := uv_len / size_of([2]f32)
         uv_data := (cast([^][2]f32)uv_start_ptr)[:uv_bytes_len]
 
-        sd: st.Shape_Data
-        sd.vertices = make([]st.Vertex, len(pos_data))
+        sd: typ.Shape_Data
+        sd.vertices = make([]typ.Vertex, len(pos_data))
         sd.indices = make([]u32, len(indices_data))
         for pos, pi in pos_data {
             sd.vertices[pi] = {{pos[0], pos[1], pos[2]}, uv_data[pi], uv_data[pi], norm_data[pi]}
@@ -142,7 +112,7 @@ read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: [
         }
         return sd
     }
-    coll: st.Collider_Data
+    coll: typ.Collider_Data
     coll.vertices = make([][3]f32, len(pos_data)) 
     coll.indices = make([]u16, len(indices_data))
     for pos, pi in pos_data {

@@ -18,31 +18,8 @@ import "core:os"
 import st "state"
 import enm "enums"
 import const "constants"
+import typ "datatypes"
 
-I_MAT :: glm.mat4(1.0)
-
-SHAPE_FILENAME := [enm.SHAPE]string {
-    .CUBE = "basic_cube",
-    .WEIRD = "weird"
-}
-TEXT_VERTICES :: [4]st.Quad_Vertex4 {
-    {{-1, -1, 0, 1}, {0, 0}},
-    {{1, -1, 0, 1}, {1, 0}},
-    {{-1, 1, 0, 1}, {0, 1}},
-    {{1, 1, 0, 1}, {1, 1}}
-}
-BACKGROUND_VERTICES :: [4]st.Quad_Vertex {
-    {{-1, -1, -1}, {0, 0}},
-    {{1, -1, -1}, {1, 0}},
-    {{-1, 1, -1}, {0, 1}},
-    {{1, 1, -1}, {1, 1}},
-}
-PARTICLE_VERTICES :: [4]st.Quad_Vertex {
-    {{-0.7, -0.7, 0.0}, {0, 0}},
-    {{0.7, -0.7, 0.0}, {1, 0}},
-    {{-0.7, 0.7, 0.0}, {0, 1}},
-    {{0.7, 0.7, 0.0}, {1, 1}},
-}
 update_vertices :: proc(gs: ^st.Game_State, lrs: st.Level_Resources, rs: ^st.Render_State) {
     if len(gs.dirty_entities) > 0 {
         for lg_idx in gs.dirty_entities {
@@ -75,8 +52,8 @@ update_vertices :: proc(gs: ^st.Game_State, lrs: st.Level_Resources, rs: ^st.Ren
 }
 
 update_player_particles :: proc(rs: ^st.Render_State, ps: st.Player_State, time: f32) {
-    vertical_count := st.PLAYER_PARTICLE_STACK_COUNT
-    horizontal_count := st.PLAYER_PARTICLE_SECTOR_COUNT
+    vertical_count := const.PLAYER_PARTICLE_STACK_COUNT
+    horizontal_count := const.PLAYER_PARTICLE_SECTOR_COUNT
     x, y, z, xz: f32
     horizontal_angle, vertical_angle: f32
     s, t: f32
@@ -158,7 +135,7 @@ render :: proc(
         sd := lrs[shape] 
         command: gl.DrawElementsIndirectCommand = {
             u32(len(sd.indices)),
-            next_off - g_off,
+            count,
             rs.index_offsets[shape],
             rs.vertex_offsets[shape],
             g_off
@@ -210,9 +187,6 @@ render :: proc(
     gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(rs.z_widths[0]) * len(rs.z_widths), raw_data(rs.z_widths), gl.DYNAMIC_DRAW)
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
 
-    // if !EDIT && !gs.player_state.dashing {
-    // }
-
     use_shader(shst, rs, .Simple)
     set_matrix_uniform(shst, "projection", &proj_mat)
     draw_shader_render_queue(rs, shst, gl.TRIANGLES)
@@ -243,7 +217,7 @@ render :: proc(
             gl.Enable(gl.BLEND)
             gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
             gl.BindVertexArray(rs.particle_vao)
-            pv := PARTICLE_VERTICES
+            pv := const.PARTICLE_VERTICES
             for &pv in pv {
                 pv.position = camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y
             }
@@ -260,7 +234,7 @@ render :: proc(
             gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), &pv[0], gl.DYNAMIC_DRAW) 
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
             gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.DYNAMIC_DRAW) 
-            gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, st.PLAYER_PARTICLE_COUNT)
+            gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, const.PLAYER_PARTICLE_COUNT)
             gl.Disable(gl.BLEND)
         // }
         // else {
@@ -273,7 +247,7 @@ render :: proc(
             set_float_uniform(shst, "dash_time", pls.dash_time)
             set_float_uniform(shst, "resolution", f32(20))
             dash_line_start := pls.dash_start_pos + pls.dash_dir * 4.5;
-            dash_line: [2]st.Line_Vertex = {{dash_line_start, 0}, {pls.dash_end_pos, 1}}
+            dash_line: [2]typ.Line_Vertex = {{dash_line_start, 0}, {pls.dash_end_pos, 1}}
             green := [3]f32{1.0, 1.0, 0.0}
             set_vec3_uniform(shst, "color", 1, &green)
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
@@ -284,17 +258,12 @@ render :: proc(
     }
 
     //fmt.println("===")
-    if EDIT {
         use_shader(shst, rs, .Trail)
-        set_matrix_uniform(shst, "projection", &proj_mat)
-        draw_shader_render_queue(rs, shst, gl.TRIANGLES)
-    } else {
         gl.BindVertexArray(rs.standard_vao)
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
         gl.Disable(gl.CULL_FACE)
         gl.Enable(gl.BLEND)
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-        use_shader(shst, rs, .Trail)
         crunch_pt : glm.vec3 = pls.crunch_pt
         player_pos := pls.position
         player_trail := interpolated_trail(pls, f32(interp_t))
@@ -308,7 +277,6 @@ render :: proc(
         draw_shader_render_queue(rs, shst, gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Disable(gl.BLEND)
-    }
 
         
 
@@ -317,9 +285,9 @@ render :: proc(
         gl.BindVertexArray(rs.text_vao)
         use_shader(shst, rs, .Text)
         set_matrix_uniform(shst, "projection", &proj_mat)
-        connection_vertices := make([dynamic]st.Line_Vertex); defer delete(connection_vertices)
+        connection_vertices := make([dynamic]typ.Line_Vertex); defer delete(connection_vertices)
         for el in gs.editor_state.connections {
-            append(&connection_vertices, st.Line_Vertex{el.poss[0], 0}, st.Line_Vertex{el.poss[1], 1})
+            append(&connection_vertices, typ.Line_Vertex{el.poss[0], 0}, typ.Line_Vertex{el.poss[1], 1})
             avg_pos := el.poss[0] + (el.poss[1] - el.poss[0]) / 2
             dist_txt_buf: [3]byte            
             strcnv.itoa(dist_txt_buf[:], el.dist)
@@ -349,7 +317,7 @@ render_text :: proc(shst: ^st.Shader_State, rs: ^st.Render_State, text: string, 
         w := f32(char_tex.size.x) * scale
         h := f32(char_tex.size.y) * scale
 
-        vertices := [4]st.Quad_Vertex4 {
+        vertices := [4]typ.Quad_Vertex4 {
             {{x_off,     y_off,     0, 1},     {0, 1}},
             {{x_off + w, y_off,     0, 1},     {1, 1}},
             {{x_off,     y_off + h, 0, 1},     {0, 0}},

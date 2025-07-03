@@ -250,7 +250,7 @@ interpolated_trail :: proc(ps: st.Player_State, t: f32) -> [3]glm.vec3 {
 
 interpolated_player_matrix :: proc(ps: st.Player_State, t: f32) -> matrix[4, 4]f32 {
     i_pos := math.lerp(ps.prev_position, ps.position, t) 
-    rot := I_MAT
+    rot := const.I_MAT
     offset := glm.mat4Translate({f32(i_pos.x), f32(i_pos.y), f32(i_pos.z)})
     return rot * offset
 }

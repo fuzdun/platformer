@@ -11,8 +11,9 @@ import "core:time"
 import st "state"
 import enm "enums"
 import const "constants"
+import typ "datatypes"
 
-aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1: f32, aabbz1: f32,) -> [8]st.Vertex {
+aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1: f32, aabbz1: f32,) -> [8]typ.Vertex {
     return {
         {{aabbx0, aabby1, aabbz0}, {0, 0}, {0, 0}, {0, 0, 0}},
         {{aabbx0, aabby0, aabbz0}, {0, 1}, {0, 0}, {0, 0, 0}},
@@ -34,7 +35,7 @@ clear_physics_state :: proc(ps: ^st.Physics_State) {
     }
 }
 
-construct_aabb :: proc(vertices: [][3]f32) -> st.AABB {
+construct_aabb :: proc(vertices: [][3]f32) -> typ.Aabb {
     aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
     aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
     for v in vertices {
@@ -51,7 +52,7 @@ construct_aabb :: proc(vertices: [][3]f32) -> st.AABB {
 get_collisions :: proc(gs: ^st.Game_State, pls: ^st.Player_State, ps: ^st.Physics_State, delta_time: f32, elapsed_time: f32) {
     clear_physics_state(ps)
 
-    filter: bit_set[st.Level_Geometry_Component_Name; u64] = { .Collider, .Transform }
+    filter: bit_set[enm.Level_Geometry_Component_Name; u64] = { .Collider, .Transform }
     ppos := pls.position
     ppos32: [3]f32 = {f32(ppos[0]), f32(ppos[1]), f32(ppos[2])}
     px, py, pz := f32(ppos[0]), f32(ppos[1]), f32(ppos[2])
@@ -102,7 +103,7 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^st.Player_State, ps: ^st.Physic
                         if did_intercept {
                             if pt_inside_triangle(tri_vertex0, tri_vertex1, tri_vertex2, intercept_pt) {
                                 pls.bunny_hop_y = max(f32)
-                                append(&ps.collisions, st.Collision{
+                                append(&ps.collisions, typ.Collision{
                                     id = id,
                                     normal = normal,
                                     contact_dist = 0,
@@ -114,7 +115,7 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^st.Player_State, ps: ^st.Physic
                                 if sphere_t, sphere_q, sphere_hit := ray_sphere_intersect(closest_pt, -velocity_normal, ppos32); sphere_hit {
                                     if sphere_t = sphere_t / player_velocity_len; sphere_t <= 1 {
                                         pls.bunny_hop_y = max(f32)
-                                        append(&ps.collisions, st.Collision{
+                                        append(&ps.collisions, typ.Collision{
                                             id = id,
                                             normal = normal,
                                             contact_dist = la.length2(closest_pt - intercept_pt),
@@ -156,7 +157,7 @@ get_collisions :: proc(gs: ^st.Game_State, pls: ^st.Player_State, ps: ^st.Physic
     }
 
     best_plane_normal: [3]f32 = {100, 100, 100}
-    most_horizontal_coll: st.Collision = {} 
+    most_horizontal_coll: typ.Collision = {} 
     best_plane_intersection: [3]f32 = {0, 0, 0}
     for coll in ps.collisions {
         contact_ray := -coll.normal * player_velocity_len

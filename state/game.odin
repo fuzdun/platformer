@@ -3,6 +3,7 @@ package state
 import la "core:math/linalg"
 
 import enm "../enums"
+import typ "../datatypes"
 
 Game_State :: struct {
     level_geometry: Level_Geometry_State,
@@ -19,61 +20,8 @@ free_gamestate :: proc(gs: ^Game_State) {
     free_editor_state(&gs.editor_state)
 }
 
-free_editor_state :: proc(es: ^Editor_State) {
-    delete(es.connections)
-}
-
 // AOS -> SOA
-Level_Geometry_State :: #soa[dynamic]Level_Geometry
-
-Level_Geometry :: struct {
-    transform: Transform,
-    angular_velocity: la.Vector3f32,
-    shape: enm.SHAPE,
-    collider: Collider,
-    shaders: Active_Shaders,
-    attributes: Level_Geometry_Attributes,
-    aabb: AABB,
-    ssbo_indexes: [enm.ProgramName]int
-}
-
-Transform :: struct{
-    position: Position,
-    scale: Scale,
-    rotation: Rotation
-}
-Position :: la.Vector3f32 
-Scale :: la.Vector3f32
-Rotation :: quaternion128
-make_transform :: proc(
-    position: Position = {0, 0, 0},
-    scale: Scale = {1, 1, 1},
-    rotation: Rotation = quaternion(real=0, imag=0, jmag=0, kmag=0)
-) -> Transform {
-    return {position, scale, rotation}
-}
-
-Angular_Velocity :: la.Vector3f32
-Shape :: enm.SHAPE
-Collider :: enm.SHAPE
-Active_Shaders :: bit_set[enm.ProgramName; u64]
-Level_Geometry_Attributes :: bit_set[Level_Geometry_Component_Name; u64]
-AABB :: struct{
-    x0: f32,
-    y0: f32,
-    z0: f32,
-    x1: f32,
-    y1: f32,
-    z1: f32
-}
-
-Level_Geometry_Component_Name :: enum {
-    Transform = 0,
-    Shape = 1,
-    Collider = 2,
-    Active_Shaders = 3,
-    Angular_Velocity = 4 
-}
+Level_Geometry_State :: #soa[dynamic]typ.Level_Geometry
 
 Input_State :: struct {
     a_pressed: bool,
@@ -120,11 +68,10 @@ Editor_State :: struct {
     x_rot: f32,
     y_rot: f32,
     zoom: f32,
-    connections: [dynamic]Connection
+    connections: [dynamic]typ.Connection
 }
 
-Connection :: struct {
-    poss: [2][3]f32,
-    dist: int
+free_editor_state :: proc(es: ^Editor_State) {
+    delete(es.connections)
 }
 
