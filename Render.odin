@@ -41,7 +41,7 @@ PARTICLE_VERTICES :: [4]st.Quad_Vertex {
     {{-0.7, 0.7, 0.0}, {0, 1}},
     {{0.7, 0.7, 0.0}, {1, 1}},
 }
-update_vertices :: proc(gs: ^st.Game_State, lrs: Level_Resources, rs: ^st.Render_State) {
+update_vertices :: proc(gs: ^st.Game_State, lrs: st.Level_Resources, rs: ^st.Render_State) {
     if len(gs.dirty_entities) > 0 {
         for lg_idx in gs.dirty_entities {
             lg := gs.level_geometry[lg_idx]
@@ -136,7 +136,7 @@ update_player_particles :: proc(rs: ^st.Render_State, ps: st.Player_State, time:
 
 render :: proc(
     gs: ^st.Game_State,
-    lrs: Level_Resources,
+    lrs: st.Level_Resources,
     pls: st.Player_State,
     rs: ^st.Render_State,
     shst: ^Shader_State,

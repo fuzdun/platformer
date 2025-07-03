@@ -90,12 +90,12 @@ main :: proc () {
     gl.load_up_to(4, 6, SDL.gl_set_proc_address)
 
     // allocate / defer deallocate state structs
-    gs:  st.Game_State;    defer st.free_gamestate(&gs)
-    phs: st.Physics_State; defer st.free_physics_state(&phs)
-    shs: Shader_State;     defer free_shader_state(&shs)
-    rs:  st.Render_State;  defer st.free_render_state(&rs)
-    pls: st.Player_State;  defer st.free_player_state(&pls)
-    lrs: Level_Resources;  defer free_level_resources(&lrs)
+    gs:  st.Game_State;      defer st.free_gamestate(&gs)
+    phs: st.Physics_State;   defer st.free_physics_state(&phs)
+    shs: Shader_State;       defer free_shader_state(&shs)
+    rs:  st.Render_State;    defer st.free_render_state(&rs)
+    pls: st.Player_State;    defer st.free_player_state(&pls)
+    lrs: st.Level_Resources; defer st.free_level_resources(&lrs)
 
     // init game state
     gs.level_geometry = make(st.Level_Geometry_State)

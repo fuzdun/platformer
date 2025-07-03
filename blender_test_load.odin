@@ -43,7 +43,7 @@ free_model_json_struct :: proc(js: model_json_struct) {
     delete(js.meshes)
 }
 
-load_blender_model :: proc(shape: enm.SHAPE, lrs: ^Level_Resources, ps: ^st.Physics_State) -> bool {
+load_blender_model :: proc(shape: enm.SHAPE, lrs: ^st.Level_Resources, ps: ^st.Physics_State) -> bool {
     // read binary data
     filename := SHAPE_FILENAME[shape]
     binary_filename := str.concatenate({"models/", filename, ".glb"})

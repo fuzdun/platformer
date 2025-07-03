@@ -5,21 +5,6 @@ import "core:fmt"
 import st "state"
 import enm "state/enums"
 
-Particle_Vertex :: struct{
-    pos: glm.vec4,
-    uv: glm.vec2
-}
-
-Level_Resources :: [enm.SHAPE]st.Shape_Data
-
-free_level_resources :: proc(lr: ^Level_Resources) {
-    for sd in lr {
-        delete(sd.indices) 
-        delete(sd.vertices)
-    }
-}
-
-// CORE_RADIUS :: 0.5
 CORE_RADIUS :: 1.0
 SPHERE_RADIUS :: 1.0
 SPHERE_SQ_RADIUS :: SPHERE_RADIUS * SPHERE_RADIUS

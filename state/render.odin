@@ -116,12 +116,6 @@ Vertex :: struct{
     normal: glm.vec3
 }
 
-Shape_Data :: struct{
-    vertices: []Vertex,
-    indices: []u32
-}
-
-
 Renderable :: struct{
     transform: glm.mat4,
     z_width: f32
