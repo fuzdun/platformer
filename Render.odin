@@ -139,7 +139,7 @@ render :: proc(
     lrs: st.Level_Resources,
     pls: st.Player_State,
     rs: ^st.Render_State,
-    shst: ^Shader_State,
+    shst: ^st.Shader_State,
     ps: ^st.Physics_State,
     time: f64,
     interp_t: f64
@@ -336,7 +336,7 @@ render :: proc(
     }
 }
 
-render_text :: proc(shst: ^Shader_State, rs: ^st.Render_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
+render_text :: proc(shst: ^st.Shader_State, rs: ^st.Render_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
     x: f32 = 0
     trans_mat: = la.matrix4_translate(pos)
     set_matrix_uniform(shst, "transform", &trans_mat)
@@ -365,7 +365,7 @@ render_text :: proc(shst: ^Shader_State, rs: ^st.Render_State, text: string, pos
     } 
 }
 
-draw_shader_render_queue :: proc(rs: ^st.Render_State, shst: ^Shader_State, mode: u32) {
+draw_shader_render_queue :: proc(rs: ^st.Render_State, shst: ^st.Shader_State, mode: u32) {
     queue := rs.shader_render_queues[shst.loaded_program_name]
     //fmt.println(queue)
     if len(queue) > 0 {

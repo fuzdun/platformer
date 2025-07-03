@@ -92,7 +92,7 @@ main :: proc () {
     // allocate / defer deallocate state structs
     gs:  st.Game_State;      defer st.free_gamestate(&gs)
     phs: st.Physics_State;   defer st.free_physics_state(&phs)
-    shs: Shader_State;       defer free_shader_state(&shs)
+    shs: st.Shader_State;    defer st.free_shader_state(&shs)
     rs:  st.Render_State;    defer st.free_render_state(&rs)
     pls: st.Player_State;    defer st.free_player_state(&pls)
     lrs: st.Level_Resources; defer st.free_level_resources(&lrs)
@@ -115,7 +115,7 @@ main :: proc () {
     }
 
     // init shaders state
-    shs.active_programs = make(map[enm.ProgramName]ActiveProgram)
+    shs.active_programs = make(map[enm.ProgramName]st.ActiveProgram)
 
     // init render state
     for shader in enm.ProgramName {
