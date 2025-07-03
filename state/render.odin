@@ -4,7 +4,7 @@ import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import ft "shared:freetype"
 
-import enm "enums"
+import enm "../enums"
 
 PLAYER_PARTICLE_STACK_COUNT :: 5
 PLAYER_PARTICLE_SECTOR_COUNT :: 10

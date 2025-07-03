@@ -7,7 +7,7 @@ import "core:encoding/endian"
 import "core:bytes"
 import gl "vendor:OpenGL"
 import st "state"
-import enm "state/enums"
+import enm "enums"
 
 model_json_struct :: struct {
     bufferViews: []struct {

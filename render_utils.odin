@@ -7,7 +7,7 @@ import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 import "core:math"
 import st "state"
-import enm "state/enums"
+import enm "enums"
 
 transformed_vertex :: proc(vertex: st.Vertex, trns: st.Transform) -> st.Vertex {
     pos := la.quaternion128_mul_vector3(trns.rotation, vertex.pos.xyz * trns.scale) + trns.position

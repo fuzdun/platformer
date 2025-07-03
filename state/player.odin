@@ -2,7 +2,7 @@ package state
 
 import glm "core:math/linalg/glsl"
 
-import const "constants"
+import const "../constants"
 
 Player_State :: struct {
     state: Player_States,

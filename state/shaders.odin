@@ -2,7 +2,7 @@ package state
 
 import gl "vendor:OpenGL"
 
-import enm "enums"
+import enm "../enums"
 
 Shader_State :: struct {
     active_programs: map[enm.ProgramName]ActiveProgram,

@@ -1,6 +1,6 @@
 package state
 
-import enm "enums"
+import enm "../enums"
 
 Level_Resources :: [enm.SHAPE]Shape_Data
 

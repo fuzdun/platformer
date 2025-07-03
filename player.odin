@@ -6,7 +6,7 @@ import glm "core:math/linalg/glsl"
 import "core:fmt"
 
 import st "state"
-import const "state/constants"
+import const "constants"
 
 update_player_velocity :: proc(gs: ^st.Game_State, pls: ^st.Player_State, elapsed_time: f64, delta_time: f32) {
     is := &gs.input_state

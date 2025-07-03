@@ -1,7 +1,8 @@
 package state
 
 import la "core:math/linalg"
-import enm "enums"
+
+import enm "../enums"
 
 Game_State :: struct {
     level_geometry: Level_Geometry_State,

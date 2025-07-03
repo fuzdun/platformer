@@ -9,8 +9,8 @@ import "core:sort"
 import "core:time"
 
 import st "state"
-import enm "state/enums"
-import const "state/constants"
+import enm "enums"
+import const "constants"
 
 aabb_vertices :: proc(aabbx0: f32, aabby0: f32, aabbz0: f32, aabbx1: f32, aabby1: f32, aabbz1: f32,) -> [8]st.Vertex {
     return {

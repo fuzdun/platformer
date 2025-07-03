@@ -5,7 +5,7 @@ import str "core:strings"
 import "core:os"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
-import enm "state/enums"
+import enm "enums"
 
 import st "state"
 

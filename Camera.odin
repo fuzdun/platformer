@@ -6,7 +6,7 @@ import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 
 import st "state"
-import const "state/constants"
+import const "constants"
 
 move_camera :: proc(ps: st.Player_State, cs: ^st.Camera_State, elapsed_time: f64, delta_time: f32) {
     //bef_thresh := ps.prev_position.z >= -750 || ps.prev_position.y < - 950

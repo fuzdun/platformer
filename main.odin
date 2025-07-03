@@ -13,8 +13,8 @@ import str "core:strings"
 import ft "shared:freetype"
 
 import st "state"
-import enm "state/enums"
-import const "state/constants"
+import enm "enums"
+import const "constants"
 
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)

@@ -6,8 +6,8 @@ import la "core:math/linalg"
 import "core:slice"
 
 import st "state"
-import enm "state/enums"
-import const "state/constants"
+import enm "enums"
+import const "constants"
 
 SSBO_Registry :: [len(enm.SHAPE) * len(enm.ProgramName)][dynamic]int
 

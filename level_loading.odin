@@ -9,7 +9,7 @@ import rnd "core:math/rand"
 import str "core:strings"
 import gl "vendor:OpenGL"
 import st "state"
-import enm "state/enums"
+import enm "enums"
 
 trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
     for val in T {

@@ -5,8 +5,8 @@ import "core:math"
 import "core:fmt"
 
 import st "state"
-import enm "state/enums"
-import const "state/constants"
+import enm "enums"
+import const "constants"
 
 add_player_sphere_data :: proc(rs: ^st.Render_State) {
     vertical_count := const.SPHERE_STACK_COUNT

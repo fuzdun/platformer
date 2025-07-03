@@ -16,8 +16,8 @@ import ft "shared:freetype"
 import "core:os"
 
 import st "state"
-import enm "state/enums"
-import const "state/constants"
+import enm "enums"
+import const "constants"
 
 I_MAT :: glm.mat4(1.0)
 

@@ -2,7 +2,7 @@ package state
 
 import glm "core:math/linalg/glsl"
 
-import enm "enums"
+import enm "../enums"
 
 Physics_State :: struct{
     collisions: [dynamic]Collision,
