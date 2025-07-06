@@ -15,6 +15,14 @@ Physics_State :: struct{
     static_collider_vertices: [dynamic][3]f32,
 }
 
+clear_physics_state :: proc(ps: ^Physics_State) {
+    clear(&ps.collisions)
+    clear(&ps.debug_render_queue.vertices)
+    for &iq in ps.debug_render_queue.indices {
+        clear(&iq)
+    }
+}
+
 free_physics_state :: proc(ps: ^Physics_State) {
     delete(ps.collisions)
     delete(ps.debug_render_queue.vertices)

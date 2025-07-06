@@ -1,13 +1,13 @@
 package constants
 
-WIDTH :: 1920.0
-HEIGHT :: 1080.0
-FULLSCREEN :: true
-TARGET_FRAME_RATE :: 240.0
+//WIDTH :: 1920.0
+//HEIGHT :: 1080.0
+//FULLSCREEN :: true
+TARGET_FRAME_RATE :: 60.0
 FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
-// WIDTH :: 900
-// HEIGHT :: 900
-// FULLSCREEN :: false
+ WIDTH :: 900
+ HEIGHT :: 900
+ FULLSCREEN :: false
 
 TITLE :: "platformer"
 

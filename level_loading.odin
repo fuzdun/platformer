@@ -105,14 +105,25 @@ lg_get_transformed_collider_vertices :: proc(lg: typ.Level_Geometry, trans_mat: 
 }
 
 add_geometry_to_physics :: proc(ps: ^st.Physics_State, lgs_in: #soa[]typ.Level_Geometry) {
-    clear_physics_state(ps)
+    st.clear_physics_state(ps)
     for &lg in lgs_in {
         trans_mat := trans_to_mat4(lg.transform)
         vertices_len := len(ps.level_colliders[lg.shape].vertices)
         transformed_vertices := make([][3]f32, vertices_len);
         defer delete(transformed_vertices)
         lg_get_transformed_collider_vertices(lg, trans_mat, ps^, transformed_vertices[:])
-        lg.aabb = construct_aabb(transformed_vertices)
+
+        aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
+        aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
+        for v in transformed_vertices {
+            aabbx0 = min(v.x - 10, aabbx0)
+            aabby0 = min(v.y - 10, aabby0)
+            aabbz0 = min(v.z - 10, aabbz0)
+            aabbx1 = max(v.x + 10, aabbx1)
+            aabby1 = max(v.y + 10, aabby1)
+            aabbz1 = max(v.z + 10, aabbz1)
+        }
+        lg.aabb = {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
         append(&ps.static_collider_vertices, ..transformed_vertices)
     }
 }
