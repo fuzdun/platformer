@@ -9,8 +9,6 @@ import st "state"
 import const "constants"
 
 move_camera :: proc(ps: st.Player_State, cs: ^st.Camera_State, elapsed_time: f64, delta_time: f32) {
-    //bef_thresh := ps.prev_position.z >= -750 || ps.prev_position.y < - 950
-    // bef_thresh := true
     cs.prev_position = cs.position
     cs.prev_target = cs.target
     ppos := ps.position
