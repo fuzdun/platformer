@@ -1,12 +1,16 @@
 package main
 
+import "core:sort"
+import "core:fmt"
+import "core:slice"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import strcnv "core:strconv"
 import la "core:math/linalg"
+import tm "core:time"
 
 draw :: proc(
-    lgs: Level_Geometry_State, 
+    lgs: ^Level_Geometry_State, 
     lrs: Level_Resources,
     pls: Player_State,
     rs: ^Render_State,
@@ -19,12 +23,41 @@ draw :: proc(
 ) {
     clear_render_queues(rs)
 
-    // add level geometry to command queues
-    for g_off, idx in rs.render_group_offsets {
-        next_off := idx == len(rs.render_group_offsets) - 1 ? u32(len(lgs.entities)) : rs.render_group_offsets[idx + 1]
-        count := next_off - g_off
+    lg_count := len(lgs.entities)
+    sorted_transforms := make([]glm.mat4, lg_count); defer delete(sorted_transforms)
+    sorted_z_widths := make([]f32, lg_count); defer delete(sorted_z_widths)
+    lg_render_commands := make([]gl.DrawElementsIndirectCommand, lg_count); defer delete(lg_render_commands) 
+    group_offsets: [len(SHAPE)]int
+
+    sorted_rd := make([]Lg_Render_Data, lg_count); defer delete(sorted_rd)
+
+    for lg, idx in lgs.entities {
+        group_offsets[lg.shape] += 1
+        sorted_rd[idx] = Lg_Render_Data {
+            render_group = int(ProgramName.Trail) * len(SHAPE) + int(lg.shape),
+            transform_mat = trans_to_mat4(lg.transform),
+            z_width = 10,
+        }
+    }
+
+    #reverse for &grp, idx in group_offsets {
+        grp = idx == 0 ? 0 : group_offsets[idx - 1]
+    }
+
+    slice.sort_by(sorted_rd[:], proc(a: Lg_Render_Data, b: Lg_Render_Data) -> bool { return a.render_group < b.render_group })
+
+    for rd, idx in sorted_rd {
+        sorted_transforms[idx] = rd.transform_mat
+        sorted_z_widths[idx] = rd.z_width
+    }
+
+    // // add level geometry to command queues
+    for g_off, idx in group_offsets {
+        next_off := idx == len(group_offsets) - 1 ? len(sorted_transforms) : group_offsets[idx + 1]
+        count := u32(next_off - g_off)
         if count == 0 do continue
-        shader := ProgramName(idx / len(SHAPE))
+        // shader := ProgramName(idx / len(SHAPE))
+        shader := ProgramName.Trail 
         shape := SHAPE(idx % len(SHAPE))
         sd := lrs[shape] 
         command: gl.DrawElementsIndirectCommand = {
@@ -32,7 +65,7 @@ draw :: proc(
             count,
             rs.index_offsets[shape],
             rs.vertex_offsets[shape],
-            g_off
+            u32(g_off)
         }
         append(&rs.shader_render_queues[shader], command)
     }
@@ -40,7 +73,7 @@ draw :: proc(
     // add player to command queue
     player_mat := interpolated_player_matrix(pls, f32(interp_t))
     player_rq := rs.shader_render_queues[.Player]
-    //append(&player_rq.transforms, player_mat)
+
     append(&player_rq, gl.DrawElementsIndirectCommand{
         u32(len(rs.player_geometry.indices)),
         1,
@@ -74,11 +107,19 @@ draw :: proc(
     gl.BindVertexArray(rs.standard_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
+
+    // gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
+    // gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(rs.static_transforms[0]) * len(rs.static_transforms), raw_data(rs.static_transforms), gl.DYNAMIC_DRAW)
+    // gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.transforms_ssbo)
+    // gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
+    // gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(rs.z_widths[0]) * len(rs.z_widths), raw_data(rs.z_widths), gl.DYNAMIC_DRAW)
+    // gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
+
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(rs.static_transforms[0]) * len(rs.static_transforms), raw_data(rs.static_transforms), gl.DYNAMIC_DRAW)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_transforms[0]) * len(sorted_transforms), raw_data(sorted_transforms), gl.DYNAMIC_DRAW)
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.transforms_ssbo)
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(rs.z_widths[0]) * len(rs.z_widths), raw_data(rs.z_widths), gl.DYNAMIC_DRAW)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_z_widths[0]) * len(sorted_z_widths), raw_data(sorted_z_widths), gl.DYNAMIC_DRAW)
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
 
     use_shader(shst, rs, .Simple)

@@ -13,6 +13,7 @@ import ft "shared:freetype"
 
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
+
 //WIDTH :: 1920.0
 //HEIGHT :: 1080.0
 //FULLSCREEN :: true
@@ -24,10 +25,7 @@ FULLSCREEN :: false
 
 TITLE :: "platformer"
 
-
-@(private="file")
 quit_app := false
-
 
 main :: proc () {
     controller : ^SDL.GameController
@@ -129,6 +127,13 @@ main :: proc () {
     rs.static_transforms = make([dynamic]glm.mat4)
     rs.z_widths = make([dynamic]f32)
     rs.player_particle_poss = make([dynamic]glm.vec3)
+
+    // ======TEST========
+    // rs.sorted_transforms = make([dynamic]glm.mat4)
+    // rs.sorted_z_widths = make([dynamic]f32)
+    // rs.render_commands = make([dynamic]gl.DrawElementsIndirectCommand)
+    // ==================
+    // group_offsets: [len(SHAPE)]int
     add_player_sphere_data(&rs)
 
     // init player state
@@ -198,7 +203,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
@@ -421,7 +426,7 @@ main :: proc () {
         
         update_vertices(&lgs, lrs, &rs)
         update_player_particles(&rs, pls, f32(elapsed_time))
-        draw(lgs, lrs, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
+        draw(&lgs, lrs, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
 
         SDL.GL_SwapWindow(window)
     }

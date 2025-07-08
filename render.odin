@@ -11,7 +11,7 @@ import ft "shared:freetype"
 
 I_MAT :: glm.mat4(1.0)
 
-SHAPE :: enum{
+SHAPE :: enum {
     CUBE,
     WEIRD,
 }
@@ -71,9 +71,9 @@ Render_State :: struct {
 
     dither_tex: u32,
 
-    static_transforms: [dynamic]glm.mat4,
+    // static_transforms: [dynamic]glm.mat4,
     player_particle_poss: [dynamic]glm.vec3,
-    z_widths: [dynamic]f32,
+    // z_widths: [dynamic]f32,
     shader_render_queues: Shader_Render_Queues,
     player_particles: [PLAYER_PARTICLE_COUNT][4]f32,
     vertex_offsets: Vertex_Offsets,
@@ -83,7 +83,16 @@ Render_State :: struct {
     render_group_offsets: [len(ProgramName) * len(SHAPE)]u32,
 
     player_geometry: Shape_Data,
+
+    // sorted_transforms: [dynamic]glm.mat4,
+    // sorted_z_widths: [dynamic]f32,
+    // render_commands: [dynamic]gl.DrawElementsIndirectCommand,
+    // group_offsets: [len(SHAPE)]int
 }
+    // sorted_transforms := make([]glm.mat4, lg_count); defer delete(sorted_transforms)
+    // sorted_z_widths := make([]f32, lg_count); defer delete(sorted_z_widths)
+    // lg_render_commands := make([]gl.DrawElementsIndirectCommand, lg_count); defer delete(lg_render_commands) 
+    // group_offsets: [len(SHAPE)]int
 
 Char_Tex :: struct {
     id: u32,
@@ -125,6 +134,12 @@ Index_Offsets :: [len(SHAPE)]u32
 
 Shader_Render_Queues :: [ProgramName][dynamic]gl.DrawElementsIndirectCommand
 
+Lg_Render_Data :: struct {
+    render_group: int,
+    transform_mat: glm.mat4,
+    z_width: f32,
+}
+
 clear_render_state :: proc(rs: ^Render_State) {
     clear(&rs.static_transforms)
     clear(&rs.z_widths)
@@ -137,6 +152,9 @@ clear_render_queues :: proc(rs: ^Render_State) {
     for shader in ProgramName {
         clear(&rs.shader_render_queues[shader])
     }
+    // clear(&rs.sorted_transforms)
+    // clear(&rs.sorted_z_widths)
+    // clear(&rs.render_commands)
 }
 
 free_render_state :: proc(rs: ^Render_State) {
