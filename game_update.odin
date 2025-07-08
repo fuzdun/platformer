@@ -3,29 +3,22 @@ package main
 import la "core:math/linalg"
 import "core:math"
 
-import st "state"
-import typ "datatypes"
-import const "constants"
-import enm "enums"
 
-
-game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_State, elapsed_time: f32, delta_time: f32) {
+game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, elapsed_time: f32, delta_time: f32) {
 
     // ====================================
     // HANDLE INPUT, UPDATE PLAYER VELOCITY
     // ====================================
-    is := gs.input_state
-
     // update trail
-    typ.ring_buffer_push(&pls.trail, [3]f32 {f32(pls.position.x), f32(pls.position.y), f32(pls.position.z)})
+    ring_buffer_push(&pls.trail, [3]f32 {f32(pls.position.x), f32(pls.position.y), f32(pls.position.z)})
     pls.prev_trail_sample = pls.trail_sample
-    pls.trail_sample = {typ.ring_buffer_at(pls.trail, -4), typ.ring_buffer_at(pls.trail, -8), typ.ring_buffer_at(pls.trail, -12)}
+    pls.trail_sample = {ring_buffer_at(pls.trail, -4), ring_buffer_at(pls.trail, -8), ring_buffer_at(pls.trail, -12)}
 
-    move_spd := const.P_ACCEL
+    move_spd := P_ACCEL
     if pls.state == .ON_SLOPE {
-        move_spd = const.SLOPE_SPEED 
+        move_spd = SLOPE_SPEED 
     } else if pls.state == .IN_AIR {
-        move_spd = const.AIR_SPEED
+        move_spd = AIR_SPEED
     }
 
     // process directional input
@@ -70,25 +63,25 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
     }
 
     // clamp xz velocity
-    clamped_xz := la.clamp_length(pls.velocity.xz, const.MAX_PLAYER_SPEED)
+    clamped_xz := la.clamp_length(pls.velocity.xz, MAX_PLAYER_SPEED)
     pls.velocity.xz = math.lerp(pls.velocity.xz, clamped_xz, f32(0.05))
-    pls.velocity.y = math.clamp(pls.velocity.y, -const.MAX_FALL_SPEED, const.MAX_FALL_SPEED)
+    pls.velocity.y = math.clamp(pls.velocity.y, -MAX_FALL_SPEED, MAX_FALL_SPEED)
 
     // apply ground friction
     if pls.state == .ON_GROUND && !got_dir_input {
-        pls.velocity *= math.pow(const.GROUND_FRICTION, delta_time)
+        pls.velocity *= math.pow(GROUND_FRICTION, delta_time)
     }
 
     // apply gravity
     if pls.state != .ON_GROUND {
         down: [3]f32 = {0, -1, 0}
         norm_contact := la.normalize(pls.contact_ray)
-        grav_force := const.GRAV
+        grav_force := GRAV
         if pls.state == .ON_SLOPE {
-            grav_force = const.SLOPE_GRAV
+            grav_force = SLOPE_GRAV
         }
         if pls.state == .ON_WALL {
-            grav_force = const.WALL_GRAV
+            grav_force = WALL_GRAV
         }
         if pls.state == .ON_WALL || pls.state == .ON_SLOPE {
             down -= la.dot(norm_contact, down) * norm_contact
@@ -97,15 +90,15 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
     }
 
     // bunny hop
-    can_bunny_hop := f32(elapsed_time) - pls.last_dash > const.BUNNY_DASH_DEBOUNCE
-    got_bunny_hop_input := pls.state != .IN_AIR && math.abs(pls.touch_time - pls.jump_pressed_time) < const.BUNNY_WINDOW
+    can_bunny_hop := f32(elapsed_time) - pls.last_dash > BUNNY_DASH_DEBOUNCE
+    got_bunny_hop_input := pls.state != .IN_AIR && math.abs(pls.touch_time - pls.jump_pressed_time) < BUNNY_WINDOW
     if got_bunny_hop_input && can_bunny_hop {
         pls.can_press_dash = true
         pls.bunny_hop_y = pls.position.y
         pls.state = .IN_AIR
-        pls.velocity.y = const.GROUND_BUNNY_V_SPEED
-        if la.length(pls.velocity.xz) > const.MIN_BUNNY_XZ_VEL {
-            pls.velocity.xz += la.normalize(pls.velocity.xz) * const.GROUND_BUNNY_H_SPEED
+        pls.velocity.y = GROUND_BUNNY_V_SPEED
+        if la.length(pls.velocity.xz) > MIN_BUNNY_XZ_VEL {
+            pls.velocity.xz += la.normalize(pls.velocity.xz) * GROUND_BUNNY_H_SPEED
         }
         pls.crunch_pt = pls.position - {0, 0, 0.5}
         pls.crunch_time = f32(elapsed_time)
@@ -114,25 +107,25 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
 
     // check for jump
     pressed_jump := is.z_pressed && pls.can_press_jump
-    ground_jumped := pressed_jump && (pls.state == .ON_GROUND || (f32(elapsed_time) - pls.left_ground < const.COYOTE_TIME))
-    slope_jumped := pressed_jump && (pls.state == .ON_SLOPE || (f32(elapsed_time) - pls.left_slope < const.COYOTE_TIME))
-    wall_jumped := pressed_jump && (pls.state == .ON_WALL || (f32(elapsed_time) - pls.left_wall < const.COYOTE_TIME))
+    ground_jumped := pressed_jump && (pls.state == .ON_GROUND || (f32(elapsed_time) - pls.left_ground < COYOTE_TIME))
+    slope_jumped := pressed_jump && (pls.state == .ON_SLOPE || (f32(elapsed_time) - pls.left_slope < COYOTE_TIME))
+    wall_jumped := pressed_jump && (pls.state == .ON_WALL || (f32(elapsed_time) - pls.left_wall < COYOTE_TIME))
 
     // handle normal jump
     if ground_jumped {
-        pls.velocity.y = const.P_JUMP_SPEED
+        pls.velocity.y = P_JUMP_SPEED
         pls.state = .IN_AIR
 
     // handle slope jump
     } else if slope_jumped {
-        pls.velocity += -la.normalize(pls.contact_ray) * const.SLOPE_JUMP_FORCE
-        pls.velocity.y = const.SLOPE_V_JUMP_FORCE
+        pls.velocity += -la.normalize(pls.contact_ray) * SLOPE_JUMP_FORCE
+        pls.velocity.y = SLOPE_V_JUMP_FORCE
         pls.state = .IN_AIR
 
     // handle wall jump
     } else if wall_jumped {
-        pls.velocity.y = const.P_JUMP_SPEED
-        pls.velocity += -pls.contact_ray * const.WALL_JUMP_FORCE 
+        pls.velocity.y = P_JUMP_SPEED
+        pls.velocity += -pls.contact_ray * WALL_JUMP_FORCE 
         pls.state = .IN_AIR
     }
 
@@ -143,8 +136,8 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
     }
 
     // lerp current particle displacement toward target particle displacement
-    pls.particle_displacement = la.lerp(pls.particle_displacement, pls.tgt_particle_displacement, const.PARTICLE_DISPLACEMENT_LERP)
-    pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, pls.velocity, const.TGT_PARTICLE_DISPLACEMENT_LERP)
+    pls.particle_displacement = la.lerp(pls.particle_displacement, pls.tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
+    pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, pls.velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
 
     // start dash 
     pressed_dash := is.x_pressed && pls.can_press_dash
@@ -154,24 +147,24 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
         pls.dash_start_pos = pls.position
         dash_input := input_dir == 0 ? la.normalize0(pls.velocity.xz) : input_dir
         pls.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
-        pls.dash_end_pos = pls.position + const.DASH_DIST * pls.dash_dir
+        pls.dash_end_pos = pls.position + DASH_DIST * pls.dash_dir
         pls.dash_time = f32(elapsed_time)
     }
 
     //end dash
     hit_surface := pls.state == .ON_WALL || grounded
-    dash_expired := f32(elapsed_time) > pls.dash_time + const.DASH_LEN
+    dash_expired := f32(elapsed_time) > pls.dash_time + DASH_LEN
     if pls.dashing && (hit_surface || dash_expired){
         pls.dash_end_time = f32(elapsed_time)
         pls.dashing = false
-        pls.velocity = la.normalize(pls.dash_end_pos - pls.dash_start_pos) * const.DASH_SPD
+        pls.velocity = la.normalize(pls.dash_end_pos - pls.dash_start_pos) * DASH_SPD
         pls.position = pls.dash_end_pos
     }
      
     // during dash
     if pls.dashing {
         pls.velocity = 0
-        dash_t := (f32(elapsed_time) - pls.dash_time) / const.DASH_LEN
+        dash_t := (f32(elapsed_time) - pls.dash_time) / DASH_LEN
         dash_delta := pls.dash_end_pos - pls.dash_start_pos
         pls.position = pls.dash_start_pos; //pls.dash_start_pos + dash_delta * dash_t
     }
@@ -179,14 +172,14 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
     // bunny hop time dilation
     if pls.state != .ON_GROUND && f32(elapsed_time) - pls.crunch_time < 1000 {
         if pls.position.y > pls.bunny_hop_y {
-            fact := abs(pls.velocity.y) / const.GROUND_BUNNY_V_SPEED
-            gs.time_mult = clamp(fact * fact * 4.5, 1.15, 1.5)
+            fact := abs(pls.velocity.y) / GROUND_BUNNY_V_SPEED
+            ts.time_mult = clamp(fact * fact * 4.5, 1.15, 1.5)
         } else {
-            gs.time_mult = f32(math.lerp(gs.time_mult, 1, f32(0.05)))
+            ts.time_mult = f32(math.lerp(ts.time_mult, 1, f32(0.05)))
         }
 
     } else {
-        gs.time_mult = f32(math.lerp(gs.time_mult, 1, f32(0.05)))
+        ts.time_mult = f32(math.lerp(ts.time_mult, 1, f32(0.05)))
     }
 
     // debounce jump/dash input
@@ -199,7 +192,7 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
 
     // handle reset level
     if is.r_pressed {
-        pls.position = const.INIT_PLAYER_POS
+        pls.position = INIT_PLAYER_POS
         pls.velocity = [3]f32 {0, 0, 0}
     }
 
@@ -212,22 +205,22 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
     init_velocity_len := la.length(pls.velocity)
     remaining_vel := init_velocity_len * delta_time
     velocity_normal := la.normalize(pls.velocity)
-    collisions := make([dynamic]typ.Collision); defer delete(collisions)
+    collisions := make([dynamic]Collision); defer delete(collisions)
     got_contact := false
 
     // inline func ========
     get_collisions :: proc(
-        lgs: st.Level_Geometry_State,
-        pls: st.Player_State,
-        phs: st.Physics_State,
+        lgs: Level_Geometry_State,
+        pls: Player_State,
+        phs: Physics_State,
         et: f32,
         dt: f32,
-        collisions: ^[dynamic]typ.Collision,
+        collisions: ^[dynamic]Collision,
         got_contact: ^bool
     ) {
         clear(collisions)
         got_contact^ = false
-        filter: bit_set[enm.Level_Geometry_Component_Name; u64] = { .Collider, .Transform }
+        filter: bit_set[Level_Geometry_Component_Name; u64] = { .Collider, .Transform }
         player_velocity := pls.velocity * dt
         player_velocity_len := la.length(player_velocity)
         player_velocity_normal := la.normalize(player_velocity)
@@ -236,10 +229,10 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
         transformed_coll_vertices := phs.static_collider_vertices
         tv_offset := 0
 
-        for lg, id in lgs {
+        for lg, id in lgs.entities {
             coll := phs.level_colliders[lg.collider] 
             if filter <= lg.attributes {
-                if sphere_aabb_collision(pls.position, const.SPHERE_SQ_RADIUS, lg.aabb) {
+                if sphere_aabb_collision(pls.position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
                     vertices := transformed_coll_vertices[tv_offset:tv_offset + len(coll.vertices)] 
                     l := len(coll.indices)
                     for i := 0; i <= l - 3; i += 3 {
@@ -248,17 +241,17 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
                         t2 := vertices[coll.indices[i+2]]
                         did_collide, t, normal, contact := player_lg_collision(
                             pls.position,
-                            const.SPHERE_RADIUS,
+                            PLAYER_SPHERE_RADIUS,
                             t0, t1, t2,
                             player_velocity,
                             player_velocity_len,
                             player_velocity_normal,
                             ppos_end,
                             pls.contact_ray,
-                            const.GROUNDED_RADIUS2
+                            GROUNDED_RADIUS2
                         )
                         if did_collide {
-                            append(collisions, typ.Collision{id, normal, t})
+                            append(collisions, Collision{id, normal, t})
                         }
                         got_contact^ = got_contact^ || contact
                     }
@@ -272,8 +265,8 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
 
     // inline func ==============
     update_contact_state :: proc(
-        pls: ^st.Player_State,
-        collisions: []typ.Collision,
+        pls: ^Player_State,
+        collisions: []Collision,
         et: f32,
         got_contact: bool
     ) {
@@ -295,7 +288,7 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
 
         // get most horizontal collided surface
         best_plane_normal: [3]f32 = {100, 100, 100}
-        most_horizontal_coll: typ.Collision = {} 
+        most_horizontal_coll: Collision = {} 
         for coll in collisions {
             if abs(coll.normal.y) < best_plane_normal.y {
                 best_plane_normal = coll.normal
@@ -307,7 +300,7 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
             old_state := pls.state
             ground_x := [3]f32{1, 0, 0}
             ground_z := [3]f32{0, 0, -1}
-            pls.contact_ray = -best_plane_normal * const.GROUND_RAY_LEN
+            pls.contact_ray = -best_plane_normal * GROUND_RAY_LEN
             pls.bunny_hop_y = max(f32)
             // collided with ground
             if best_plane_normal.y >= 0.85{
@@ -331,7 +324,7 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
     }
     // end func ==========
 
-    get_collisions(gs.level_geometry, pls^, phs, elapsed_time, delta_time, &collisions, &got_contact)
+    get_collisions(lgs, pls^, phs, elapsed_time, delta_time, &collisions, &got_contact)
     update_contact_state(pls, collisions[:], elapsed_time, got_contact)
 
     if remaining_vel > 0 {
@@ -352,7 +345,7 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
             velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
             pls.velocity = (velocity_normal * remaining_vel) / delta_time
 
-            get_collisions(gs.level_geometry, pls^, phs, elapsed_time, delta_time, &collisions, &got_contact)
+            get_collisions(lgs, pls^, phs, elapsed_time, delta_time, &collisions, &got_contact)
             update_contact_state(pls, collisions[:], elapsed_time, got_contact)
         }
         pls.position += velocity_normal * remaining_vel
@@ -360,22 +353,21 @@ game_update :: proc(gs: ^st.Game_State, pls: ^st.Player_State, phs: st.Physics_S
     }
 
     // update camera
-    cs := gs.camera_state
     cs.prev_position = cs.position
     cs.prev_target = cs.target
     ppos := pls.position
     if pls.dashing {
-        dash_t := (f32(elapsed_time) - pls.dash_time) / const.DASH_LEN
+        dash_t := (f32(elapsed_time) - pls.dash_time) / DASH_LEN
         dash_delta := pls.dash_end_pos - pls.dash_start_pos
         ppos = pls.dash_start_pos + dash_delta * dash_t
     }
-    tgt_y := ppos.y + const.CAMERA_PLAYER_Y_OFFSET
-    tgt_z := ppos.z + const.CAMERA_PLAYER_Z_OFFSET
-    tgt_x := ppos.x + const.CAMERA_PLAYER_X_OFFSET
+    tgt_y := ppos.y + CAMERA_PLAYER_Y_OFFSET
+    tgt_z := ppos.z + CAMERA_PLAYER_Z_OFFSET
+    tgt_x := ppos.x + CAMERA_PLAYER_X_OFFSET
     tgt : [3]f32 = {tgt_x, tgt_y, tgt_z}
-    cs.position = math.lerp(cs.position, tgt, f32(const.CAMERA_POS_LERP))
-    cs.target.x = math.lerp(cs.target.x, ppos.x, f32(const.CAMERA_X_LERP))
-    cs.target.y = math.lerp(cs.target.y, ppos.y, f32(const.CAMERA_Y_LERP))
-    cs.target.z = math.lerp(cs.target.z, ppos.z, f32(const.CAMERA_Z_LERP))
-    gs.camera_state = cs
+    cs.position = math.lerp(cs.position, tgt, f32(CAMERA_POS_LERP))
+    cs.target.x = math.lerp(cs.target.x, ppos.x, f32(CAMERA_X_LERP))
+    cs.target.y = math.lerp(cs.target.y, ppos.y, f32(CAMERA_Y_LERP))
+    cs.target.z = math.lerp(cs.target.z, ppos.z, f32(CAMERA_Z_LERP))
 }
+

@@ -1,9 +1,6 @@
-package state
+package main
 
-import enm "../enums"
-import typ "../datatypes"
-
-Level_Resources :: [enm.SHAPE]typ.Shape_Data
+Level_Resources :: [SHAPE]Shape_Data
 
 free_level_resources :: proc(lr: ^Level_Resources) {
     for sd in lr {

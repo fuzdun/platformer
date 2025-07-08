@@ -1,11 +1,52 @@
 package main
 
-import la "core:math/linalg"
 import "core:math"
+import la "core:math/linalg"
 
-import const "constants"
-import typ "datatypes"
 
+Physics_State :: struct{
+    //collisions: [dynamic]typ.Collision,
+    debug_render_queue: struct {
+        vertices: [dynamic]Vertex,
+        indices: [ProgramName][dynamic]u16
+    },
+    level_colliders: [SHAPE]Collider_Data,
+    static_collider_vertices: [dynamic][3]f32,
+}
+
+clear_physics_state :: proc(ps: ^Physics_State) {
+    //clear(&ps.collisions)
+    clear(&ps.debug_render_queue.vertices)
+    for &iq in ps.debug_render_queue.indices {
+        clear(&iq)
+    }
+}
+
+free_physics_state :: proc(ps: ^Physics_State) {
+    //delete(ps.collisions)
+    delete(ps.debug_render_queue.vertices)
+    for &iq in ps.debug_render_queue.indices {
+        delete(iq)
+    }
+    for coll in ps.level_colliders {
+        delete(coll.indices) 
+        delete(coll.vertices)
+    }
+    //delete(ps.level_colliders)
+    delete(ps.static_collider_vertices)
+}
+
+
+Collision :: struct{
+    id: int,
+    normal: [3]f32,
+    t: f32
+}
+
+Collider_Data :: struct{
+    vertices: [][3]f32,
+    indices: []u16
+}
 
 player_lg_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f32, v: [3]f32, v_l: f32, v_n: [3]f32, c1: [3]f32, cr: [3]f32, gr: f32
 ) -> (collided: bool = false, collision_t: f32, collision_n: [3]f32, contact: bool = false) {
@@ -64,7 +105,7 @@ player_lg_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f
     return
 }
 
-sphere_aabb_collision :: proc(c: [3]f32, r: f32, aabb: typ.Aabb) -> bool {
+sphere_aabb_collision :: proc(c: [3]f32, r: f32, aabb: Aabb) -> bool {
     total : f32 = 0
     if c.x < aabb.x0 do total += (c.x - aabb.x0) * (c.x - aabb.x0)
     if c.x > aabb.x1 do total += (c.x - aabb.x1) * (c.x - aabb.x1)
@@ -149,7 +190,7 @@ closest_line_pt :: proc(l0: [3]f32, l1: [3]f32, p: [3]f32) -> [3]f32{
 ray_sphere_intersection :: proc(origin: [3]f32, dir: [3]f32, ppos: [3]f32) -> (t: f32, q: [3]f32, ok: bool) {
     m := origin - ppos 
     b := la.dot(m, dir)
-    c := la.dot(m, m) - const.SPHERE_SQ_RADIUS
+    c := la.dot(m, m) - PLAYER_SPHERE_SQ_RADIUS
     if c > 0 && b > 0 {
         ok = false
         return

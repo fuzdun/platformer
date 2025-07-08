@@ -1,13 +1,38 @@
 package main
 
-import "core:fmt"
-import "vendor:glfw"
-import "base:runtime"
 import SDL "vendor:sdl2"
-import st "state"
 
-process_input :: proc (is: ^st.Input_State, quit_handler: proc()) 
-{
+
+Input_State :: struct {
+    a_pressed: bool,
+    d_pressed: bool,
+    s_pressed: bool,
+    w_pressed: bool,
+    q_pressed: bool,
+    c_pressed: bool,
+    z_pressed: bool, 
+    x_pressed: bool,
+    lt_pressed: bool, 
+    gt_pressed: bool,
+    left_pressed: bool,
+    right_pressed: bool,
+    up_pressed : bool, 
+    down_pressed: bool,
+    pg_up_pressed: bool,
+    pg_down_pressed: bool,
+    tab_pressed: bool,
+    bck_pressed: bool,
+    e_pressed: bool,
+    r_pressed: bool,
+    ent_pressed: bool,
+    spc_pressed: bool,
+    hor_axis: f32,
+    vert_axis: f32
+}
+
+free_input_state :: proc(is: ^Input_State) {}
+
+process_input :: proc (is: ^Input_State, quit_handler: proc()) {
     event : SDL.Event
     for SDL.PollEvent(&event) {
         #partial switch event.type {

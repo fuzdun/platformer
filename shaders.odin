@@ -1,11 +1,47 @@
-package constants
+package main
 
 import gl "vendor:OpenGL"
+import glm "core:math/linalg/glsl"
 
-import enm "../enums"
-import typ "../datatypes"
 
-PROGRAM_CONFIGS :: #partial[enm.ProgramName]typ.Program{
+Shader_State :: struct {
+    active_programs: map[ProgramName]Active_Program,
+    loaded_program: u32,
+    loaded_program_name: ProgramName
+}
+
+free_shader_state :: proc(shst: ^Shader_State) {
+    for _, ap in shst.active_programs {
+        delete(ap.locations)
+    }
+    delete(shst.active_programs)
+}
+
+Program :: struct{
+    pipeline: []string,
+    uniforms: []string,
+    shader_types: []gl.Shader_Type,
+    init_proc: proc(),
+}
+
+Active_Program :: struct{
+    id: u32,
+    init_proc: proc(),
+    locations: map[string]i32
+}
+
+ProgramName :: enum{
+    Player,
+    Trail,
+    Simple,
+    Background,
+    Player_Particle,
+    Outline,
+    Text,
+    Line
+}
+
+PROGRAM_CONFIGS :: #partial[ProgramName]Program{
     .Trail = {
         pipeline = {"thumpervertex", "tessellationctrl", "tessellationeval", "thumpergeometry", "trailfrag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
@@ -68,5 +104,27 @@ PROGRAM_CONFIGS :: #partial[enm.ProgramName]typ.Program{
         uniforms = {"projection", "transform"},
         init_proc = proc() {}
     },
+}
+
+use_shader :: proc(sh: ^Shader_State, rs: ^Render_State, name: ProgramName) {
+    if name in sh.active_programs {
+        gl.UseProgram(sh.active_programs[name].id)
+        sh.loaded_program = sh.active_programs[name].id
+        sh.loaded_program_name = name
+        gl.UseProgram(sh.loaded_program)
+        sh.active_programs[name].init_proc()
+    }
+}
+
+set_matrix_uniform :: proc(sh: ^Shader_State, name: string, data: ^glm.mat4) {
+    gl.UniformMatrix4fv(sh.active_programs[sh.loaded_program_name].locations[name], 1, gl.FALSE, &data[0, 0])
+}
+
+set_float_uniform :: proc(sh: ^Shader_State, name: string, data: f32) {
+    gl.Uniform1f(sh.active_programs[sh.loaded_program_name].locations[name], data)
+}
+
+set_vec3_uniform :: proc(sh: ^Shader_State, name: string, count: i32, data: ^glm.vec3) {
+    gl.Uniform3fv(sh.active_programs[sh.loaded_program_name].locations[name], count, &data[0])
 }
 
