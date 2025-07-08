@@ -1,9 +1,12 @@
 package state
 
 import la "core:math/linalg"
+import glm "core:math/linalg/glsl"
+import "core:math"
 
 import enm "../enums"
 import typ "../datatypes"
+import const "../constants"
 
 Game_State :: struct {
     level_geometry: Level_Geometry_State,
@@ -73,5 +76,23 @@ Editor_State :: struct {
 
 free_editor_state :: proc(es: ^Editor_State) {
     delete(es.connections)
+}
+
+interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4{
+    tgt := math.lerp(cs.prev_target, cs.target, t)
+    c_pos := math.lerp(cs.prev_position, cs.position, t)
+    rot := glm.mat4LookAt({0, 0, 0}, {f32(tgt.x - c_pos.x), f32(tgt.y - c_pos.y), f32(tgt.z - c_pos.z)}, {0, 1, 0})
+    proj := glm.mat4Perspective(1.0, const.WIDTH / const.HEIGHT, 10.0, 1000)
+    offset := glm.mat4Translate({f32(-c_pos.x), f32(-c_pos.y), f32(-c_pos.z)})
+    return proj * rot * offset
+}
+
+construct_camera_matrix :: proc(cs: ^Camera_State) -> glm.mat4 {
+    tgt := cs.target
+    c_pos := cs.position
+    rot := glm.mat4LookAt({0, 0, 0}, {f32(tgt.x - c_pos.x), f32(tgt.y - c_pos.y), f32(tgt.z - c_pos.z)}, {0, 1, 0})
+    proj := glm.mat4Perspective(.4, const.WIDTH / const.HEIGHT, 1.0, 10000)
+    offset := glm.mat4Translate({f32(-c_pos.x), f32(-c_pos.y), f32(-c_pos.z)})
+    return proj * rot * offset
 }
 

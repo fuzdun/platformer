@@ -1,14 +1,10 @@
 package main
 
-import "core:fmt"
-import str "core:strings"
-import "core:os"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
-import enm "enums"
 
+import enm "enums"
 import st "state"
-import const "constants"
 import typ "datatypes"
 
 
@@ -75,53 +71,6 @@ PROGRAM_CONFIGS := #partial[enm.ProgramName]typ.Program{
         uniforms = {"projection", "transform"},
         init_proc = proc() {}
     },
-}
-
-init_shaders :: proc(sh: ^st.Shader_State) -> bool {
-    for config, program in PROGRAM_CONFIGS {
-        shaders := make([]u32, len(config.pipeline))
-        defer delete(shaders)
-        for filename, shader_i in config.pipeline {
-            id, ok := shader_program_from_file(filename, config.shader_types[shader_i])
-            if !ok {
-                return false
-            }
-            shaders[shader_i] = id
-        }
-
-        program_id, program_ok := gl.create_and_link_program(shaders)
-        if !program_ok {
-            fmt.eprintln("program link failed:", program)
-            return false
-        }
-        sh.active_programs[program] = {program_id, config.init_proc, make(map[string]i32)}
-        prog := sh.active_programs[program]
-        for uniform in config.uniforms {
-            cstr_name := str.clone_to_cstring(uniform); defer delete(cstr_name)
-            prog.locations[uniform] = gl.GetUniformLocation(program_id, cstr_name)
-            sh.active_programs[program] = prog
-        }
-    }
-    return true
-}
-
-shader_program_from_file :: proc(filename: string, type: gl.Shader_Type) -> (u32, bool) {
-    dir := "shaders/"
-    ext := ".glsl"
-    filename := str.concatenate({dir, filename, ext})
-    defer delete(filename)
-    shader_string, shader_ok := os.read_entire_file(filename)
-    defer delete(shader_string)
-    if !shader_ok {
-        fmt.eprintln("failed to read vertex shader file:", shader_string)
-        return 0, false
-    }
-    shader_id, ok := gl.compile_shader_from_source(string(shader_string), type)
-    if !ok {
-        fmt.eprintln("failed to compile shader:", filename)
-        return 0, false
-    }
-    return shader_id, true
 }
 
 use_shader :: proc(sh: ^st.Shader_State, rs: ^st.Render_State, name: enm.ProgramName) {

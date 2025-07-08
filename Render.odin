@@ -35,7 +35,10 @@ update_vertices :: proc(gs: ^st.Game_State, lrs: st.Level_Resources, rs: ^st.Ren
 
             for offset, shader in lg.ssbo_indexes {
                 if offset != -1 {
-                    ssbo_idx := get_ssbo_idx(lg, shader, rs^)
+                    //ssbo_idx := get_ssbo_idx(lg, shader, rs^)
+                    group_idx := int(shader) * len(enm.SHAPE) + int(lg.shape)
+                    group_offset := rs.render_group_offsets[group_idx]
+                    ssbo_idx := int(group_offset) + lg.ssbo_indexes[shader]
                     if ssbo_idx > len(rs.static_transforms) - 1 {
                         append(&rs.static_transforms, trans_mat) 
                         append(&rs.z_widths, max_z - min_z)
@@ -144,7 +147,7 @@ render :: proc(
     }
 
     // add player to command queue
-    player_mat := interpolated_player_matrix(pls, f32(interp_t))
+    player_mat := st.interpolated_player_matrix(pls, f32(interp_t))
     player_rq := rs.shader_render_queues[.Player]
     //append(&player_rq.transforms, player_mat)
     append(&player_rq, gl.DrawElementsIndirectCommand{
@@ -159,9 +162,9 @@ render :: proc(
     // execute draw queues
     proj_mat: glm.mat4
     if EDIT {
-        proj_mat = construct_camera_matrix(&gs.camera_state)
+        proj_mat = st.construct_camera_matrix(&gs.camera_state)
     } else {
-        proj_mat = interpolated_camera_matrix(&gs.camera_state, f32(interp_t))
+        proj_mat = st.interpolated_camera_matrix(&gs.camera_state, f32(interp_t))
     }
 
     if !EDIT {
@@ -222,7 +225,7 @@ render :: proc(
                 pv.position = camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y
             }
             pp := rs.player_particles
-            i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
+            i_ppos:[3]f32 = st.interpolated_player_pos(pls, f32(interp_t))
             set_matrix_uniform(shst, "projection", &proj_mat)
             set_float_uniform(shst, "i_time", f32(time))
             set_float_uniform(shst, "radius", 3.0)
@@ -266,7 +269,7 @@ render :: proc(
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         crunch_pt : glm.vec3 = pls.crunch_pt
         player_pos := pls.position
-        player_trail := interpolated_trail(pls, f32(interp_t))
+        player_trail := st.interpolated_trail(pls, f32(interp_t))
         set_vec3_uniform(shst, "player_trail", 3, &player_trail[0])
         set_vec3_uniform(shst, "player_pos", 1, &player_pos)
         set_vec3_uniform(shst, "crunch_pt", 1, &crunch_pt)

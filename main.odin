@@ -103,7 +103,6 @@ main :: proc () {
     gs.time_mult = 1
 
     // init physics state
-    phs.collisions = make([dynamic]typ.Collision)
     phs.debug_render_queue.vertices = make([dynamic]typ.Vertex)
     phs.static_collider_vertices = make([dynamic][3]f32)
     for pn in enm.ProgramName {
@@ -120,7 +119,7 @@ main :: proc () {
     rs.static_transforms = make([dynamic]glm.mat4)
     rs.z_widths = make([dynamic]f32)
     rs.player_particle_poss = make([dynamic]glm.vec3)
-    add_player_sphere_data(&rs)
+    st.add_player_sphere_data(&rs)
 
     // init player state
     pls.state = .IN_AIR
@@ -144,15 +143,25 @@ main :: proc () {
     //}
 
     // init shader programs
+    dir := "shaders/"
+    ext := ".glsl"
     for config, program in PROGRAM_CONFIGS {
         shaders := make([]u32, len(config.pipeline))
         defer delete(shaders)
         for filename, shader_i in config.pipeline {
-            id, ok := shader_program_from_file(filename, config.shader_types[shader_i])
-            if !ok {
-                //return false
+            type := config.shader_types[shader_i]
+            filename := str.concatenate({dir, filename, ext})
+            defer delete(filename)
+            shader_string, shader_ok := os.read_entire_file(filename)
+            defer delete(shader_string)
+            if !shader_ok {
+                fmt.eprintln("failed to read vertex shader file:", shader_string)
             }
-            shaders[shader_i] = id
+            shader_id, ok := gl.compile_shader_from_source(string(shader_string), type)
+            if !ok {
+                fmt.eprintln("failed to compile shader:", filename)
+            }
+            shaders[shader_i] = shader_id
         }
 
         program_id, program_ok := gl.create_and_link_program(shaders)
@@ -387,7 +396,15 @@ main :: proc () {
 
         for accumulator >= target_frame_clocks {
             // Fixed update
-            game_update(&gs, lrs, &pls, &phs, &rs, elapsed_time, const.FIXED_DELTA_TIME * gs.time_mult)
+            if EDIT {
+                get_selected_geometry_dists(&gs.editor_state, phs, gs.level_geometry)
+                editor_move_camera(&gs.level_geometry, &gs.editor_state, &gs.camera_state, const.FIXED_DELTA_TIME)
+                editor_move_object(&gs, lrs, &gs.editor_state, gs.input_state, &phs, &rs, const.FIXED_DELTA_TIME)
+                editor_save_changes(&gs.level_geometry, gs.input_state, &gs.editor_state)
+            } else {
+                game_update(&gs, &pls, phs, f32(elapsed_time), const.FIXED_DELTA_TIME)
+            }
+            //update(&gs, lrs, &pls, &phs, &rs, elapsed_time, const.FIXED_DELTA_TIME * gs.time_mult)
             accumulator -= target_frame_clocks 
         }
 

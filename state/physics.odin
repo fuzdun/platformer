@@ -6,7 +6,7 @@ import enm "../enums"
 import typ "../datatypes"
 
 Physics_State :: struct{
-    collisions: [dynamic]typ.Collision,
+    //collisions: [dynamic]typ.Collision,
     debug_render_queue: struct {
         vertices: [dynamic]typ.Vertex,
         indices: [enm.ProgramName][dynamic]u16
@@ -16,7 +16,7 @@ Physics_State :: struct{
 }
 
 clear_physics_state :: proc(ps: ^Physics_State) {
-    clear(&ps.collisions)
+    //clear(&ps.collisions)
     clear(&ps.debug_render_queue.vertices)
     for &iq in ps.debug_render_queue.indices {
         clear(&iq)
@@ -24,7 +24,7 @@ clear_physics_state :: proc(ps: ^Physics_State) {
 }
 
 free_physics_state :: proc(ps: ^Physics_State) {
-    delete(ps.collisions)
+    //delete(ps.collisions)
     delete(ps.debug_render_queue.vertices)
     for &iq in ps.debug_render_queue.indices {
         delete(iq)

@@ -1,6 +1,7 @@
 package state
 
 import glm "core:math/linalg/glsl"
+import "core:math"
 
 import enm "../enums"
 import const "../constants"
@@ -47,3 +48,17 @@ Player_State :: struct {
 
 free_player_state :: proc(ps: ^Player_State) {}
 
+interpolated_player_pos :: proc(ps: Player_State, t: f32) -> [3]f32 {
+    return math.lerp(ps.prev_position, ps.position, t) 
+}
+
+interpolated_trail :: proc(ps: Player_State, t: f32) -> [3]glm.vec3 {
+    return math.lerp(ps.prev_trail_sample, ps.trail_sample, t)
+}
+
+interpolated_player_matrix :: proc(ps: Player_State, t: f32) -> matrix[4, 4]f32 {
+    i_pos := math.lerp(ps.prev_position, ps.position, t) 
+    rot := const.I_MAT
+    offset := glm.mat4Translate({f32(i_pos.x), f32(i_pos.y), f32(i_pos.z)})
+    return rot * offset
+}
