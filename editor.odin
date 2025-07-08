@@ -107,7 +107,6 @@ editor_move_object :: proc(gs: ^st.Game_State, lrs: st.Level_Resources, es: ^st.
         new_lg.shape = enm.SHAPE(nxt_shape)
         new_lg.collider = enm.SHAPE(nxt_shape)
         ordered_remove_soa(&gs.level_geometry, es.selected_entity) 
-        fmt.println(new_lg)
         append(&gs.level_geometry, new_lg)
         es.selected_entity = len(gs.level_geometry) - 1
         editor_reload_level_geometry(gs, lrs, ps, rs)

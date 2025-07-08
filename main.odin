@@ -1,15 +1,14 @@
 package main
 
-import "base:runtime"
 import "core:fmt"
+import "core:mem"
+import "core:os"
+import la "core:math/linalg"
+import glm "core:math/linalg/glsl"
+import str "core:strings"
 import SDL "vendor:sdl2"
 import TTF "vendor:sdl2/ttf"
 import gl "vendor:OpenGL"
-import la "core:math/linalg"
-import "core:mem"
-import "core:os"
-import glm "core:math/linalg/glsl"
-import str "core:strings"
 import ft "shared:freetype"
 
 import st "state"
@@ -22,6 +21,7 @@ PERF_TEST :: #config(PERF_TEST, false)
 
 @(private="file")
 quit_app := false
+
 
 main :: proc () {
     controller : ^SDL.GameController
@@ -132,7 +132,7 @@ main :: proc () {
 
     // init level resources
     for shape in enm.SHAPE {
-        if ok := load_blender_model(shape, &lrs, &phs); ok {
+        if ok := load_glb_model(shape, &lrs, &phs); ok {
             fmt.println("loaded", shape) 
         }
     }
@@ -145,7 +145,7 @@ main :: proc () {
     // init shader programs
     dir := "shaders/"
     ext := ".glsl"
-    for config, program in PROGRAM_CONFIGS {
+    for config, program in const.PROGRAM_CONFIGS {
         shaders := make([]u32, len(config.pipeline))
         defer delete(shaders)
         for filename, shader_i in config.pipeline {

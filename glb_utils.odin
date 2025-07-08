@@ -6,14 +6,14 @@ import "core:fmt"
 import "core:encoding/json"
 import "core:encoding/endian"
 import "core:bytes"
-import gl "vendor:OpenGL"
 
 import st "state"
 import enm "enums"
 import const "constants"
 import typ "datatypes"
 
-load_blender_model :: proc(shape: enm.SHAPE, lrs: ^st.Level_Resources, ps: ^st.Physics_State) -> bool {
+
+load_glb_model :: proc(shape: enm.SHAPE, lrs: ^st.Level_Resources, ps: ^st.Physics_State) -> bool {
     // read binary data
     filename := const.SHAPE_FILENAME[shape]
     binary_filename := str.concatenate({"models/", filename, ".glb"})
