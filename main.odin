@@ -407,14 +407,10 @@ main :: proc () {
         for accumulator >= target_frame_clocks {
             // Fixed update
             if EDIT {
-                get_selected_geometry_dists(&es, phs, lgs.entities)
-                editor_move_camera(&lgs, &es, &cs, FIXED_DELTA_TIME)
-                editor_move_object(&lgs, lrs, &es, is, &phs, &rs, FIXED_DELTA_TIME)
-                editor_save_changes(&lgs, is, &es)
+                editor_update(&lgs, lrs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
                 game_update(lgs, is, &pls, phs, &cs, &ts, f32(elapsed_time), FIXED_DELTA_TIME)
             }
-            //update(&gs, lrs, &pls, &phs, &rs, elapsed_time, const.FIXED_DELTA_TIME * gs.time_mult)
             accumulator -= target_frame_clocks 
         }
 
