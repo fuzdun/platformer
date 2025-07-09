@@ -124,16 +124,7 @@ main :: proc () {
     for shader in ProgramName {
         rs.shader_render_queues[shader] = make([dynamic]gl.DrawElementsIndirectCommand)
     }
-    rs.static_transforms = make([dynamic]glm.mat4)
-    rs.z_widths = make([dynamic]f32)
     rs.player_particle_poss = make([dynamic]glm.vec3)
-
-    // ======TEST========
-    // rs.sorted_transforms = make([dynamic]glm.mat4)
-    // rs.sorted_z_widths = make([dynamic]f32)
-    // rs.render_commands = make([dynamic]gl.DrawElementsIndirectCommand)
-    // ==================
-    // group_offsets: [len(SHAPE)]int
     add_player_sphere_data(&rs)
 
     // init player state
@@ -170,7 +161,7 @@ main :: proc () {
             shader_string, shader_ok := os.read_entire_file(filename)
             defer delete(shader_string)
             if !shader_ok {
-                fmt.eprintln("failed to read vertex shader file:", shader_string)
+                fmt.eprintln("failed to read shader file:", shader_string)
             }
             shader_id, ok := gl.compile_shader_from_source(string(shader_string), type)
             if !ok {
@@ -184,7 +175,7 @@ main :: proc () {
             fmt.eprintln("program link failed:", program)
             //return false
         }
-        shs.active_programs[program] = {program_id, config.init_proc, make(map[string]i32)}
+        shs.active_programs[program] = {program_id, make(map[string]i32)}
         prog := shs.active_programs[program]
         for uniform in config.uniforms {
             cstr_name := str.clone_to_cstring(uniform); defer delete(cstr_name)

@@ -39,11 +39,8 @@ editor_update :: proc(lgs: ^Level_Geometry_State, lrs: Level_Resources, es: ^Edi
         new_lg.shape = cur_shape
         new_lg.collider = cur_shape 
         new_lg.transform = selected_obj.transform
-        new_lg.shaders = {.Trail}
+        new_lg.shaders = {.Level_Geometry_Fill}
         new_lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-        for &idx in new_lg.ssbo_indexes {
-            idx = -1
-        }
         add_geometry(lgs, lrs, phs, rs, es, new_lg)
     }
     es.can_add = !is.q_pressed

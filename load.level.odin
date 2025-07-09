@@ -58,12 +58,12 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, lrs: Level_Resources, ps
         // ==========================================
     } else {
         // perf test load======================
-        loaded_level_geometry = make([]Level_Geometry, 5000)
-        for i in 0..<5000 {
+        loaded_level_geometry = make([]Level_Geometry, 1000)
+        for i in 0..<1000 {
             rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
             shape: SHAPE = rnd.choice([]SHAPE{ .CUBE, .WEIRD })
             // fmt.println(shape)
-            shader: ProgramName = .Trail
+            shader: ProgramName = .Level_Geometry_Fill
             lg: Level_Geometry
             lg.shape = shape
             lg.collider = shape
@@ -90,7 +90,6 @@ editor_reload_level_geometry :: proc(lgs: ^Level_Geometry_State, lrs: Level_Reso
         current_level_geometry[idx] = lg
     }
     clear(&lgs.entities)
-    clear_render_state(rs)
     add_geometry_to_renderer(lgs, rs, ps, current_level_geometry[:])
 }
 
@@ -126,40 +125,20 @@ add_geometry_to_physics :: proc(ps: ^Physics_State, lgs_in: []Level_Geometry) {
 }
 
 add_geometry_to_renderer :: proc(lgs: ^Level_Geometry_State, rs: ^Render_State, ps: ^Physics_State, lgs_in: []Level_Geometry) {
-    // initialize ssbo_indexes
-    clear_render_state(rs)
     for &lg in lgs_in {
-        for &idx in lg.ssbo_indexes {
-            idx = -1 
-        }
         trans_mat := trans_to_mat4(lg.transform)
         vertices_len := len(ps.level_colliders[lg.shape].vertices)
-        transformed_vertices := make([][3]f32, vertices_len);
-        defer delete(transformed_vertices)
-        lg_get_transformed_collider_vertices(lg, trans_mat, ps^, transformed_vertices[:])
-        max_z := min(f32)
-        min_z := max(f32)
-        for v, vi in transformed_vertices {
-            max_z = max(v.z, max_z)
-            min_z = min(v.z, min_z)
-        }
+        // transformed_vertices := make([][3]f32, vertices_len);
+        // defer delete(transformed_vertices)
+        // lg_get_transformed_collider_vertices(lg, trans_mat, ps^, transformed_vertices[:])
+        // max_z := min(f32)
+        // min_z := max(f32)
+        // for v, vi in transformed_vertices {
+        //     max_z = max(v.z, max_z)
+        //     min_z = min(v.z, min_z)
+        // }
         // insert transform into render state
-        loaded_shaders: Active_Shaders = EDIT ? {.Simple} : lg.shaders
-        for shader in loaded_shaders {
-            group_offsets_idx := int(shader) * len(SHAPE) + int(lg.shape)
-            group_start_idx := rs.render_group_offsets[group_offsets_idx]
-            in_last_group := group_offsets_idx == len(rs.render_group_offsets) - 1
-            nxt_group_start_idx := in_last_group ? u32(len(rs.static_transforms)) : rs.render_group_offsets[group_offsets_idx + 1]
-
-            inject_at(&rs.z_widths, nxt_group_start_idx, max_z - min_z)
-            inject_at(&rs.static_transforms, nxt_group_start_idx, trans_mat)
-
-            lg.ssbo_indexes[shader] = int(nxt_group_start_idx - group_start_idx)
-
-            for &g_offset, idx in rs.render_group_offsets[group_offsets_idx + 1:] {
-                g_offset += 1 
-            }
-        }
+        loaded_shaders: Active_Shaders = EDIT ? {.Editor_Geometry} : lg.shaders
         append(&lgs.entities, lg)
     }
 }

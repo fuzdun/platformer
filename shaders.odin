@@ -21,88 +21,70 @@ Program :: struct{
     pipeline: []string,
     uniforms: []string,
     shader_types: []gl.Shader_Type,
-    init_proc: proc(),
 }
 
 Active_Program :: struct{
     id: u32,
-    init_proc: proc(),
     locations: map[string]i32
 }
 
 ProgramName :: enum{
     Player,
-    Trail,
-    Simple,
+    Level_Geometry_Outline,
+    Level_Geometry_Fill,
+    Editor_Geometry,
     Background,
     Player_Particle,
-    Outline,
+    Connection_Line,
     Text,
-    Line
+    Dash_Line,
 }
 
 PROGRAM_CONFIGS :: #partial[ProgramName]Program{
-    .Trail = {
-        pipeline = {"thumpervertex", "tessellationctrl", "tessellationeval", "thumpergeometry", "trailfrag"},
+    .Level_Geometry_Outline = {
+        pipeline = {"lg_outline_vertex", "lg_outline_frag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {}
+    },
+    .Level_Geometry_Fill = {
+        pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "lg_fill_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"player_trail", "player_pos", "crunch_time", "crunch_pt", "time", "projection", "sonar_time"},
-        init_proc = proc() {
-             //gl.PolygonMode(gl.FRONT, gl.FILL)
-        },
+        uniforms = {"player_trail", "player_pos", "crunch_time", "crunch_pt", "time", "projection"},
     },
     .Player = {
-        pipeline = {"playervertex", "playerfrag"},
+        pipeline = {"player_vertex", "player_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"transform", "i_time", "dash_time", "dash_end_time", "projection", "p_color", "constrain_dir"},
-        init_proc = proc() {
-            // gl.PolygonMode(gl.FRONT, gl.FILL)
-        },
     },
     .Player_Particle = {
-        pipeline = {"particlevertex", "particlefrag"},
+        pipeline = {"player_particle_vertex", "player_particle_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection", "player_pos", "i_time", "radius", "constrain_dir", "dash_time", "dash_end_time"},
-        init_proc = proc() {
-            // gl.PolygonMode(gl.FRONT, gl.FILL)
-        },
     },
-    .Simple = {
-        pipeline = {"simplevertex", "simplefrag"},
+    .Editor_Geometry = {
+        pipeline = {"editor_vertex", "editor_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection"},
-        init_proc = proc() {
-            // gl.PolygonMode(gl.FRONT, gl.FILL)
-        }
     },
     .Background = {
-        pipeline = {"backgroundvertex", "backgroundfrag"},
+        pipeline = {"background_vertex", "background_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"i_time"},
-        init_proc = proc(){
-            // gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
-        }
     },
-    .Outline = {
-        pipeline = {"outlinevertex", "outlinefrag"},
+    .Connection_Line = {
+        pipeline = {"connection_line_vertex", "connection_line_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection", "color"},
-        init_proc = proc() {
-            // gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINES)
-        }
     },
-    .Line = {
-        pipeline = {"linevertex", "linegeometry", "linefrag"},
+    .Dash_Line = {
+        pipeline = {"dash_line_vertex", "dash_line_geometry", "dash_line_frag"},
         shader_types = {.VERTEX_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection", "color", "line_dir", "dash_time", "i_time", "dash_dir", "resolution"},
-        init_proc = proc() {
-
-        }
     },
     .Text = {
-        pipeline = {"textvertex", "textfrag"},
+        pipeline = {"text_vertex", "text_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection", "transform"},
-        init_proc = proc() {}
     },
 }
 
@@ -112,7 +94,6 @@ use_shader :: proc(sh: ^Shader_State, rs: ^Render_State, name: ProgramName) {
         sh.loaded_program = sh.active_programs[name].id
         sh.loaded_program_name = name
         gl.UseProgram(sh.loaded_program)
-        sh.active_programs[name].init_proc()
     }
 }
 

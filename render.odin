@@ -71,28 +71,16 @@ Render_State :: struct {
 
     dither_tex: u32,
 
-    // static_transforms: [dynamic]glm.mat4,
-    player_particle_poss: [dynamic]glm.vec3,
-    // z_widths: [dynamic]f32,
-    shader_render_queues: Shader_Render_Queues,
-    player_particles: [PLAYER_PARTICLE_COUNT][4]f32,
-    vertex_offsets: Vertex_Offsets,
-    index_offsets: Index_Offsets,
     player_vertex_offset: u32,
     player_index_offset: u32,
-    render_group_offsets: [len(ProgramName) * len(SHAPE)]u32,
-
+    player_particle_poss: [dynamic]glm.vec3,
+    player_particles: [PLAYER_PARTICLE_COUNT][4]f32,
     player_geometry: Shape_Data,
 
-    // sorted_transforms: [dynamic]glm.mat4,
-    // sorted_z_widths: [dynamic]f32,
-    // render_commands: [dynamic]gl.DrawElementsIndirectCommand,
-    // group_offsets: [len(SHAPE)]int
+    vertex_offsets: Vertex_Offsets,
+    index_offsets: Index_Offsets,
+    shader_render_queues: Shader_Render_Queues,
 }
-    // sorted_transforms := make([]glm.mat4, lg_count); defer delete(sorted_transforms)
-    // sorted_z_widths := make([]f32, lg_count); defer delete(sorted_z_widths)
-    // lg_render_commands := make([]gl.DrawElementsIndirectCommand, lg_count); defer delete(lg_render_commands) 
-    // group_offsets: [len(SHAPE)]int
 
 Char_Tex :: struct {
     id: u32,
@@ -138,31 +126,19 @@ Lg_Render_Data :: struct {
     render_group: int,
     transform_mat: glm.mat4,
     z_width: f32,
-}
-
-clear_render_state :: proc(rs: ^Render_State) {
-    clear(&rs.static_transforms)
-    clear(&rs.z_widths)
-    for &off in rs.render_group_offsets {
-        off = 0
-    }
+    z: f32
 }
 
 clear_render_queues :: proc(rs: ^Render_State) {
     for shader in ProgramName {
         clear(&rs.shader_render_queues[shader])
     }
-    // clear(&rs.sorted_transforms)
-    // clear(&rs.sorted_z_widths)
-    // clear(&rs.render_commands)
 }
 
 free_render_state :: proc(rs: ^Render_State) {
     for shader in ProgramName {
         delete(rs.shader_render_queues[shader])
     }
-    delete(rs.static_transforms)
-    delete(rs.z_widths)
     ft.done_face(rs.face)
     ft.done_free_type(rs.ft_lib)
     delete(rs.char_tex_map)
@@ -247,24 +223,24 @@ update_vertices :: proc(lgs: ^Level_Geometry_State, lrs: Level_Resources, rs: ^R
                 min_z = min(new_pos.z, min_z)
             }
 
-            for offset, shader in lg.ssbo_indexes {
-                if offset != -1 {
+            // for offset, shader in lg.ssbo_indexes {
+            //     if offset != -1 {
                     //ssbo_idx := get_ssbo_idx(lg, shader, rs^)
-                    group_idx := int(shader) * len(SHAPE) + int(lg.shape)
-                    group_offset := rs.render_group_offsets[group_idx]
-                    ssbo_idx := int(group_offset) + lg.ssbo_indexes[shader]
-                    if ssbo_idx > len(rs.static_transforms) - 1 {
-                        append(&rs.static_transforms, trans_mat) 
-                        append(&rs.z_widths, max_z - min_z)
-                    } else {
-                        rs.static_transforms[ssbo_idx] = trans_mat
-                        rs.z_widths[ssbo_idx] = max_z - min_z
-                    }
-                }
-            }
+                    // group_idx := int(shader) * len(SHAPE) + int(lg.shape)
+                    // group_offset := rs.render_group_offsets[group_idx]
+                    // ssbo_idx := int(group_offset) + lg.ssbo_indexes[shader]
+                    // if ssbo_idx > len(rs.static_transforms) - 1 {
+                    //     append(&rs.static_transforms, trans_mat) 
+                    //     append(&rs.z_widths, max_z - min_z)
+                    // } else {
+                    //     rs.static_transforms[ssbo_idx] = trans_mat
+                    //     rs.z_widths[ssbo_idx] = max_z - min_z
+                    // }
+                // }
+            // }
         }
     }
-    clear(&lgs.dirty_entities)
+    // clear(&lgs.dirty_entities)
     //slice.sort_by(rs.static_transforms[:], proc(a: glm.mat4, b: glm.mat4) -> bool { return a[3][2] < b[3][2] })
 }
 

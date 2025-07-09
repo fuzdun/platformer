@@ -23,7 +23,6 @@ Level_Geometry :: struct {
     shaders: Active_Shaders,
     attributes: Level_Geometry_Attributes,
     aabb: Aabb,
-    ssbo_indexes: [ProgramName]int,
 }
 
 Transform :: struct{

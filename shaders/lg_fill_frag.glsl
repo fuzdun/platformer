@@ -9,7 +9,6 @@ in flat int in_view;
 in vec3 normal_frag;
 in vec3 player_pos;
 
-uniform float sonar_time;
 uniform float time;
 uniform vec3[3] player_trail;
 uniform vec3 crunch_pt;
