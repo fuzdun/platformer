@@ -41,7 +41,7 @@ free_model_json_struct :: proc(js: model_json_struct) {
     delete(js.meshes)
 }
 
-load_glb_model :: proc(shape: SHAPE, lrs: ^Level_Resources, ps: ^Physics_State) -> bool {
+load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, ps: ^Physics_State) -> bool {
     // read binary data
     filename := SHAPE_FILENAME[shape]
     binary_filename := str.concatenate({"models/", filename, ".glb"})
@@ -92,7 +92,7 @@ load_glb_model :: proc(shape: SHAPE, lrs: ^Level_Resources, ps: ^Physics_State) 
     defer free_model_json_struct(js) 
 
     collider_mesh_idx := len(js.scenes[0].nodes) == 2 ? 1 : 0
-    lrs[shape] = read_mesh_data_from_binary(js, bin_data, 0, false).(Shape_Data)
+    sr[shape] = read_mesh_data_from_binary(js, bin_data, 0, false).(Shape_Data)
     ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true).(Collider_Data)
     return true
 }

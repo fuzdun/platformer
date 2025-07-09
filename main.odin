@@ -99,7 +99,7 @@ main :: proc () {
     shs: Shader_State;         defer free_shader_state(&shs)
     rs:  Render_State;         defer free_render_state(&rs)
     pls: Player_State;         defer free_player_state(&pls)
-    lrs: Level_Resources;      defer free_level_resources(&lrs)
+    sr:  Shape_Resources;      defer free_level_resources(&sr)
 
     // init game state
     lgs.entities = make(Level_Geometry_Soa)
@@ -138,7 +138,7 @@ main :: proc () {
 
     // init level resources
     for shape in SHAPE {
-        if ok := load_glb_model(shape, &lrs, &phs); ok {
+        if ok := load_glb_model(shape, &sr, &phs); ok {
             fmt.println("loaded", shape) 
         }
     }
@@ -312,7 +312,7 @@ main :: proc () {
         vertices := make([dynamic]Vertex); defer delete(vertices)
         indices := make([dynamic]u32); defer delete(indices)
         for shape in SHAPE {
-            sd := lrs[shape]
+            sd := sr[shape]
             rs.vertex_offsets[int(shape)] = u32(len(vertices))
             rs.index_offsets[int(shape)] = u32(len(indices))
             append(&indices, ..sd.indices)
@@ -333,7 +333,7 @@ main :: proc () {
     gl.LineWidth(5)
 
     // load level data
-    load_level_geometry(&lgs, lrs, &phs, &rs, "test_level")
+    load_level_geometry(&lgs, sr, &phs, &rs, "test_level")
 
     // start frame loop
     clocks_per_second := i64(SDL.GetPerformanceFrequency())
@@ -403,7 +403,7 @@ main :: proc () {
         for accumulator >= target_frame_clocks {
             // Fixed update
             if EDIT {
-                editor_update(&lgs, lrs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
+                editor_update(&lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
                 game_update(lgs, is, &pls, phs, &cs, &ts, f32(elapsed_time), FIXED_DELTA_TIME)
             }
@@ -415,9 +415,9 @@ main :: proc () {
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         
-        update_vertices(&lgs, lrs, &rs)
+        update_vertices(&lgs, sr, &rs)
         update_player_particles(&rs, pls, f32(elapsed_time))
-        draw(&lgs, lrs, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
+        draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
 
         SDL.GL_SwapWindow(window)
     }

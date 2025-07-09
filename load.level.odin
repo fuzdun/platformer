@@ -30,7 +30,7 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     os.write_entire_file("levels/test_level.bin", bin)
 }
 
-load_level_geometry :: proc(lgs: ^Level_Geometry_State, lrs: Level_Resources, ps: ^Physics_State, rs: ^Render_State, filename: string) {
+load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State, filename: string) {
     level_filename := str.concatenate({"levels/", filename, ".bin"})
     defer delete(level_filename)
     level_bin, read_err := os.read_entire_file(level_filename)
@@ -83,7 +83,7 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, lrs: Level_Resources, ps
     add_geometry_to_renderer(lgs, rs, ps, loaded_level_geometry)
 }
 
-editor_reload_level_geometry :: proc(lgs: ^Level_Geometry_State, lrs: Level_Resources, ps: ^Physics_State, rs: ^Render_State) {
+editor_reload_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State) {
     current_level_geometry := make([]Level_Geometry, len(lgs.entities))
     defer delete(current_level_geometry)
     for lg, idx in lgs.entities {

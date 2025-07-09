@@ -3,7 +3,7 @@ package main
 import "core:math"
 import la "core:math/linalg"
 
-editor_update :: proc(lgs: ^Level_Geometry_State, lrs: Level_Resources, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
+editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
     // get selected geometry distances
     clear(&es.connections)
     selected_geometry := lgs.entities[es.selected_entity]
@@ -41,7 +41,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, lrs: Level_Resources, es: ^Edi
         new_lg.transform = selected_obj.transform
         new_lg.shaders = {.Level_Geometry_Fill}
         new_lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-        add_geometry(lgs, lrs, phs, rs, es, new_lg)
+        add_geometry(lgs, sr, phs, rs, es, new_lg)
     }
     es.can_add = !is.q_pressed
 
@@ -59,12 +59,12 @@ editor_update :: proc(lgs: ^Level_Geometry_State, lrs: Level_Resources, es: ^Edi
         ordered_remove_soa(&lgs.entities, es.selected_entity) 
         append(&lgs.entities, new_lg)
         es.selected_entity = len(lgs.entities) - 1
-        editor_reload_level_geometry(lgs, lrs, phs, rs)
+        editor_reload_level_geometry(lgs, sr, phs, rs)
     }
     es.can_swap = !(is.lt_pressed || is.gt_pressed)
 
     if is.bck_pressed && es.can_delete {
-        remove_geometry(lgs, lrs, phs, rs, es)
+        remove_geometry(lgs, sr, phs, rs, es)
     }
     es.can_delete = !is.bck_pressed
 

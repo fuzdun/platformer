@@ -11,7 +11,7 @@ import tm "core:time"
 
 draw :: proc(
     lgs: ^Level_Geometry_State, 
-    lrs: Level_Resources,
+    sr: Shape_Resources,
     pls: Player_State,
     rs: ^Render_State,
     shst: ^Shader_State,
@@ -65,7 +65,7 @@ draw :: proc(
         // shader := ProgramName(idx / len(SHAPE))
         shader := ProgramName.Level_Geometry_Fill 
         shape := SHAPE(idx % len(SHAPE))
-        sd := lrs[shape] 
+        sd := sr[shape] 
         command: gl.DrawElementsIndirectCommand = {
             u32(len(sd.indices)),
             count,
