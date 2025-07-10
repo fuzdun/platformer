@@ -121,9 +121,6 @@ main :: proc () {
     shs.active_programs = make(map[ProgramName]Active_Program)
 
     // init render state
-    for shader in ProgramName {
-        rs.shader_render_queues[shader] = make([dynamic]gl.DrawElementsIndirectCommand)
-    }
     rs.player_particle_poss = make([dynamic]glm.vec3)
     add_player_sphere_data(&rs)
 
@@ -318,8 +315,13 @@ main :: proc () {
             append(&indices, ..sd.indices)
             append(&vertices, ..sd.vertices)
         }
-        rs.player_vertex_offset = u32(len(vertices))
-        rs.player_index_offset = u32(len(indices))
+        rs.player_draw_command = {{
+            u32(len(rs.player_geometry.indices)),
+            1,
+            u32(len(indices)),
+            u32(len(vertices)),
+            0
+        }}
         append(&indices, ..rs.player_geometry.indices)
         append(&vertices, ..rs.player_geometry.vertices)
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)

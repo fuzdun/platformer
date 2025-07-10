@@ -71,15 +71,14 @@ Render_State :: struct {
 
     dither_tex: u32,
 
-    player_vertex_offset: u32,
-    player_index_offset: u32,
+    player_draw_command: [1]gl.DrawElementsIndirectCommand,
+
     player_particle_poss: [dynamic]glm.vec3,
     player_particles: [PLAYER_PARTICLE_COUNT][4]f32,
     player_geometry: Shape_Data,
 
     vertex_offsets: Vertex_Offsets,
     index_offsets: Index_Offsets,
-    shader_render_queues: Shader_Render_Queues,
 }
 
 Char_Tex :: struct {
@@ -126,19 +125,13 @@ Lg_Render_Data :: struct {
     render_group: int,
     transform_mat: glm.mat4,
     z_width: f32,
-    z: f32
 }
 
-clear_render_queues :: proc(rs: ^Render_State) {
-    for shader in ProgramName {
-        clear(&rs.shader_render_queues[shader])
-    }
+Level_Geometry_Render_Type :: enum {
+    Standard
 }
 
 free_render_state :: proc(rs: ^Render_State) {
-    for shader in ProgramName {
-        delete(rs.shader_render_queues[shader])
-    }
     ft.done_face(rs.face)
     ft.done_free_type(rs.ft_lib)
     delete(rs.char_tex_map)
@@ -335,9 +328,7 @@ render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [
     } 
 }
 
-draw_shader_render_queue :: proc(rs: ^Render_State, shst: ^Shader_State, mode: u32) {
-    queue := rs.shader_render_queues[shst.loaded_program_name]
-    //fmt.println(queue)
+draw_indirect_render_queue :: proc(rs: Render_State, queue: []gl.DrawElementsIndirectCommand, mode: u32) {
     if len(queue) > 0 {
         gl.BindBuffer(gl.DRAW_INDIRECT_BUFFER, rs.indirect_buffer)
         gl.BufferData(gl.DRAW_INDIRECT_BUFFER, size_of(queue[0]) * len(queue), raw_data(queue), gl.DYNAMIC_DRAW)
@@ -355,4 +346,14 @@ trans_to_mat4 :: proc(trns: Transform) -> glm.mat4 {
 easeout :: proc(n: f32) -> f32 {
     return math.sin(n * math.PI / 2.0);
 }
+
+counts_to_offsets :: proc(arr: []int) {
+    for &val, idx in arr[1:] {
+       val += arr[idx] 
+    }
+    #reverse for &val, idx in arr {
+        val = idx == 0 ? 0 : arr[idx - 1]
+    }
+}
+
 

@@ -7,7 +7,6 @@ import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import strcnv "core:strconv"
 import la "core:math/linalg"
-import tm "core:time"
 
 draw :: proc(
     lgs: ^Level_Geometry_State, 
@@ -21,49 +20,39 @@ draw :: proc(
     time: f64,
     interp_t: f64
 ) {
-    clear_render_queues(rs)
+    // init level geometry render queues
+    lg_render_groups: [Level_Geometry_Render_Type][dynamic]gl.DrawElementsIndirectCommand 
+
+    for &rg in lg_render_groups {
+        rg = make([dynamic]gl.DrawElementsIndirectCommand)
+    }; defer for &rg in lg_render_groups { delete(rg) }
+
+    lg_count := len(lgs.entities)
+
+    sorted_rd          := make([]Lg_Render_Data, lg_count);                 defer delete(sorted_rd)
+    sorted_transforms  := make([]glm.mat4, lg_count);                       defer delete(sorted_transforms)
+    sorted_z_widths    := make([]f32, lg_count);                            defer delete(sorted_z_widths)
+    lg_render_commands := make([]gl.DrawElementsIndirectCommand, lg_count); defer delete(lg_render_commands) 
 
     // sort level geometry by shader and shape
-    lg_count := len(lgs.entities)
-    sorted_transforms := make([]glm.mat4, lg_count); defer delete(sorted_transforms)
-    sorted_z_widths := make([]f32, lg_count); defer delete(sorted_z_widths)
-    lg_render_commands := make([]gl.DrawElementsIndirectCommand, lg_count); defer delete(lg_render_commands) 
-    group_offsets: [len(SHAPE)]int
-
-    // sort_start := tm.now()
-
-    sorted_rd := make([]Lg_Render_Data, lg_count); defer delete(sorted_rd)
-
+    group_offsets: [len(SHAPE) * len(Level_Geometry_Render_Type)]int
     for lg, idx in lgs.entities {
-        group_offsets[lg.shape] += 1
+        render_group := int(lg.render_type) * len(SHAPE) + int(lg.shape)
+        group_offsets[render_group] += 1
         sorted_rd[idx] = Lg_Render_Data {
-            render_group = int(ProgramName.Level_Geometry_Fill) * len(SHAPE) + int(lg.shape),
+            render_group = render_group,
             transform_mat = trans_to_mat4(lg.transform),
-            z_width = 10,
-            z = lg.transform.position.z
+            z_width = 10, // need to change this
         }
     }
 
-    #reverse for &grp, idx in group_offsets {
-        grp = idx == 0 ? 0 : group_offsets[idx - 1]
-    }
+    counts_to_offsets(group_offsets[:])
 
-    slice.sort_by(sorted_rd[:], proc(a: Lg_Render_Data, b: Lg_Render_Data) -> bool { return a.render_group < b.render_group })
-
-    // fmt.println("sort time:", tm.since(sort_start))
-
-    for rd, idx in sorted_rd {
-        sorted_transforms[idx] = rd.transform_mat
-        sorted_z_widths[idx] = rd.z_width
-    }
-
-    //  add level geometry to command queues
+    // generate command queues
     for g_off, idx in group_offsets {
         next_off := idx == len(group_offsets) - 1 ? len(sorted_transforms) : group_offsets[idx + 1]
         count := u32(next_off - g_off)
         if count == 0 do continue
-        // shader := ProgramName(idx / len(SHAPE))
-        shader := ProgramName.Level_Geometry_Fill 
         shape := SHAPE(idx % len(SHAPE))
         sd := sr[shape] 
         command: gl.DrawElementsIndirectCommand = {
@@ -73,32 +62,66 @@ draw :: proc(
             rs.vertex_offsets[shape],
             u32(g_off)
         }
-        append(&rs.shader_render_queues[shader], command)
-        append(&rs.shader_render_queues[.Level_Geometry_Outline], command)
+        append(&lg_render_groups[.Standard], command)
     }
 
-    // add player to command queue
-    player_mat := interpolated_player_matrix(pls, f32(interp_t))
-    player_rq := rs.shader_render_queues[.Player]
+    // sort and distribute level geometry transforms and z_widths 
+    slice.sort_by(sorted_rd[:], proc(a: Lg_Render_Data, b: Lg_Render_Data) -> bool { return a.render_group < b.render_group })
+    for rd, idx in sorted_rd {
+        sorted_transforms[idx] = rd.transform_mat
+        sorted_z_widths[idx] = rd.z_width
+    }
 
-    append(&player_rq, gl.DrawElementsIndirectCommand{
-        u32(len(rs.player_geometry.indices)),
-        1,
-        rs.player_index_offset,
-        rs.player_vertex_offset,
-        0
-    })
-    rs.shader_render_queues[.Player] = player_rq
+    // load sorted matrices and z_widths into SSBOs
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_transforms[0]) * len(sorted_transforms), raw_data(sorted_transforms), gl.DYNAMIC_DRAW)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.transforms_ssbo)
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_z_widths[0]) * len(sorted_z_widths), raw_data(sorted_z_widths), gl.DYNAMIC_DRAW)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
 
-    proj_mat: glm.mat4
+    // get projection matrix
+    proj_mat := EDIT ? construct_camera_matrix(cs) : interpolated_camera_matrix(cs, f32(interp_t))
+
+    // get axes for text and particle quad alignment
+    camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
+    camera_right_worldspace = la.normalize(camera_right_worldspace)
+    camera_up_worldspace: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
+    camera_up_worldspace = la.normalize(camera_up_worldspace)
+
     if EDIT {
-        proj_mat = construct_camera_matrix(cs)
-    } else {
-        proj_mat = interpolated_camera_matrix(cs, f32(interp_t))
-    }
+        // draw level geometry (edit mode)
+        use_shader(shst, rs, .Editor_Geometry)
+        set_matrix_uniform(shst, "projection", &proj_mat)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.TRIANGLES)
 
-    // draw background 
-    if !EDIT {
+        // draw geometry connections
+        if len(es.connections) > 0 {
+            gl.BindVertexArray(rs.text_vao)
+            use_shader(shst, rs, .Text)
+            set_matrix_uniform(shst, "projection", &proj_mat)
+            connection_vertices := make([dynamic]Line_Vertex); defer delete(connection_vertices)
+            for el in es.connections {
+                append(&connection_vertices, Line_Vertex{el.poss[0], 0}, Line_Vertex{el.poss[1], 1})
+                avg_pos := el.poss[0] + (el.poss[1] - el.poss[0]) / 2
+                dist_txt_buf: [3]byte            
+                strcnv.itoa(dist_txt_buf[:], el.dist)
+                scale := es.zoom / 400 * .02
+                render_text(shst, rs, string(dist_txt_buf[:]), avg_pos, camera_up_worldspace, camera_right_worldspace, scale)
+            }
+            gl.BindVertexArray(rs.lines_vao)
+            use_shader(shst, rs, .Connection_Line)
+            set_matrix_uniform(shst, "projection", &proj_mat)
+            red := [3]f32{1.0, 0.0, 0.0}
+            set_vec3_uniform(shst, "color", 1, &red)
+            gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
+            gl.BufferData(gl.ARRAY_BUFFER, size_of(connection_vertices[0]) * len(connection_vertices), &connection_vertices[0], gl.DYNAMIC_DRAW)
+            gl.DrawArrays(gl.LINES, 0, i32(len(connection_vertices)))
+        }
+
+    } else {
+
+        // draw background 
         use_shader(shst, rs, .Background)
         gl.Disable(gl.DEPTH_TEST)
         gl.Disable(gl.CULL_FACE)
@@ -107,42 +130,21 @@ draw :: proc(
         gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
         gl.Enable(gl.DEPTH_TEST)
         gl.Enable(gl.CULL_FACE)
-    }
 
-    // load data for level geometry and player draw calls
-    gl.BindVertexArray(rs.standard_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
+        // draw level geometry outline
+        use_shader(shst, rs, .Level_Geometry_Outline)
+        gl.BindVertexArray(rs.standard_vao)
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
+        set_matrix_uniform(shst, "projection", &proj_mat)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.TRIANGLES)
 
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_transforms[0]) * len(sorted_transforms), raw_data(sorted_transforms), gl.DYNAMIC_DRAW)
-    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.transforms_ssbo)
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_z_widths[0]) * len(sorted_z_widths), raw_data(sorted_z_widths), gl.DYNAMIC_DRAW)
-    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
-
-    // draw level geometry if in edit mode
-    use_shader(shst, rs, .Editor_Geometry)
-    set_matrix_uniform(shst, "projection", &proj_mat)
-    draw_shader_render_queue(rs, shst, gl.TRIANGLES)
-
-    use_shader(shst, rs, .Level_Geometry_Outline)
-    set_matrix_uniform(shst, "projection", &proj_mat)
-    draw_shader_render_queue(rs, shst, gl.TRIANGLES)
-
-    // prepare matrices for text and particle quad alignment
-    camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
-    camera_right_worldspace = la.normalize(camera_right_worldspace)
-    camera_up_worldspace: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
-    camera_up_worldspace = la.normalize(camera_up_worldspace)
-
-    // draw player
-    if !EDIT {
+        // draw player
         use_shader(shst, rs, .Player)
         p_color := [3]f32 {1.0, 0.0, 0.0}
         constrain_len: f32 = 250.0
         constrain_dir := la.normalize0(pls.dash_dir)
+        player_mat := interpolated_player_matrix(pls, f32(interp_t))
         set_matrix_uniform(shst, "projection", &proj_mat)
         set_matrix_uniform(shst, "transform", &player_mat)
         set_float_uniform(shst, "i_time", f32(time))
@@ -150,7 +152,7 @@ draw :: proc(
         set_float_uniform(shst, "dash_end_time", pls.dash_end_time)
         set_vec3_uniform(shst, "p_color", 1, &p_color)
         set_vec3_uniform(shst, "constrain_dir", 1, &constrain_dir)
-        draw_shader_render_queue(rs, shst, gl.TRIANGLES)
+        draw_indirect_render_queue(rs^, rs.player_draw_command[:], gl.TRIANGLES)
 
         //draw player particles
         use_shader(shst, rs, .Player_Particle)
@@ -194,8 +196,8 @@ draw :: proc(
         gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.DYNAMIC_DRAW)
         gl.LineWidth(2)
         gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
-    }
-
+        
+        // draw level geometry
         use_shader(shst, rs, .Level_Geometry_Fill)
         gl.BindVertexArray(rs.standard_vao)
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
@@ -212,34 +214,9 @@ draw :: proc(
         set_float_uniform(shst, "time", f32(time) / 1000)
         set_matrix_uniform(shst, "projection", &proj_mat)
         gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
-        draw_shader_render_queue(rs, shst, gl.PATCHES)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Disable(gl.BLEND)
-
-        
-
-    // draw geometry connections in editor
-    if EDIT && len(es.connections) > 0 {
-        gl.BindVertexArray(rs.text_vao)
-        use_shader(shst, rs, .Text)
-        set_matrix_uniform(shst, "projection", &proj_mat)
-        connection_vertices := make([dynamic]Line_Vertex); defer delete(connection_vertices)
-        for el in es.connections {
-            append(&connection_vertices, Line_Vertex{el.poss[0], 0}, Line_Vertex{el.poss[1], 1})
-            avg_pos := el.poss[0] + (el.poss[1] - el.poss[0]) / 2
-            dist_txt_buf: [3]byte            
-            strcnv.itoa(dist_txt_buf[:], el.dist)
-            scale := es.zoom / 400 * .02
-            render_text(shst, rs, string(dist_txt_buf[:]), avg_pos, camera_up_worldspace, camera_right_worldspace, scale)
-        }
-        gl.BindVertexArray(rs.lines_vao)
-        use_shader(shst, rs, .Connection_Line)
-        set_matrix_uniform(shst, "projection", &proj_mat)
-        red := [3]f32{1.0, 0.0, 0.0}
-        set_vec3_uniform(shst, "color", 1, &red)
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(connection_vertices[0]) * len(connection_vertices), &connection_vertices[0], gl.DYNAMIC_DRAW)
-        gl.DrawArrays(gl.LINES, 0, i32(len(connection_vertices)))
     }
 }
 

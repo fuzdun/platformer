@@ -39,7 +39,8 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         new_lg.shape = cur_shape
         new_lg.collider = cur_shape 
         new_lg.transform = selected_obj.transform
-        new_lg.shaders = {.Level_Geometry_Fill}
+        // new_lg.shaders = {.Level_Geometry_Fill}
+        new_lg.render_type = .Standard
         new_lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
         add_geometry(lgs, sr, phs, rs, es, new_lg)
     }

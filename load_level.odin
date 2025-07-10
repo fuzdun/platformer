@@ -52,7 +52,7 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             defer delete(entry_bin)
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
-            lg.shaders = trim_bit_set(lg.shaders)
+            // lg.shaders = trim_bit_set(lg.shaders)
             loaded_level_geometry[idx] = lg
         }
         // ==========================================
@@ -63,7 +63,8 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
             shape: SHAPE = rnd.choice([]SHAPE{ .CUBE, .WEIRD })
             // fmt.println(shape)
-            shader: ProgramName = .Level_Geometry_Fill
+            // shader: ProgramName = .Level_Geometry_Fill
+            render_group: Level_Geometry_Render_Type = .Standard
             lg: Level_Geometry
             lg.shape = shape
             lg.collider = shape
@@ -72,7 +73,8 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             y := math.floor(f32(i) / 10.0)
             lg.transform = {{x * 20, y * -2 -20, y * -10 + 300},{10, 10, 10}, rot}
             // lg.transform_mat4 = trans_to_mat4(lg.transform)
-            lg.shaders = {shader}
+            // lg.shaders = {shader}
+            lg.render_type = render_group
             lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
 
             loaded_level_geometry[i] = lg
@@ -138,7 +140,7 @@ add_geometry_to_renderer :: proc(lgs: ^Level_Geometry_State, rs: ^Render_State, 
         //     min_z = min(v.z, min_z)
         // }
         // insert transform into render state
-        loaded_shaders: Active_Shaders = EDIT ? {.Editor_Geometry} : lg.shaders
+        // loaded_shaders: Active_Shaders = EDIT ? {.Editor_Geometry} : lg.shaders
         append(&lgs.entities, lg)
     }
 }

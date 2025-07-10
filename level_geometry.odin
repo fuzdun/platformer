@@ -20,7 +20,7 @@ Level_Geometry :: struct {
     angular_velocity: la.Vector3f32,
     shape: SHAPE,
     collider: Collider,
-    shaders: Active_Shaders,
+    render_type: Level_Geometry_Render_Type,
     attributes: Level_Geometry_Attributes,
     aabb: Aabb,
 }

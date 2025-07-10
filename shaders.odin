@@ -17,18 +17,18 @@ free_shader_state :: proc(shst: ^Shader_State) {
     delete(shst.active_programs)
 }
 
-Program :: struct{
+Program :: struct {
     pipeline: []string,
     uniforms: []string,
     shader_types: []gl.Shader_Type,
 }
 
-Active_Program :: struct{
+Active_Program :: struct {
     id: u32,
     locations: map[string]i32
 }
 
-ProgramName :: enum{
+ProgramName :: enum {
     Player,
     Level_Geometry_Outline,
     Level_Geometry_Fill,
@@ -40,7 +40,7 @@ ProgramName :: enum{
     Dash_Line,
 }
 
-PROGRAM_CONFIGS :: #partial[ProgramName]Program{
+PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Level_Geometry_Outline = {
         pipeline = {"lg_outline_vertex", "lg_outline_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
