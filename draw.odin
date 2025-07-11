@@ -118,9 +118,7 @@ draw :: proc(
             gl.BufferData(gl.ARRAY_BUFFER, size_of(connection_vertices[0]) * len(connection_vertices), &connection_vertices[0], gl.DYNAMIC_DRAW)
             gl.DrawArrays(gl.LINES, 0, i32(len(connection_vertices)))
         }
-
     } else {
-
         // draw background 
         use_shader(shst, rs, .Background)
         gl.Disable(gl.DEPTH_TEST)
@@ -176,7 +174,7 @@ draw :: proc(
         gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), &pv[0], gl.DYNAMIC_DRAW) 
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
         gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.DYNAMIC_DRAW) 
-        gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
+        // gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
         gl.Disable(gl.BLEND)
 
         // draw player dash trail

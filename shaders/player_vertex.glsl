@@ -9,10 +9,16 @@ out float time;
 
 #define PI 3.1415
 
-uniform float i_time;
+layout (std140, binding = 0) uniform Common
+{
+    mat4 projection;
+    float i_time;
+};
+
+// uniform float i_time;
 uniform float dash_time;
 uniform float dash_end_time;
-uniform mat4 projection;
+// uniform mat4 projection;
 uniform mat4 transform;
 uniform vec3 constrain_dir;
 
