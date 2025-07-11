@@ -4,19 +4,33 @@ layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec2 uv_in;
 layout (location = 2) in vec4 offset;
 
-uniform float i_time;
-uniform mat4 projection;
-uniform vec3 player_pos;
-uniform float dash_time;
-uniform vec3 constrain_dir;
-uniform float dash_end_time;
+layout (std140, binding = 0) uniform Common
+{
+    mat4 projection;
+    float i_time;
+};
+
+layout (std140, binding = 1) uniform Dash
+{
+    float dash_time;
+    float dash_end_time;
+    vec3 constrain_dir;
+};
+
+layout (std140, binding = 2) uniform Player_Pos
+{
+    vec3 player_pos;
+};
+
 uniform float radius;
 
 out vec2 uv;
 out float f_radius; 
+out float i_time_frag;
 flat out int id;
 
 #define PI 3.1415
+
 
 float easeout(float n) {
     return sin(n * PI / 2.0);
@@ -38,6 +52,7 @@ void main() {
 
     id = int(offset.a);
     uv = uv_in;
+    i_time_frag = i_time;
     gl_Position = projection * (aPos + vec4(stretched_offset.xyz, 1.0) + vec4(player_pos, 0.0) * 2.0);
 }
 

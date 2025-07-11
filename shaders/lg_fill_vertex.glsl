@@ -12,8 +12,16 @@ layout (std430, binding = 1) buffer z_width {
     float z_width_data[];
 };
 
-uniform vec3 player_pos;
-uniform mat4 projection;
+layout (std140, binding = 0) uniform Common
+{
+    mat4 projection;
+    float i_time;
+};
+
+layout (std140, binding = 2) uniform Player_Pos
+{
+    vec3 player_pos;
+};
 
 out VS_OUT {
     vec2 uv;
@@ -23,9 +31,10 @@ out VS_OUT {
     vec3 player_pos;
     int v_id;
     int tess_amt;
-    // need to make projection a patch for performance
     mat4 projection;
+    float i_time;
 } vs_out;
+
 
 void main() {
     mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
@@ -43,5 +52,6 @@ void main() {
     vs_out.player_dist = dist;
     vs_out.tess_amt = dist > 0 ? 4 : 1;
     vs_out.projection = projection;
+    vs_out.i_time = i_time / 1000;
 }
 

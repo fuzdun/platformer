@@ -8,8 +8,9 @@ in vec2 perspective_uv;
 in flat int in_view;
 in vec3 normal_frag;
 in vec3 player_pos;
+in float i_time;
+in float displacement;
 
-uniform float time;
 uniform vec3[3] player_trail;
 uniform vec3 crunch_pt;
 uniform float crunch_time;
@@ -17,7 +18,7 @@ uniform float crunch_time;
 uniform sampler2D ditherTexture;
 
 #define TWOPI 6.2831853
-#define SHADES 2.0
+#define SHADES 5.0
 
 float colormap_red(float x) {
     if (x < 0.0) {
@@ -94,14 +95,14 @@ float noise(vec2 p) {
 
 float fbm (vec2 p )
 {
-    float intv1 = sin((time + 12.0) / 10.0);
-    float intv2 = cos((time + 12.0) / 10.0);
+    float intv1 = sin((i_time + 12.0) / 10.0);
+    float intv2 = cos((i_time + 12.0) / 10.0);
 
     mat2 mtx_off = mat2(intv1, 1.0, intv2, 1.0);
     mat2 mtx = mat2(1.6, 1.2, -1.2, 1.6);
     mtx = mtx_off * mtx;
     float f = 0.0;
-    f += 0.25*noise( p + time * 1.5); p = mtx*p;
+    f += 0.25*noise( p + i_time * 1.5); p = mtx*p;
     f += 0.25*noise( p ); p = mtx*p;
     f += 0.25*noise( p ); p = mtx*p;
     f += 0.25*noise( p );
@@ -128,7 +129,7 @@ void main()
 {
     // vec2 uv = in_view == 1 ? affine_uv : perspective_uv;
     vec2 uv = perspective_uv;
-    uv = floor(uv * 512.0) / 512.0;
+    uv = floor(uv * 64.0) / 64.0;
     float plane_off = dot(normal_frag, global_pos);
     float dist = dot(normal_frag, player_pos) - plane_off;
     vec3 proj_pt = player_pos - dist * normal_frag;
@@ -138,7 +139,7 @@ void main()
     float a = atan(diff.x / diff.z) * 5;
     vec3 planar_diff = proj_pt - global_pos;
     float uvd = length(planar_diff);
-    float d1 = dist + noise(a + time * 100) * .3;
+    float d1 = dist + noise(a + i_time * 100) * .3;
     float dfrac = d1 / uvd;
     float absd = abs(uvd - d1);
     float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.0, 0.1, absd);
@@ -159,14 +160,14 @@ void main()
     d += t * 0.69;
     float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
     float freq = 2.0 * line_len;
-    float width =  sin(-time * 70.0 + t * TWOPI * freq) * 2.0 + 40.0;
+    float width =  sin(-i_time * 70.0 + t * TWOPI * freq) * 2.0 + 40.0;
     float border_d = 0.050 * width;
     vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.5, 0.0, 0.5), t);
     trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
 
     vec3 impact_col = vec3(0.0);
     float crunch_dist = distance(global_pos, crunch_pt);    
-    float k = crunch_dist - (time - crunch_time) * 30;
+    float k = crunch_dist - (i_time - crunch_time) * 30;
     float angle = atan(global_pos.z - crunch_pt.z, global_pos.x - crunch_pt.x);
     float w = crunch_dist + 25.7 * floor(angle / TWOPI * 10);
     angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, .5) * 20;
@@ -176,16 +177,16 @@ void main()
         impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
     }
 
-    float v_border = .02;
-    float h_border = .02;
-
-    float x_border_fact = smoothstep(1.0 - h_border, 1.0, uv.x) +
-        1.0 - smoothstep(0.0, h_border, uv.x);
-    float y_border_fact = smoothstep(1.0 - v_border, 1.0, uv.y) +
-        1.0 - smoothstep(0.0, v_border, uv.y);
-    float border_fact = max(x_border_fact, y_border_fact);
-    // vec4 border_col = border_fact * vec4(1.0, 0.0, 0.0, 0.8);
-    vec4 border_col = vec4(1.0, 1.0, 1.0, 0.7);
+    // float v_border = .02;
+    // float h_border = .02;
+    //
+    // float x_border_fact = smoothstep(1.0 - h_border, 1.0, uv.x) +
+    //     1.0 - smoothstep(0.0, h_border, uv.x);
+    // float y_border_fact = smoothstep(1.0 - v_border, 1.0, uv.y) +
+    //     1.0 - smoothstep(0.0, v_border, uv.y);
+    // float border_fact = max(x_border_fact, y_border_fact);
+    // // vec4 border_col = border_fact * vec4(1.0, 0.0, 0.0, 0.8);
+    // vec4 border_col = vec4(1.0, 1.0, 1.0, 0.7);
     // vec3 border_col = border_fact * vec3(1.0, 1.0, 1.0, 0.8);
 
     // pattern_col = vec3(0.5, 0.5, 0.0);  
@@ -194,24 +195,26 @@ void main()
     vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
 
 
-    float mask = texture(ditherTexture, perspective_uv * 8.0).r;
+    float mask = texture(ditherTexture, perspective_uv).r;
     // mask = reshapeUniformToTriangle(mask);
 
-    float visibility = length(diff) * 0.025;
-    visibility = min(1.0, floor((visibility + mask / SHADES) * SHADES) / SHADES);
+    float visibility = length(diff) * 0.015;
+    visibility = max(min(1.0, floor((visibility + mask / SHADES) * SHADES) / SHADES), .2);
     // visibility = max(min(visibility, 0.9), 0.2);
 
     // vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
 
     // vec3 plane_offset = dot(normal_frag, diff) * global_pos;
+    vec4 glassColor = mix(vec4(0.1, 0.2, 0.0, 0.60), vec4(0.5, 0.5, 0.5, 0.00), displacement);
+    fragColor = mix(vec4(col, 1.0), glassColor, visibility);
     vec3 player_planar_proj = player_pos + normal_frag * dot(normal_frag, diff);
     vec3 planar_delta = player_planar_proj - global_pos;
 
     float adjustment_amt = min(length(planar_delta), 20.0);
     vec3 adjusted_pos = global_pos + normalize(planar_delta) * adjustment_amt;     // float norm = -dot(normalize(diff), normalize(normal_frag));
     // float norm = -dot(normalize(player_pos - adjusted_planar), normal_frag);
-    fragColor = mix(mix(vec4(col, 1.0), vec4(0.0, 0.2, 0.0, 0.25), visibility), border_col, border_fact);
-    if (fragColor.a < 0.25) {
+    // fragColor = mix(mix(vec4(col, 1.0), vec4(0.0, 0.2, 0.0, 0.25), visibility), border_col, border_fact);
+    if (fragColor.a < 0.10) {
       discard;
     }
     // fragColor.a = 1.0;

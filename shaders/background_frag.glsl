@@ -3,7 +3,12 @@
 in vec2 uv;
 out vec4 fragColor;
 
-uniform float i_time;
+layout (std140, binding = 0) uniform Common
+{
+    mat4 _;
+    float i_time;
+};
+// uniform float i_time;
 
 // vec4 colormap (float x) {
 //   const float e0 = 0.0;
@@ -75,7 +80,7 @@ float fbm (vec2 p )
     mat2 mtx = mat2(1.6, 1.2, -1.2, 1.6);
     // mtx = mtx_off * mtx;
     float f = 0.0;
-    f += 0.25*noise( p + i_time * 1.5); p = mtx*p;
+    f += 0.25*noise( p + (i_time / 1000) * 1.5); p = mtx*p;
     f += 0.25*noise( p ); p = mtx*p;
     f += 0.25*noise( p ); p = mtx*p;
     f += 0.25*noise( p );

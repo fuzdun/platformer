@@ -2,10 +2,10 @@
 
 in vec2 uv;
 in float f_radius;
+in float i_time_frag;
 flat in int id;
-out vec4 fragColor;
 
-uniform float i_time;
+out vec4 fragColor;
 
 const vec3 COLOR1 = vec3(0.6, 0.7, 0.3);
 const vec3 COLOR2 = vec3(0.8, 0.0, 0.0);
@@ -15,7 +15,7 @@ float distance_from_sphere(vec3 p, vec3 c, float r) {
 }
 
 float map_world(vec3 p) {
-    float t = i_time / 400 + id * 100.0;
+    float t = i_time_frag / 400 + id * 100.0;
     float displacment = sin(2.0 * p.x + t) * sin(2.0 * p.y + t) * sin(2.0 * p.z + t) * .30;
     return distance_from_sphere(p, vec3(0.0, 0.0, 0.0), f_radius) + displacment;
 }

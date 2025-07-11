@@ -8,6 +8,7 @@ import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import ft "shared:freetype"
 
+//UBO_VEC3_SIZE :: size_of(glm.vec4)
 
 I_MAT :: glm.mat4(1.0)
 
@@ -69,6 +70,10 @@ Render_State :: struct {
     transforms_ssbo: u32,
     z_widths_ssbo: u32,
 
+    common_ubo: u32,
+    dash_ubo: u32,
+    ppos_ubo: u32,
+
     dither_tex: u32,
 
     player_draw_command: [1]gl.DrawElementsIndirectCommand,
@@ -129,6 +134,17 @@ Lg_Render_Data :: struct {
 
 Level_Geometry_Render_Type :: enum {
     Standard
+}
+
+Common_Ubo :: struct {
+    projection: glm.mat4,
+    time: f32
+}
+
+Dash_Ubo :: struct {
+    dash_time: f32,
+    dash_end_time: f32,
+    constrain_dir: glm.vec3,
 }
 
 free_render_state :: proc(rs: ^Render_State) {

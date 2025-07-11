@@ -49,17 +49,17 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Level_Geometry_Fill = {
         pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "lg_fill_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"player_trail", "player_pos", "crunch_time", "crunch_pt", "time", "projection"},
+        uniforms = {"player_trail", "crunch_time", "crunch_pt"},
     },
     .Player = {
         pipeline = {"player_vertex", "player_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"transform", "i_time", "dash_time", "dash_end_time", "projection", "p_color", "constrain_dir"},
+        uniforms = {"transform", "p_color"},
     },
     .Player_Particle = {
         pipeline = {"player_particle_vertex", "player_particle_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"projection", "player_pos", "i_time", "radius", "constrain_dir", "dash_time", "dash_end_time"},
+        uniforms = {"radius"},
     },
     .Editor_Geometry = {
         pipeline = {"editor_vertex", "editor_frag"},
@@ -69,7 +69,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Background = {
         pipeline = {"background_vertex", "background_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"i_time"},
+        uniforms = {},
     },
     .Connection_Line = {
         pipeline = {"connection_line_vertex", "connection_line_frag"},
@@ -79,7 +79,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Dash_Line = {
         pipeline = {"dash_line_vertex", "dash_line_geometry", "dash_line_frag"},
         shader_types = {.VERTEX_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"projection", "color", "line_dir", "dash_time", "i_time", "dash_dir", "resolution"},
+        uniforms = {"color", "resolution"},
     },
     .Text = {
         pipeline = {"text_vertex", "text_frag"},

@@ -15,12 +15,14 @@ layout (std140, binding = 0) uniform Common
     float i_time;
 };
 
-// uniform float i_time;
-uniform float dash_time;
-uniform float dash_end_time;
-// uniform mat4 projection;
+layout (std140, binding = 1) uniform Dash
+{
+    float dash_time;
+    float dash_end_time;
+    vec3 constrain_dir;
+};
+
 uniform mat4 transform;
-uniform vec3 constrain_dir;
 
 
 float easeout(float n) {

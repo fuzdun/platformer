@@ -11,6 +11,7 @@ in TE_OUT {
     vec3 player_pos;
     int v_id;
     mat4 projection;
+    float i_time;
 } te_out[];
 
 out vec3 global_pos;
@@ -19,6 +20,8 @@ out vec2 affine_uv;
 out vec3 normal_frag;
 out vec3 player_pos;
 out int in_view;
+out float i_time;
+out float displacement;
 
 #define MAX_INTERVAL 200.0 
 
@@ -60,6 +63,8 @@ void main() {
         perspective_uv = te_out[i].uv;
         affine_uv = te_out[i].uv;
         normal_frag = te_out[i].normal_frag;
+        i_time = te_out[i].i_time;
+        displacement = dist_fact;
         EmitVertex();
     }
     EndPrimitive();

@@ -58,10 +58,11 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
         // ==========================================
     } else {
         // perf test load======================
-        loaded_level_geometry = make([]Level_Geometry, 1000)
-        for i in 0..<1000 {
+        loaded_level_geometry = make([]Level_Geometry, 10000)
+        for i in 0..<10000 {
             rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
-            shape: SHAPE = rnd.choice([]SHAPE{ .CUBE, .WEIRD })
+            //shape: SHAPE = rnd.choice([]SHAPE{ .CUBE, .WEIRD })
+            shape: SHAPE = rnd.choice([]SHAPE{ .CUBE })
             // fmt.println(shape)
             // shader: ProgramName = .Level_Geometry_Fill
             render_group: Level_Geometry_Render_Type = .Standard
@@ -69,9 +70,9 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             lg.shape = shape
             lg.collider = shape
 
-            x := f32(i % 10)
+            x := f32(i % 30)
             y := math.floor(f32(i) / 10.0)
-            lg.transform = {{x * 20, y * -2 -20, y * -10 + 300},{10, 10, 10}, rot}
+            lg.transform = {{x * 100, y * 1 -80, y * -40 + 300},{40, 40, 40}, rot}
             // lg.transform_mat4 = trans_to_mat4(lg.transform)
             // lg.shaders = {shader}
             lg.render_type = render_group

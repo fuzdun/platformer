@@ -3,13 +3,25 @@
 layout (lines) in; 
 layout (line_strip, max_vertices = 100) out;
 
+layout (std140, binding = 0) uniform Common
+{
+    mat4 projection;
+    float i_time;
+};
+
+layout (std140, binding = 1) uniform Dash
+{
+    float dash_time;
+    float dash_end_time;
+    vec3 dash_dir;
+};
+
 uniform float resolution;
-uniform mat4 projection;
-uniform float dash_time;
 
 in float v_t[];
 out float t;
 out float dash_time_frag;
+out float i_time_frag;
 
 float rand(float n){return mod(sin(n) * 43758.5453123, 360);}
 
@@ -21,6 +33,7 @@ void main() {
         gl_Position = projection * gl_in[0].gl_Position + step * i;
         t = float(i) / resolution - 1;
         dash_time_frag = dash_time;
+        i_time_frag = i_time;
         EmitVertex();
     }
 
@@ -35,14 +48,16 @@ void main() {
 
         gl_Position = projection * interp_pos;
         t = float(i) / resolution - 1;
-        // dash_time_frag = dash_time;
+        dash_time_frag = dash_time;
+        i_time_frag = i_time;
         EmitVertex();
     }
 
     for(int i=int(resolution - 3); i < resolution; i++) {
         gl_Position = projection * gl_in[1].gl_Position - (resolution - i) * step;
         t = float(i) / resolution - 1;
-        // dash_time_frag = dash_time;
+        dash_time_frag = dash_time;
+        i_time_frag = i_time;
         EmitVertex();
     }
 

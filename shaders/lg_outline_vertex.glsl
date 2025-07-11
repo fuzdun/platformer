@@ -7,7 +7,12 @@ layout (std430, binding = 0) buffer matrices {
     mat4 matrices_data[];
 };
 
-uniform mat4 projection;
+layout (std140, binding = 0) uniform Common
+{
+    mat4 projection;
+    float _;
+};
+
 out vec2 uv;
 
 void main() {

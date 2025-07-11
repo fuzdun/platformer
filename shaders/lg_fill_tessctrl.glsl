@@ -10,8 +10,8 @@ in VS_OUT {
     vec3 player_pos;
     int v_id;
     int tess_amt;
-    // make this a patch
     mat4 projection;
+    float i_time;
 } vs_out[];
 
 out TC_OUT {
@@ -22,6 +22,7 @@ out TC_OUT {
     vec3 player_pos;
     int v_id;
     mat4 projection;
+    float i_time;
 } tc_out[];
 
 void main() {
@@ -32,6 +33,7 @@ void main() {
     tc_out[gl_InvocationID].player_pos = vs_out[gl_InvocationID].player_pos;
     tc_out[gl_InvocationID].v_id = vs_out[gl_InvocationID].v_id;
     tc_out[gl_InvocationID].projection = vs_out[gl_InvocationID].projection;
+    tc_out[gl_InvocationID].i_time = vs_out[gl_InvocationID].i_time;
   
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
