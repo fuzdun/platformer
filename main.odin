@@ -13,15 +13,16 @@ import ft "shared:freetype"
 
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
+DITHER_TEST :: #config(DITHER_TEST, false)
 
 WIDTH :: 1920.0
 HEIGHT :: 1080.0
 FULLSCREEN :: true
 TARGET_FRAME_RATE :: 60.0
 FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
-//WIDTH :: 900
-//HEIGHT :: 900
-//FULLSCREEN :: false
+// WIDTH :: 900
+// HEIGHT :: 900
+// FULLSCREEN :: false
 
 TITLE :: "platformer"
 
@@ -191,7 +192,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 

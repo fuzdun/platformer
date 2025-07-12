@@ -366,6 +366,7 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
     tgt_x := ppos.x + CAMERA_PLAYER_X_OFFSET
     tgt : [3]f32 = {tgt_x, tgt_y, tgt_z}
     cs.position = math.lerp(cs.position, tgt, f32(CAMERA_POS_LERP))
+    // cs.position = {0, 100, 30}
     cs.target.x = math.lerp(cs.target.x, ppos.x, f32(CAMERA_X_LERP))
     cs.target.y = math.lerp(cs.target.y, ppos.y, f32(CAMERA_Y_LERP))
     cs.target.z = math.lerp(cs.target.z, ppos.z, f32(CAMERA_Z_LERP))

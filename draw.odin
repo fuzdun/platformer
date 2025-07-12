@@ -3,6 +3,7 @@ package main
 import "core:sort"
 import "core:fmt"
 import "core:slice"
+import "core:math"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import strcnv "core:strconv"
@@ -54,6 +55,7 @@ draw :: proc(
         count := u32(next_off - g_off)
         if count == 0 do continue
         shape := SHAPE(idx % len(SHAPE))
+        render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(Level_Geometry_Render_Type))))
         sd := sr[shape] 
         command: gl.DrawElementsIndirectCommand = {
             u32(len(sd.indices)),
@@ -62,7 +64,7 @@ draw :: proc(
             rs.vertex_offsets[shape],
             u32(g_off)
         }
-        append(&lg_render_groups[.Standard], command)
+        append(&lg_render_groups[render_type], command)
     }
 
     // sort and distribute level geometry transforms and z_widths 
@@ -142,7 +144,7 @@ draw :: proc(
         gl.BindVertexArray(rs.background_vao)
         gl.Disable(gl.DEPTH_TEST)
         gl.Disable(gl.CULL_FACE)
-        //gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        // gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
         gl.Enable(gl.DEPTH_TEST)
         gl.Enable(gl.CULL_FACE)
 
@@ -159,7 +161,6 @@ draw :: proc(
         set_matrix_uniform(shst, "transform", &player_mat)
         draw_indirect_render_queue(rs^, rs.player_draw_command[:], gl.TRIANGLES)
 
-        //draw player particles
         // draw level geometry
         use_shader(shst, rs, .Level_Geometry_Fill)
         gl.BindVertexArray(rs.standard_vao)
@@ -169,12 +170,33 @@ draw :: proc(
         player_trail := interpolated_trail(pls, f32(interp_t))
         set_vec3_uniform(shst, "player_trail", 3, &player_trail[0])
         set_float_uniform(shst, "crunch_time", f32(pls.crunch_time) / 1000)
+        inverse_view := glm.inverse(only_view_matrix(cs, f32(interp_t)))
+        set_matrix_uniform(shst, "inverse_view", &inverse_view)
+        inverse_proj := glm.inverse(only_projection_matrix(cs, f32(interp_t)))
+        set_matrix_uniform(shst, "inverse_projection", &inverse_proj)
+        set_vec3_uniform(shst, "camera_pos", 1, &cs.position)
         gl.Disable(gl.CULL_FACE)
         gl.Enable(gl.BLEND)
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Disable(gl.BLEND)
+
+        // use_shader(shst, rs, .Screen_Dither)
+        // gl.BindVertexArray(rs.standard_vao)
+        // gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
+        // inverse_view := glm.inverse(only_view_matrix(cs, f32(interp_t)))
+        // inverse_proj := glm.inverse(only_projection_matrix(cs, f32(interp_t)))
+        // set_matrix_uniform(shst, "projection", &proj_mat)
+        // set_vec3_uniform(shst, "camera_pos", 1, &cs.position)
+        // set_matrix_uniform(shst, "inverse_projection", &inverse_proj)
+        // set_matrix_uniform(shst, "inverse_view", &inverse_view)
+        // gl.Disable(gl.CULL_FACE)
+        // gl.Enable(gl.BLEND)
+        // gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+        // draw_indirect_render_queue(rs^, lg_render_groups[.Dither_Test][:], gl.TRIANGLES)
+        // gl.Enable(gl.CULL_FACE)
+        // gl.Disable(gl.BLEND)
 
         // draw player dash trail
         use_shader(shst, rs, .Dash_Line)
@@ -192,6 +214,7 @@ draw :: proc(
         gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
         gl.Disable(gl.BLEND)
 
+        //draw player particles
         use_shader(shst, rs, .Player_Particle)
         gl.BindVertexArray(rs.particle_vao)
         set_float_uniform(shst, "radius", 3.0)

@@ -3,3 +3,14 @@ radial blur
 
 
 instead of rendering surfaces all the time, maybe render particles that condense and expand as objects warp into existence and shrink when they are in a transparent state
+
+
+NEW DITHER EFFECT
+- transform frag into screen space, floor to some resolution
+- sample value at this coord from dither texture
+- use unproject to get 3d line passing through floored screen coordinate
+- get intersection of line and triangle plane
+- use triangle vertices positions and uvs to barycentrically calculate uv of intersection point
+- calculate color based on this uv
+- get distance from player, floored based on number of desired shades
+- add sampled dither value, multiplied by shade, to transparency

@@ -133,7 +133,8 @@ Lg_Render_Data :: struct {
 }
 
 Level_Geometry_Render_Type :: enum {
-    Standard
+    Standard,
+    Dither_Test
 }
 
 Common_Ubo :: struct {

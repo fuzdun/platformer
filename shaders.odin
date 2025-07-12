@@ -38,6 +38,7 @@ ProgramName :: enum {
     Connection_Line,
     Text,
     Dash_Line,
+    Screen_Dither
 }
 
 PROGRAM_CONFIGS :: #partial[ProgramName]Program {
@@ -49,7 +50,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Level_Geometry_Fill = {
         pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "lg_fill_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"player_trail", "crunch_time", "crunch_pt"},
+        uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view"},
     },
     .Player = {
         pipeline = {"player_vertex", "player_frag"},
@@ -86,6 +87,11 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection", "transform"},
     },
+    .Screen_Dither = {
+        pipeline = {"screen_dither_vertex", "screen_dither_geometry", "screen_dither_frag"},
+        shader_types = {.VERTEX_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"inverse_projection", "inverse_view", "projection", "camera_pos"}
+    }
 }
 
 use_shader :: proc(sh: ^Shader_State, rs: ^Render_State, name: ProgramName) {

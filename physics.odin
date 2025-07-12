@@ -124,7 +124,7 @@ sphere_plane_intersection :: proc(c: [3]f32, r: f32, plane_norm: [3]f32, plane_d
 ray_plane_intersection :: proc(start: [3]f32, offset: [3]f32, plane_n: [3]f32, plane_d: f32) -> (t: f32, q: [3]f32, ok: bool) {
   t = (plane_d - la.dot(plane_n, start)) / la.dot(plane_n, offset) 
   if t >= 0 && t <= 1 {
-    q =  start + t * offset
+    q = start + t * offset
         ok = true
         return
     }

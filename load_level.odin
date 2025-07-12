@@ -42,21 +42,7 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
     loaded_level_geometry: []Level_Geometry
     defer delete(loaded_level_geometry)
 
-    if !PERF_TEST {
-        // standard load from level data=============
-        loaded_level_geometry = make([]Level_Geometry, len(decoded_arr))
-        for entry, idx in decoded_arr {
-            // decode level geometry struct
-            lg: Level_Geometry
-            entry_bin, _ := cbor.encode(entry)
-            defer delete(entry_bin)
-            cbor.unmarshal(string(entry_bin), &lg)
-            lg.attributes = trim_bit_set(lg.attributes)
-            // lg.shaders = trim_bit_set(lg.shaders)
-            loaded_level_geometry[idx] = lg
-        }
-        // ==========================================
-    } else {
+    if PERF_TEST {
         // perf test load======================
         loaded_level_geometry = make([]Level_Geometry, 10000)
         for i in 0..<10000 {
@@ -81,6 +67,31 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             loaded_level_geometry[i] = lg
         }
         // =====================================
+    } else if DITHER_TEST {
+        loaded_level_geometry = make([]Level_Geometry, 1)
+        rot := la.quaternion_from_euler_angles_f32(0, 0, 0, .XYZ)
+        shape: SHAPE = .CUBE
+        lg: Level_Geometry
+        lg.shape = shape
+        lg.collider = shape
+        lg.transform = {{0, 0, 0},{20, 20, 20}, rot}
+        lg.render_type = .Dither_Test 
+        lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+        loaded_level_geometry[0] = lg
+    } else {
+        // standard load from level data=============
+        loaded_level_geometry = make([]Level_Geometry, len(decoded_arr))
+        for entry, idx in decoded_arr {
+            // decode level geometry struct
+            lg: Level_Geometry
+            entry_bin, _ := cbor.encode(entry)
+            defer delete(entry_bin)
+            cbor.unmarshal(string(entry_bin), &lg)
+            lg.attributes = trim_bit_set(lg.attributes)
+            // lg.shaders = trim_bit_set(lg.shaders)
+            loaded_level_geometry[idx] = lg
+        }
+        // ==========================================
     }
     add_geometry_to_physics(ps, loaded_level_geometry)
     add_geometry_to_renderer(lgs, rs, ps, loaded_level_geometry)

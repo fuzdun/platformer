@@ -12,6 +12,8 @@ in VS_OUT {
     int tess_amt;
     mat4 projection;
     float i_time;
+    // float plane_dist;
+    vec3 pos;
 } vs_out[];
 
 out TC_OUT {
@@ -23,6 +25,8 @@ out TC_OUT {
     int v_id;
     mat4 projection;
     float i_time;
+    // float plane_dist;
+    vec3 pos;
 } tc_out[];
 
 void main() {
@@ -34,6 +38,8 @@ void main() {
     tc_out[gl_InvocationID].v_id = vs_out[gl_InvocationID].v_id;
     tc_out[gl_InvocationID].projection = vs_out[gl_InvocationID].projection;
     tc_out[gl_InvocationID].i_time = vs_out[gl_InvocationID].i_time;
+    // tc_out[gl_InvocationID].plane_dist = vs_out[gl_InvocationID].plane_dist;
+    tc_out[gl_InvocationID].pos = vs_out[gl_InvocationID].pos;
   
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
@@ -41,7 +47,6 @@ void main() {
         gl_TessLevelOuter[0] = vs_out[0].tess_amt;
         gl_TessLevelOuter[1] = vs_out[0].tess_amt;
         gl_TessLevelOuter[2] = vs_out[0].tess_amt;
-
         gl_TessLevelInner[0] = vs_out[0].tess_amt == 1 ? 1 : vs_out[0].tess_amt - 1;
     }
 }
