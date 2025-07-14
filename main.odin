@@ -193,7 +193,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
@@ -439,8 +439,8 @@ main :: proc () {
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         
-        update_vertices(&lgs, sr, &rs)
-        update_player_particles(&rs, pls, f32(elapsed_time))
+        // update_vertices(&lgs, sr, &rs)
+        // update_player_particles(&rs, pls, f32(elapsed_time))
         //draw_time := tm.now()
         draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
 

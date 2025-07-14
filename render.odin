@@ -221,17 +221,17 @@ add_player_sphere_data :: proc(rs: ^Render_State) {
 
 
 update_vertices :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, rs: ^Render_State) {
-    if len(lgs.dirty_entities) > 0 {
-        for lg_idx in lgs.dirty_entities {
-            lg := lgs.entities[lg_idx]
-            trans_mat := trans_to_mat4(lg.transform)
-            max_z := min(f32)
-            min_z := max(f32)
-            for v in sr[lg.shape].vertices {
-                new_pos := trans_mat * [4]f32{v.pos[0], v.pos[1], v.pos[2], 1.0}
-                max_z = max(new_pos.z, max_z)
-                min_z = min(new_pos.z, min_z)
-            }
+    // if len(lgs.dirty_entities) > 0 {
+    //     for lg_idx in lgs.dirty_entities {
+    //         lg := lgs.entities[lg_idx]
+    //         trans_mat := trans_to_mat4(lg.transform)
+    //         max_z := min(f32)
+    //         min_z := max(f32)
+    //         for v in sr[lg.shape].vertices {
+    //             new_pos := trans_mat * [4]f32{v.pos[0], v.pos[1], v.pos[2], 1.0}
+    //             max_z = max(new_pos.z, max_z)
+    //             min_z = min(new_pos.z, min_z)
+    //         }
 
             // for offset, shader in lg.ssbo_indexes {
             //     if offset != -1 {
@@ -248,8 +248,8 @@ update_vertices :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, rs: ^Re
                     // }
                 // }
             // }
-        }
-    }
+    //     }
+    // }
     // clear(&lgs.dirty_entities)
     //slice.sort_by(rs.static_transforms[:], proc(a: glm.mat4, b: glm.mat4) -> bool { return a[3][2] < b[3][2] })
 }

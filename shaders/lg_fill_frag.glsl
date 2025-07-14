@@ -31,49 +31,18 @@ uniform sampler2D ditherTexture;
 #define TWOPI 6.2831853
 #define SHADES 3.0
 
-float colormap_red(float x) {
-    if (x < 0.0) {
-        return 167.0;
-    } else if (x < (2.54491177159840E+02 + 2.49117061281287E+02) / (1.94999353031535E+00 + 1.94987400471999E+00)) {
-        return -1.94987400471999E+00 * x + 2.54491177159840E+02;
-    } else if (x <= 255.0) {
-        return 1.94999353031535E+00 * x - 2.49117061281287E+02;
-    } else {
-        return 251.0;
-    }
+vec3 colormap(float t) {
+    const vec3 c0 = vec3(0.042660,0.186181,0.409512);
+    const vec3 c1 = vec3(-0.703712,1.094974,2.049478);
+    const vec3 c2 = vec3(7.995725,-0.686110,-4.998203);
+    const vec3 c3 = vec3(-24.421963,2.680736,7.532937);
+    const vec3 c4 = vec3(47.519089,-4.615112,-5.126531);
+    const vec3 c5 = vec3(-46.038418,2.606781,0.685560);
+    const vec3 c6 = vec3(16.586546,-0.279280,0.447047);
+    return c0+t*(c1+t*(c2+t*(c3+t*(c4+t*(c5+t*c6)))));
 }
 
-float colormap_green(float x) {
-    if (x < 0.0) {
-        return 112.0;
-    } else if (x < (2.13852573128775E+02 + 1.42633630462899E+02) / (1.31530121382008E+00 + 1.39181683887691E+00)) {
-        return -1.39181683887691E+00 * x + 2.13852573128775E+02;
-    } else if (x <= 255.0) {
-        return 1.31530121382008E+00 * x - 1.42633630462899E+02;
-    } else {
-        return 195.0;
-    }
-}
 
-float colormap_blue(float x) {
-    if (x < 0.0) {
-        return 255.0;
-    } else if (x <= 255.0) {
-        return -9.84241021836929E-01 * x + 2.52502692064968E+02;
-    } else {
-        return 0.0;
-    }
-}
-
-vec4 colormap(float x) {
-    float t = x * 255.0;
-    float r = colormap_red(t) / 255.0;
-    float g = colormap_green(t) / 255.0;
-    float b = colormap_blue(t) / 255.0;
-    return vec4(r, g, b, 1.0);
-}
-
-//White Hole draw
 vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
 {
 	vec3 pa = p - a, ba = b - a;
@@ -230,17 +199,19 @@ void main()
         impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
     }
 
-    vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+    // vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
+    vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
 
     // float mask = texture(ditherTexture, perspective_uv).r;
     // float mask = texture(ditherTexture, uv * 16.0).r;
     float mask = texture(ditherTexture, screen_uv * 8.0).r;
+    // float mask = texture(ditherTexture, perspective_uv * 4.0).r;
     mask = reshapeUniformToTriangle(mask);
-    mask = min(1.0, max(floor(mask + length(t_diff) / 5.0) / 10.0, 0.3)); 
+    mask = min(1.0, max(floor(mask + length(t_diff) / 5.0) / 10.0, 0.15)); 
     // mask = 0.0; 
     // float visibility = length(diff) * 0.0025;
     // visibility = max(min(1.0, floor((visibility + mask / SHADES) * SHADES) / SHADES), .2);
-    vec4 glassColor = mix(vec4(0.1, 0.2, 0.0, 0.40), vec4(0.0, 0.0, 0.0, 0.60), displacement);
+    vec4 glassColor = mix(vec4(0.02, 0.04, 0.0, 0.40), vec4(0.05, 0.1, 0.0, 0.60), displacement);
     // float visibility = 1.0;
     // fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);

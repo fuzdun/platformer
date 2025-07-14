@@ -148,18 +148,6 @@ draw :: proc(
         gl.Enable(gl.DEPTH_TEST)
         gl.Enable(gl.CULL_FACE)
 
-        // draw level geometry outline
-        use_shader(shst, rs, .Level_Geometry_Outline)
-        gl.BindVertexArray(rs.standard_vao)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.TRIANGLES)
-
-        // draw player
-        use_shader(shst, rs, .Player)
-        p_color := [3]f32 {1.0, 0.0, 0.0}
-        set_vec3_uniform(shst, "p_color", 1, &p_color)
-        player_mat := interpolated_player_matrix(pls, f32(interp_t))
-        set_matrix_uniform(shst, "transform", &player_mat)
-        draw_indirect_render_queue(rs^, rs.player_draw_command[:], gl.TRIANGLES)
 
         // draw level geometry
         use_shader(shst, rs, .Level_Geometry_Fill)
@@ -175,12 +163,34 @@ draw :: proc(
         inverse_proj := glm.inverse(only_projection_matrix(cs, f32(interp_t)))
         set_matrix_uniform(shst, "inverse_projection", &inverse_proj)
         set_vec3_uniform(shst, "camera_pos", 1, &cs.position)
-        gl.Disable(gl.CULL_FACE)
-        gl.Enable(gl.BLEND)
+        // gl.Disable(gl.CULL_FACE)
+        // gl.Enable(gl.BLEND)
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
+        // gl.Enable(gl.CULL_FACE)
+        // gl.Disable(gl.BLEND)
+
+        // draw level geometry outline
+        use_shader(shst, rs, .Level_Geometry_Outline)
+        gl.BindVertexArray(rs.standard_vao)
+        gl.Disable(gl.CULL_FACE)
+        gl.Disable(gl.DEPTH_TEST)
+        // gl.Enable(gl.BLEND)
+        // gl.BlendFunc(gl.ZERO, gl.ONE)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.TRIANGLES)
         gl.Enable(gl.CULL_FACE)
-        gl.Disable(gl.BLEND)
+        gl.Enable(gl.DEPTH_TEST)
+        // gl.Disable(gl.BLEND)
+
+        // draw player
+        use_shader(shst, rs, .Player)
+        gl.BindVertexArray(rs.standard_vao)
+        p_color := [3]f32 {1.0, 0.0, 0.0}
+        set_vec3_uniform(shst, "p_color", 1, &p_color)
+        player_mat := interpolated_player_matrix(pls, f32(interp_t))
+        set_matrix_uniform(shst, "transform", &player_mat)
+        draw_indirect_render_queue(rs^, rs.player_draw_command[:], gl.TRIANGLES)
+
 
         // use_shader(shst, rs, .Screen_Dither)
         // gl.BindVertexArray(rs.standard_vao)
@@ -215,22 +225,22 @@ draw :: proc(
         gl.Disable(gl.BLEND)
 
         //draw player particles
-        use_shader(shst, rs, .Player_Particle)
-        gl.BindVertexArray(rs.particle_vao)
-        set_float_uniform(shst, "radius", 3.0)
-        pv := PARTICLE_VERTICES
-        for &pv in pv {
-            pv.position = camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y
-        }
-        pp := rs.player_particles
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), &pv[0], gl.STATIC_DRAW) 
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.STATIC_DRAW) 
-        gl.Enable(gl.BLEND)
-        gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-        gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
-        gl.Disable(gl.BLEND)
+        // use_shader(shst, rs, .Player_Particle)
+        // gl.BindVertexArray(rs.particle_vao)
+        // set_float_uniform(shst, "radius", 3.0)
+        // pv := PARTICLE_VERTICES
+        // for &pv in pv {
+        //     pv.position = camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y
+        // }
+        // pp := rs.player_particles
+        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
+        // gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), &pv[0], gl.STATIC_DRAW) 
+        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+        // gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.STATIC_DRAW) 
+        // gl.Enable(gl.BLEND)
+        // gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+        // gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
+        // gl.Disable(gl.BLEND)
 
         
     }

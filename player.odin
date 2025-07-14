@@ -5,7 +5,7 @@ import glm "core:math/linalg/glsl"
 
 
 // init
-INIT_PLAYER_POS :: [3]f32 { 0, 60, 0 }
+INIT_PLAYER_POS :: [3]f32 { 0, 0, 0 }
 
 // move speed
 MAX_PLAYER_SPEED: f32: 50.0
