@@ -9,6 +9,7 @@ import SDL "vendor:sdl2"
 import TTF "vendor:sdl2/ttf"
 import gl "vendor:OpenGL"
 import ft "shared:freetype"
+import tm "core:time"
 
 
 EDIT :: #config(EDIT, false)
@@ -192,7 +193,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
@@ -379,6 +380,7 @@ main :: proc () {
     resync := true
     quit_handler :: proc () { quit_app = true }
 
+    frame_time := tm.now()
     for !quit_app {
         if quit_app do break
 
@@ -439,9 +441,13 @@ main :: proc () {
         
         update_vertices(&lgs, sr, &rs)
         update_player_particles(&rs, pls, f32(elapsed_time))
+        //draw_time := tm.now()
         draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
 
+        //fmt.println("draw time:", tm.since(draw_time))
         SDL.GL_SwapWindow(window)
+        //fmt.println("frame time:", tm.since(frame_time))
+        //frame_time = tm.now()
     }
 }
 

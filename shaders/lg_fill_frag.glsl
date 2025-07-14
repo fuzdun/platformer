@@ -145,7 +145,12 @@ void main()
     float screen_height = 1080.0;
 
     vec4 rounded_frag =  gl_FragCoord;
-    rounded_frag.xy = ceil(gl_FragCoord.xy / 6.0) * 6.0;
+    vec2 screen_uv = gl_FragCoord.xy;
+    screen_uv.x /= screen_width;
+    screen_uv.y /= screen_width;
+    screen_uv = floor(screen_uv * 512.0) / 512.0;
+    // rounded_frag.xy = ceil(gl_FragCoord.xy / 6.0) * 6.0;
+    rounded_frag.xy = screen_uv * screen_width;
 
     vec3 ndc = vec3(
         (rounded_frag.x / screen_width - 0.5) * 2.0,
@@ -228,13 +233,16 @@ void main()
     vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
 
     // float mask = texture(ditherTexture, perspective_uv).r;
-    float mask = texture(ditherTexture, uv * 4.0).r;
-    // mask = reshapeUniformToTriangle(mask);
-    mask = min(1.0, max(floor(mask + length(t_diff) / 10.0) / 5.0, 0.3)); 
+    // float mask = texture(ditherTexture, uv * 16.0).r;
+    float mask = texture(ditherTexture, screen_uv * 8.0).r;
+    mask = reshapeUniformToTriangle(mask);
+    mask = min(1.0, max(floor(mask + length(t_diff) / 5.0) / 10.0, 0.3)); 
+    // mask = 0.0; 
     // float visibility = length(diff) * 0.0025;
     // visibility = max(min(1.0, floor((visibility + mask / SHADES) * SHADES) / SHADES), .2);
     vec4 glassColor = mix(vec4(0.1, 0.2, 0.0, 0.40), vec4(0.0, 0.0, 0.0, 0.60), displacement);
     // float visibility = 1.0;
+    // fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     // fragColor = vec4();
     // fragColor = glassColor;
