@@ -182,9 +182,9 @@ void main()
     d += t * 0.69;
     float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
     float freq = 2.0 * line_len;
-    float width =  sin(-i_time * 70.0 + t * TWOPI * freq) * 2.0 + 40.0;
+    float width =  sin(-i_time * 70.0 + t * TWOPI * freq) * 2.0 + 30.0;
     float border_d = 0.050 * width;
-    vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.5, 0.0, 0.5), t);
+    vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.6, 0.0, 0.15), t);
     trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
 
     vec3 impact_col = vec3(0.0);
@@ -204,7 +204,7 @@ void main()
 
     // float mask = texture(ditherTexture, perspective_uv).r;
     // float mask = texture(ditherTexture, uv * 16.0).r;
-    float mask = texture(ditherTexture, screen_uv * 8.0).r;
+    float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * 8.0).r;
     // float mask = texture(ditherTexture, perspective_uv * 4.0).r;
     mask = reshapeUniformToTriangle(mask);
     mask = min(1.0, max(floor(mask + length(t_diff) / 5.0) / 10.0, 0.15)); 

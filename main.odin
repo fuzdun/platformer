@@ -14,7 +14,7 @@ import tm "core:time"
 
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
-DITHER_TEST :: #config(DITHER_TEST, false)
+PLAYER_DRAW :: #config(PLAYER_DRAW, false)
 
 WIDTH :: 1920.0
 HEIGHT :: 1080.0
@@ -231,9 +231,12 @@ main :: proc () {
 
     // init mesh rendering
     gl.GenBuffers(1, &rs.standard_vbo)
+    gl.GenBuffers(1, &rs.player_vbo)
     gl.GenBuffers(1, &rs.standard_ebo)
+    // gl.GenBuffers(1, &rs.player_ebo)
     gl.GenBuffers(1, &rs.indirect_buffer)
     gl.GenBuffers(1, &rs.transforms_ssbo)
+    gl.GenBuffers(1, &rs.player_transforms_ssbo)
     gl.GenBuffers(1, &rs.z_widths_ssbo)
     gl.GenBuffers(1, &rs.common_ubo)
     gl.GenBuffers(1, &rs.dash_ubo)
@@ -242,11 +245,13 @@ main :: proc () {
     gl.GenBuffers(1, &rs.particle_pos_vbo)
     gl.GenBuffers(1, &rs.background_vbo)
     gl.GenBuffers(1, &rs.text_vbo)
+    gl.GenBuffers(1, &rs.player_vbo)
     gl.GenBuffers(1, &rs.editor_lines_vbo)
     gl.GenVertexArrays(1, &rs.standard_vao)
     gl.GenVertexArrays(1, &rs.particle_vao)
     gl.GenVertexArrays(1, &rs.background_vao)
     gl.GenVertexArrays(1, &rs.lines_vao)
+    gl.GenVertexArrays(1, &rs.player_vao)
     gl.GenVertexArrays(1, &rs.text_vao)
     gl.GenTextures(1, &rs.dither_tex)
 
@@ -255,6 +260,17 @@ main :: proc () {
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
     gl.PatchParameteri(gl.PATCH_VERTICES, 3);
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
+    gl.EnableVertexAttribArray(0)
+    gl.EnableVertexAttribArray(1)
+    gl.EnableVertexAttribArray(2)
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, b_uv))
+    gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, normal))
+
+    gl.BindVertexArray(rs.player_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
+    // gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_ebo)
+    gl.PatchParameteri(gl.PATCH_VERTICES, 3);
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
     gl.EnableVertexAttribArray(2)
@@ -349,6 +365,25 @@ main :: proc () {
         gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices[0]) * len(vertices), raw_data(vertices), gl.STATIC_DRAW) 
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
         gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
+
+        // if PLAYER_DRAW {
+            pi := rs.player_geometry.indices
+            pv := rs.player_geometry.vertices
+            end_vertex_index := u32(len(pv))
+            rs.new_player_vertices = make([]Vertex, end_vertex_index + 1)
+            rs.new_player_indices = make([dynamic]u32)
+            for i := 0; i < len(pi); i += 2 {
+                append(&rs.new_player_indices, ..pi[i:i+2])
+                append(&rs.new_player_indices, end_vertex_index)
+            }
+            copy(rs.new_player_vertices, pv[:])
+            rs.new_player_vertices[len(rs.new_player_vertices) - 1] = Vertex{{0, 0, 0}, {0, 0}, {0, 0}, {0, 1, 0}}
+            // rs.new_player_indices[len(rs.new_player_indices) - 1] = u32(len(rs.new_player_vertices) - 1)
+            // gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo) 
+            // gl.BufferData(gl.ARRAY_BUFFER, size_of(rs.new_player_vertices[0]) * len(rs.new_player_vertices), raw_data(rs.new_player_vertices), gl.STATIC_DRAW) 
+            // gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_ebo)
+            // gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(pi[0]) * len(pi), raw_data(pi), gl.STATIC_DRAW)
+        // }
     }
 
     gl.Enable(gl.CULL_FACE)
@@ -385,7 +420,7 @@ main :: proc () {
         if quit_app do break
 
         elapsed_time := f64(SDL.GetTicks())
-        //elapsed_time := f64(SDL.GetTicks()) * 0.1
+        // elapsed_time := f64(SDL.GetTicks()) * 0.1
 
         current_time = i64(SDL.GetPerformanceCounter())
         delta_time = current_time - previous_time
@@ -440,7 +475,7 @@ main :: proc () {
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         
         // update_vertices(&lgs, sr, &rs)
-        // update_player_particles(&rs, pls, f32(elapsed_time))
+        update_player_particles(&rs, pls, f32(elapsed_time))
         //draw_time := tm.now()
         draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
 

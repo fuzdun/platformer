@@ -42,7 +42,7 @@ void main() {
     vec3 constrained_pos = offset.xyz - constrain_proj;
     float dash_pos_t = length(constrain_dir - constrain_proj) / 2.0;
     float constrain_start_t = dash_time + 50.0 * dash_pos_t;
-    float constrain_amt = 1.0 - easeout(clamp((i_time - constrain_start_t) / 75.0, 0.0, 1.0));
+    float constrain_amt = 1.0 - easeout(clamp((i_time - constrain_start_t) / 300.0, 0.0, 1.0));
     if (i_time - dash_time > 200) {
         constrain_amt = 1.0;
     }

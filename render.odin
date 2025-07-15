@@ -54,11 +54,14 @@ Render_State :: struct {
     background_vao: u32,
     lines_vao: u32,
     text_vao: u32,
+    player_vao: u32,
 
     standard_ebo: u32,
     background_ebo: u32,
+    player_ebo: u32,
 
     standard_vbo: u32,
+    player_vbo: u32,
     particle_vbo: u32,
     particle_pos_vbo: u32,
     background_vbo: u32,
@@ -68,6 +71,7 @@ Render_State :: struct {
     indirect_buffer: u32,
 
     transforms_ssbo: u32,
+    player_transforms_ssbo: u32,
     z_widths_ssbo: u32,
 
     common_ubo: u32,
@@ -81,6 +85,8 @@ Render_State :: struct {
     player_particle_poss: [dynamic]glm.vec3,
     player_particles: [PLAYER_PARTICLE_COUNT][4]f32,
     player_geometry: Shape_Data,
+    new_player_indices: [dynamic]u32,
+    new_player_vertices: []Vertex,
 
     vertex_offsets: Vertex_Offsets,
     index_offsets: Index_Offsets,
@@ -302,13 +308,13 @@ update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) 
         constrained_pos := p.xyz - constrain_proj
         dash_pos_t := la.length(ps.dash_dir - constrain_proj) / 2.0
         constrain_start_t := ps.dash_time + 50.0 * dash_pos_t
-        constrain_amt := 1.0 - easeout(clamp((time - constrain_start_t) / 75.0, 0.0, 1.0))
+        constrain_amt := 1.0 - easeout(clamp((time - constrain_start_t) / 300.0, 0.0, 1.0))
         if (time - ps.dash_time > 200) {
             constrain_amt = 1.0;
         }
         constrained_pos *= constrain_amt;
         constrained_pos += constrain_proj;
-        //constrained_pos += constrain_proj * (1.0 - constrain_amt) * 2.5 + ps.dash_dir * 2.5 * (1.0 - constrain_amt);
+        constrained_pos += constrain_proj * (1.0 - constrain_amt) * 5.0 + ps.dash_dir * 5.0 * (1.0 - constrain_amt);
         p = {constrained_pos.x, constrained_pos.y, constrained_pos.z, p.w}
     }
 

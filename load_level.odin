@@ -67,15 +67,15 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             loaded_level_geometry[i] = lg
         }
         // =====================================
-    } else if DITHER_TEST {
+    } else if PLAYER_DRAW {
         loaded_level_geometry = make([]Level_Geometry, 1)
         rot := la.quaternion_from_euler_angles_f32(0, 0, 0, .XYZ)
         shape: SHAPE = .CUBE
         lg: Level_Geometry
         lg.shape = shape
         lg.collider = shape
-        lg.transform = {{0, 0, 0},{20, 20, 20}, rot}
-        lg.render_type = .Dither_Test 
+        lg.transform = {{0, -1000, 0},{1000, 1000, 1000}, rot}
+        lg.render_type = .Standard 
         lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
         loaded_level_geometry[0] = lg
     } else {

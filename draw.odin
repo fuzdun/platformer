@@ -138,13 +138,53 @@ draw :: proc(
             gl.BufferData(gl.ARRAY_BUFFER, size_of(connection_vertices[0]) * len(connection_vertices), &connection_vertices[0], gl.DYNAMIC_DRAW)
             gl.DrawArrays(gl.LINES, 0, i32(len(connection_vertices)))
         }
+    } else if PLAYER_DRAW {
+        // draw player
+        use_shader(shst, rs, .Player)
+        gl.BindVertexArray(rs.player_vao)
+        p_color := [3]f32 {1.0, 0.0, 0.0}
+        set_vec3_uniform(shst, "p_color", 1, &p_color)
+        player_mat := interpolated_player_matrix(pls, f32(interp_t))
+        set_matrix_uniform(shst, "transform", &player_mat)
+        offset_vertices := make([]Vertex, len(rs.new_player_vertices)); defer delete(offset_vertices)
+        copy(offset_vertices, rs.new_player_vertices[:])
+        for &v, idx in offset_vertices {
+            v.pos += la.cross(v.pos, [3]f32{0, 1, 0}) * .01
+            v.pos.x += la.sin(f32(time) / (40.0 + f32(idx) / 10.0)) * .1
+            v.pos.z += la.cos(f32(time) / (80.0 + f32(idx) / 20.0)) * .1
+            v.pos.y += la.cos(f32(time) / (120.0 + f32(idx) / 70.0))  * .01
+        }
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo) 
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
+        gl.Disable(gl.CULL_FACE)
+        gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_geometry.indices)), gl.UNSIGNED_INT, raw_data(rs.new_player_indices))
+        gl.Enable(gl.CULL_FACE)
+
+        //draw player particles
+        // use_shader(shst, rs, .Player_Particle)
+        // gl.BindVertexArray(rs.particle_vao)
+        // set_float_uniform(shst, "radius", 3.0)
+        // pv := PARTICLE_VERTICES
+        // for &pv in pv {
+        //     pv.position = camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y
+        // }
+        // pp := rs.player_particles
+        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
+        // gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), &pv[0], gl.STATIC_DRAW) 
+        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+        // gl.BufferData(gl.ARRAY_BUFFER, size_of(pp[0]) * len(pp), &pp[0], gl.STATIC_DRAW) 
+        // gl.Enable(gl.BLEND)
+        // gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+        // gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
+        // gl.Disable(gl.BLEND)
+
     } else {
         // draw background 
         use_shader(shst, rs, .Background)
         gl.BindVertexArray(rs.background_vao)
         gl.Disable(gl.DEPTH_TEST)
         gl.Disable(gl.CULL_FACE)
-        // gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
         gl.Enable(gl.DEPTH_TEST)
         gl.Enable(gl.CULL_FACE)
 
@@ -163,55 +203,51 @@ draw :: proc(
         inverse_proj := glm.inverse(only_projection_matrix(cs, f32(interp_t)))
         set_matrix_uniform(shst, "inverse_projection", &inverse_proj)
         set_vec3_uniform(shst, "camera_pos", 1, &cs.position)
-        // gl.Disable(gl.CULL_FACE)
-        // gl.Enable(gl.BLEND)
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
-        // gl.Enable(gl.CULL_FACE)
-        // gl.Disable(gl.BLEND)
 
         // draw level geometry outline
         use_shader(shst, rs, .Level_Geometry_Outline)
         gl.BindVertexArray(rs.standard_vao)
         gl.Disable(gl.CULL_FACE)
         gl.Disable(gl.DEPTH_TEST)
-        // gl.Enable(gl.BLEND)
-        // gl.BlendFunc(gl.ZERO, gl.ONE)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.TRIANGLES)
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
-        // gl.Disable(gl.BLEND)
 
-        // draw player
+        // // draw player
+        // use_shader(shst, rs, .Player)
+        // gl.BindVertexArray(rs.standard_vao)
+        // p_color := [3]f32 {1.0, 0.0, 0.0}
+        // set_vec3_uniform(shst, "p_color", 1, &p_color)
+        // player_mat := interpolated_player_matrix(pls, f32(interp_t))
+        // set_matrix_uniform(shst, "transform", &player_mat)
+        // draw_indirect_render_queue(rs^, rs.player_draw_command[:], gl.TRIANGLES)
+
         use_shader(shst, rs, .Player)
-        gl.BindVertexArray(rs.standard_vao)
+        gl.BindVertexArray(rs.player_vao)
         p_color := [3]f32 {1.0, 0.0, 0.0}
         set_vec3_uniform(shst, "p_color", 1, &p_color)
         player_mat := interpolated_player_matrix(pls, f32(interp_t))
         set_matrix_uniform(shst, "transform", &player_mat)
-        draw_indirect_render_queue(rs^, rs.player_draw_command[:], gl.TRIANGLES)
-
-
-        // use_shader(shst, rs, .Screen_Dither)
-        // gl.BindVertexArray(rs.standard_vao)
-        // gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
-        // inverse_view := glm.inverse(only_view_matrix(cs, f32(interp_t)))
-        // inverse_proj := glm.inverse(only_projection_matrix(cs, f32(interp_t)))
-        // set_matrix_uniform(shst, "projection", &proj_mat)
-        // set_vec3_uniform(shst, "camera_pos", 1, &cs.position)
-        // set_matrix_uniform(shst, "inverse_projection", &inverse_proj)
-        // set_matrix_uniform(shst, "inverse_view", &inverse_view)
-        // gl.Disable(gl.CULL_FACE)
-        // gl.Enable(gl.BLEND)
-        // gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-        // draw_indirect_render_queue(rs^, lg_render_groups[.Dither_Test][:], gl.TRIANGLES)
-        // gl.Enable(gl.CULL_FACE)
-        // gl.Disable(gl.BLEND)
+        offset_vertices := make([]Vertex, len(rs.new_player_vertices)); defer delete(offset_vertices)
+        copy(offset_vertices, rs.new_player_vertices[:])
+        for &v, idx in offset_vertices {
+            v.pos += la.cross(v.pos, [3]f32{0, 1, 0}) * .01
+            v.pos.x += la.sin(f32(time) / (20.0 + f32(idx) / 2.0)) * .75
+            v.pos.z += la.cos(f32(time) / (40.0 + f32(idx) / 4.0)) * .75
+            v.pos.y += la.cos(f32(time) / (60.0 + f32(idx) / 7.0))  * .5
+        }
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo) 
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
+        gl.Disable(gl.CULL_FACE)
+        gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_geometry.indices)), gl.UNSIGNED_INT, raw_data(rs.new_player_indices))
+        gl.Enable(gl.CULL_FACE)
 
         // draw player dash trail
         use_shader(shst, rs, .Dash_Line)
         gl.BindVertexArray(rs.lines_vao)
-        green := [3]f32{1.0, 1.0, 0.0}
+        green := [3]f32{1.0, 0.0, 0.0}
         set_vec3_uniform(shst, "color", 1, &green)
         set_float_uniform(shst, "resolution", f32(20))
         dash_line_start := pls.dash_start_pos + pls.dash_dir * 4.5;

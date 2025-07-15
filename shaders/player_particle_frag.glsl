@@ -7,8 +7,8 @@ flat in int id;
 
 out vec4 fragColor;
 
-const vec3 COLOR1 = vec3(0.6, 0.7, 0.3);
-const vec3 COLOR2 = vec3(0.8, 0.0, 0.0);
+const vec3 COLOR1 = vec3(0.9, 0.35, 0.9);
+const vec3 COLOR2 = vec3(0.2, 0.2, 0.0);
 
 float distance_from_sphere(vec3 p, vec3 c, float r) {
     return length(p - c) - r;
