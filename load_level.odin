@@ -56,9 +56,9 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             lg.shape = shape
             lg.collider = shape
 
-            x := f32(i % 30)
-            y := math.floor(f32(i) / 10.0)
-            lg.transform = {{x * 100, y * 1 -80, y * -40 + 250},{40, 40, 40}, rot}
+            x := f32(i % 10)
+            y := math.floor(f32(i) / 4)
+            lg.transform = {{x * 120, y * 1 - 80, y * -45 + 200},{40, 40, 40}, rot}
             // lg.transform_mat4 = trans_to_mat4(lg.transform)
             // lg.shaders = {shader}
             lg.render_type = render_group

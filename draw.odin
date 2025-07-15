@@ -43,7 +43,7 @@ draw :: proc(
         sorted_rd[idx] = Lg_Render_Data {
             render_group = render_group,
             transform_mat = trans_to_mat4(lg.transform),
-            z_width = 50, // need to change this
+            z_width = 200, // need to change this
         }
     }
 
@@ -146,16 +146,17 @@ draw :: proc(
         set_vec3_uniform(shst, "p_color", 1, &p_color)
         player_mat := interpolated_player_matrix(pls, f32(interp_t))
         set_matrix_uniform(shst, "transform", &player_mat)
-        offset_vertices := make([]Vertex, len(rs.new_player_vertices)); defer delete(offset_vertices)
-        copy(offset_vertices, rs.new_player_vertices[:])
-        for &v, idx in offset_vertices {
-            v.pos += la.cross(v.pos, [3]f32{0, 1, 0}) * .01
-            v.pos.x += la.sin(f32(time) / (40.0 + f32(idx) / 10.0)) * .1
-            v.pos.z += la.cos(f32(time) / (80.0 + f32(idx) / 20.0)) * .1
-            v.pos.y += la.cos(f32(time) / (120.0 + f32(idx) / 70.0))  * .01
-        }
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo) 
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
+        //offset_vertices := make([]Vertex, len(rs.new_player_vertices)); defer delete(offset_vertices)
+        //copy(offset_vertices, rs.new_player_vertices[:])
+        //for &v, idx in offset_vertices {
+        //    v.pos += la.cross(v.pos, [3]f32{0, 1, 0}) * .01
+        //    v.pos.x += la.sin(f32(time) / (40.0 + f32(idx) / 10.0)) * .1
+        //    v.pos.z += la.cos(f32(time) / (80.0 + f32(idx) / 20.0)) * .1
+        //    v.pos.y += la.cos(f32(time) / (120.0 + f32(idx) / 70.0))  * .01
+        //}
+        //gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo) 
+        //gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(rs.player_geometry.vertices[0]) * len(rs.player_geometry.vertices), raw_data(rs.player_geometry.vertices), gl.STATIC_DRAW) 
         gl.Disable(gl.CULL_FACE)
         gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_geometry.indices)), gl.UNSIGNED_INT, raw_data(rs.new_player_indices))
         gl.Enable(gl.CULL_FACE)

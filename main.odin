@@ -193,7 +193,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
@@ -366,7 +366,7 @@ main :: proc () {
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
         gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
 
-        // if PLAYER_DRAW {
+        //if PLAYER_DRAW {
             pi := rs.player_geometry.indices
             pv := rs.player_geometry.vertices
             end_vertex_index := u32(len(pv))
@@ -378,12 +378,12 @@ main :: proc () {
             }
             copy(rs.new_player_vertices, pv[:])
             rs.new_player_vertices[len(rs.new_player_vertices) - 1] = Vertex{{0, 0, 0}, {0, 0}, {0, 0}, {0, 1, 0}}
-            // rs.new_player_indices[len(rs.new_player_indices) - 1] = u32(len(rs.new_player_vertices) - 1)
-            // gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo) 
-            // gl.BufferData(gl.ARRAY_BUFFER, size_of(rs.new_player_vertices[0]) * len(rs.new_player_vertices), raw_data(rs.new_player_vertices), gl.STATIC_DRAW) 
-            // gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_ebo)
-            // gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(pi[0]) * len(pi), raw_data(pi), gl.STATIC_DRAW)
-        // }
+            rs.new_player_indices[len(rs.new_player_indices) - 1] = u32(len(rs.new_player_vertices) - 1)
+             //gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo) 
+             //gl.BufferData(gl.ARRAY_BUFFER, size_of(rs.new_player_vertices[0]) * len(rs.new_player_vertices), raw_data(rs.new_player_vertices), gl.STATIC_DRAW) 
+             //gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_ebo)
+             //gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(pi[0]) * len(pi), raw_data(pi), gl.STATIC_DRAW)
+        //}
     }
 
     gl.Enable(gl.CULL_FACE)
@@ -476,7 +476,7 @@ main :: proc () {
         
         // update_vertices(&lgs, sr, &rs)
         update_player_particles(&rs, pls, f32(elapsed_time))
-        //draw_time := tm.now()
+        draw_time := tm.now()
         draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
 
         //fmt.println("draw time:", tm.since(draw_time))
