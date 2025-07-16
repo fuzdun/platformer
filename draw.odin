@@ -4,6 +4,7 @@ import "core:sort"
 import "core:fmt"
 import "core:slice"
 import "core:math"
+import rand "core:math/rand"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import strcnv "core:strconv"
@@ -43,7 +44,7 @@ draw :: proc(
         sorted_rd[idx] = Lg_Render_Data {
             render_group = render_group,
             transform_mat = trans_to_mat4(lg.transform),
-            z_width = 200, // need to change this
+            z_width =  30, // need to change this
         }
     }
 
@@ -140,26 +141,71 @@ draw :: proc(
         }
     } else if PLAYER_DRAW {
         // draw player
-        use_shader(shst, rs, .Player)
         gl.BindVertexArray(rs.player_vao)
+        offset_vertices := make([]Vertex, len(rs.player_geometry.vertices)); defer delete(offset_vertices)
+        copy(offset_vertices, rs.player_geometry.vertices[:])
+        displacement_dir := la.normalize0(pls.particle_displacement)
+
+        af_rot_mat := la.matrix4_rotate_f32(-f32(pls.anim_angle), {0, 1, 0})
+        animation_frame: [4][3]f32 = {
+            {.5, -1.25, f32(math.sin(time / 100) * 1.5)},
+            {-.5, -1.25, -f32(math.sin(time / 100) * 1.5)},
+            {1.25, .25, -f32(math.sin(time / 100))},
+            {-1.25, .25, f32(math.sin(time / 100))},
+        } 
+        for &af in animation_frame {
+            af = la.matrix_mul_vector(af_rot_mat, [4]f32{af[0], af[1], af[2], 1.0}).xyz
+        }
+
+        for &v, idx in offset_vertices {
+
+            rot_mat: matrix[4, 4]f32 = la.matrix4_rotate_f32(f32(time / 2000), {1, 1, .5})
+            v.pos = la.matrix_mul_vector(rot_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 1.0}).xyz
+
+            if pls.state == .ON_GROUND {
+                for af in animation_frame {
+                    anim_fact := la.dot(la.normalize0(v.pos), la.normalize0(af))
+                    if anim_fact > 0.900 {
+                        // diff :=  1 - (anim_fact - 0.9) / 0.1
+                        t := (anim_fact - 0.9) / 0.1
+                        vl := la.length(v.pos)
+                        afl := la.length(af)
+                        // v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, 1 - (diff * diff))
+                        v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, t * t)
+                    }
+                }
+            }
+
+            displacement_fact := la.dot(displacement_dir, la.normalize0(v.pos))
+            if displacement_fact > 0.25 {
+                displacement_fact *= 0.5
+            }
+            // v.pos = la.clamp_length(v.pos + pls.particle_displacement * displacement_fact * 0.030, 3.0)
+            v.pos += pls.particle_displacement * displacement_fact * 0.030
+        }
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
         p_color := [3]f32 {1.0, 0.0, 0.0}
-        set_vec3_uniform(shst, "p_color", 1, &p_color)
         player_mat := interpolated_player_matrix(pls, f32(interp_t))
-        set_matrix_uniform(shst, "transform", &player_mat)
-        //offset_vertices := make([]Vertex, len(rs.new_player_vertices)); defer delete(offset_vertices)
-        //copy(offset_vertices, rs.new_player_vertices[:])
-        //for &v, idx in offset_vertices {
-        //    v.pos += la.cross(v.pos, [3]f32{0, 1, 0}) * .01
-        //    v.pos.x += la.sin(f32(time) / (40.0 + f32(idx) / 10.0)) * .1
-        //    v.pos.z += la.cos(f32(time) / (80.0 + f32(idx) / 20.0)) * .1
-        //    v.pos.y += la.cos(f32(time) / (120.0 + f32(idx) / 70.0))  * .01
-        //}
-        //gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo) 
-        //gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(rs.player_geometry.vertices[0]) * len(rs.player_geometry.vertices), raw_data(rs.player_geometry.vertices), gl.STATIC_DRAW) 
+
         gl.Disable(gl.CULL_FACE)
-        gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_geometry.indices)), gl.UNSIGNED_INT, raw_data(rs.new_player_indices))
+
+        use_shader(shst, rs, .Player_Fill)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
+        set_vec3_uniform(shst, "p_color", 1, &p_color)
+        set_matrix_uniform(shst, "transform", &player_mat)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
+        gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_fill_indices)), gl.UNSIGNED_INT, nil)
+
+        // gl.Disable(gl.DEPTH_TEST)
+        use_shader(shst, rs, .Player_Outline)
+        set_vec3_uniform(shst, "p_color", 1, &p_color)
+        set_matrix_uniform(shst, "transform", &player_mat)
+        gl.LineWidth(1.5)
+        gl.DrawElements(gl.LINES, i32(len(rs.player_outline_indices)), gl.UNSIGNED_INT, nil)
+
         gl.Enable(gl.CULL_FACE)
+        // gl.Enable(gl.DEPTH_TEST)
 
         //draw player particles
         // use_shader(shst, rs, .Player_Particle)
@@ -225,25 +271,75 @@ draw :: proc(
         // set_matrix_uniform(shst, "transform", &player_mat)
         // draw_indirect_render_queue(rs^, rs.player_draw_command[:], gl.TRIANGLES)
 
-        use_shader(shst, rs, .Player)
+        // draw player
         gl.BindVertexArray(rs.player_vao)
-        p_color := [3]f32 {1.0, 0.0, 0.0}
-        set_vec3_uniform(shst, "p_color", 1, &p_color)
-        player_mat := interpolated_player_matrix(pls, f32(interp_t))
-        set_matrix_uniform(shst, "transform", &player_mat)
-        offset_vertices := make([]Vertex, len(rs.new_player_vertices)); defer delete(offset_vertices)
-        copy(offset_vertices, rs.new_player_vertices[:])
-        for &v, idx in offset_vertices {
-            v.pos += la.cross(v.pos, [3]f32{0, 1, 0}) * .01
-            v.pos.x += la.sin(f32(time) / (20.0 + f32(idx) / 2.0)) * .75
-            v.pos.z += la.cos(f32(time) / (40.0 + f32(idx) / 4.0)) * .75
-            v.pos.y += la.cos(f32(time) / (60.0 + f32(idx) / 7.0))  * .5
+        offset_vertices := make([]Vertex, len(rs.player_geometry.vertices)); defer delete(offset_vertices)
+        copy(offset_vertices, rs.player_geometry.vertices[:])
+        displacement_dir := la.normalize0(pls.particle_displacement)
+
+        af_rot_mat := la.matrix4_rotate_f32(-f32(pls.anim_angle), {0, 1, 0})
+        vel_len := la.length(pls.velocity)
+        animation_frame: [4][3]f32 = {
+            {.5, -1.25, f32(math.sin(time / 60) * 1.5)},
+            {-.5, -1.25, -f32(math.sin(time / 60) * 1.5)},
+            {1.25, .25, -f32(math.sin(time / 60))},
+            {-1.25, .25, f32(math.sin(time / 60))},
+        } 
+        for &af in animation_frame {
+            af = la.matrix_mul_vector(af_rot_mat, [4]f32{af[0], af[1], af[2], 1.0}).xyz
         }
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo) 
+
+        for &v, idx in offset_vertices {
+            rand.reset(u64(idx))
+            offset := math.sin(rand.float32() * 100 + f32(time) / 300) / 10.0 + 0.95
+            rot_mat: matrix[4, 4]f32 = la.matrix4_rotate_f32(f32(time / 2000), {1, 1, .5})
+            v.pos = la.matrix_mul_vector(rot_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 1.0}).xyz
+            v.pos *= offset
+
+            if pls.state == .ON_GROUND {
+                for af in animation_frame {
+                    anim_fact := la.dot(la.normalize0(v.pos), la.normalize0(af))
+                    if anim_fact > 0.950 {
+                        // diff :=  1 - (anim_fact - 0.9) / 0.1
+                        t := (anim_fact - 0.9) / 0.1
+                        vl := la.length(v.pos)
+                        afl := la.length(af)
+                        // v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, 1 - (diff * diff))
+                        v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, t * t)
+                    }
+                }
+            }
+
+            displacement_fact := la.dot(displacement_dir, la.normalize0(v.pos))
+            if displacement_fact > 0.25 {
+                displacement_fact *= 0.5
+            }
+            // v.pos = la.clamp_length(v.pos + pls.particle_displacement * displacement_fact * 0.030, 3.0)
+            v.pos += pls.particle_displacement * displacement_fact * 0.030
+        }
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
         gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
+        p_color := [3]f32 {1.0, 0.0, 0.0}
+        player_mat := interpolated_player_matrix(pls, f32(interp_t))
+
         gl.Disable(gl.CULL_FACE)
-        gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_geometry.indices)), gl.UNSIGNED_INT, raw_data(rs.new_player_indices))
+
+        use_shader(shst, rs, .Player_Fill)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
+        set_vec3_uniform(shst, "p_color", 1, &p_color)
+        set_matrix_uniform(shst, "transform", &player_mat)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
+        gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_fill_indices)), gl.UNSIGNED_INT, nil)
+
+        // gl.Disable(gl.DEPTH_TEST)
+        use_shader(shst, rs, .Player_Outline)
+        set_vec3_uniform(shst, "p_color", 1, &p_color)
+        set_matrix_uniform(shst, "transform", &player_mat)
+        gl.LineWidth(1.0)
+        gl.DrawElements(gl.LINES, i32(len(rs.player_outline_indices)), gl.UNSIGNED_INT, nil)
+
         gl.Enable(gl.CULL_FACE)
+        // gl.Enable(gl.DEPTH_TEST)
 
         // draw player dash trail
         use_shader(shst, rs, .Dash_Line)

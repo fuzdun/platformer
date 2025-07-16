@@ -38,7 +38,9 @@ ProgramName :: enum {
     Connection_Line,
     Text,
     Dash_Line,
-    Screen_Dither
+    Screen_Dither,
+    Player_Fill,
+    Player_Outline
 }
 
 PROGRAM_CONFIGS :: #partial[ProgramName]Program {
@@ -91,6 +93,16 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         pipeline = {"screen_dither_vertex", "screen_dither_geometry", "screen_dither_frag"},
         shader_types = {.VERTEX_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
         uniforms = {"inverse_projection", "inverse_view", "projection", "camera_pos"}
+    },
+    .Player_Fill = {
+        pipeline = {"player_fill_vertex", "player_fill_frag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"transform"}
+    },
+    .Player_Outline = {
+        pipeline = {"player_outline_vertex", "player_outline_frag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"transform"}
     }
 }
 

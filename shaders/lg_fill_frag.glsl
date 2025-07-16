@@ -113,6 +113,9 @@ void main()
     float screen_width = 1920.0;
     float screen_height = 1080.0;
 
+    // float screen_width = 900.0;
+    // float screen_height = 900.0;
+
     vec4 rounded_frag =  gl_FragCoord;
     vec2 screen_uv = gl_FragCoord.xy;
     screen_uv.x /= screen_width;
@@ -211,7 +214,7 @@ void main()
     // mask = 0.0; 
     // float visibility = length(diff) * 0.0025;
     // visibility = max(min(1.0, floor((visibility + mask / SHADES) * SHADES) / SHADES), .2);
-    vec4 glassColor = mix(vec4(0.02, 0.04, 0.0, 0.40), vec4(0.20, 0.2, 0.2, 0.60), displacement);
+    vec4 glassColor = mix(vec4(0.02, 0.04, 0.05, 0.40), vec4(0.20, 0.2, 0.2, 0.60), displacement);
     // float visibility = 1.0;
     // fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);

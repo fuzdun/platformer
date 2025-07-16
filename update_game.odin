@@ -137,7 +137,11 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
 
     // lerp current particle displacement toward target particle displacement
     pls.particle_displacement = la.lerp(pls.particle_displacement, pls.tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
-    pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, pls.velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
+    if !(pls.state == .ON_GROUND) {
+        pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, pls.velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
+    } else {
+        pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, [3]f32{0, 0, 0}, TGT_PARTICLE_DISPLACEMENT_LERP)
+    }
 
     // start dash 
     pressed_dash := is.x_pressed && pls.can_press_dash
@@ -261,6 +265,8 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
         }
         return
     }
+    
+    pls.anim_angle = math.lerp(pls.anim_angle, math.atan2(pls.velocity.x, -pls.velocity.z), f32(0.1))
     // end func ==========
 
     // inline func ==============

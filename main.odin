@@ -193,7 +193,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
@@ -233,10 +233,11 @@ main :: proc () {
     gl.GenBuffers(1, &rs.standard_vbo)
     gl.GenBuffers(1, &rs.player_vbo)
     gl.GenBuffers(1, &rs.standard_ebo)
-    // gl.GenBuffers(1, &rs.player_ebo)
+    gl.GenBuffers(1, &rs.player_fill_ebo)
+    gl.GenBuffers(1, &rs.player_outline_ebo)
     gl.GenBuffers(1, &rs.indirect_buffer)
     gl.GenBuffers(1, &rs.transforms_ssbo)
-    gl.GenBuffers(1, &rs.player_transforms_ssbo)
+    // gl.GenBuffers(1, &rs.player_transforms_ssbo)
     gl.GenBuffers(1, &rs.z_widths_ssbo)
     gl.GenBuffers(1, &rs.common_ubo)
     gl.GenBuffers(1, &rs.dash_ubo)
@@ -245,7 +246,6 @@ main :: proc () {
     gl.GenBuffers(1, &rs.particle_pos_vbo)
     gl.GenBuffers(1, &rs.background_vbo)
     gl.GenBuffers(1, &rs.text_vbo)
-    gl.GenBuffers(1, &rs.player_vbo)
     gl.GenBuffers(1, &rs.editor_lines_vbo)
     gl.GenVertexArrays(1, &rs.standard_vao)
     gl.GenVertexArrays(1, &rs.particle_vao)
@@ -269,7 +269,6 @@ main :: proc () {
 
     gl.BindVertexArray(rs.player_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
-    // gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_ebo)
     gl.PatchParameteri(gl.PATCH_VERTICES, 3);
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
@@ -367,23 +366,12 @@ main :: proc () {
         gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
 
         //if PLAYER_DRAW {
-            pi := rs.player_geometry.indices
-            pv := rs.player_geometry.vertices
-            end_vertex_index := u32(len(pv))
-            rs.new_player_vertices = make([]Vertex, end_vertex_index + 1)
-            rs.new_player_indices = make([dynamic]u32)
-            for i := 0; i < len(pi); i += 2 {
-                append(&rs.new_player_indices, ..pi[i:i+2])
-                append(&rs.new_player_indices, end_vertex_index)
-            }
-            copy(rs.new_player_vertices, pv[:])
-            rs.new_player_vertices[len(rs.new_player_vertices) - 1] = Vertex{{0, 0, 0}, {0, 0}, {0, 0}, {0, 1, 0}}
-            rs.new_player_indices[len(rs.new_player_indices) - 1] = u32(len(rs.new_player_vertices) - 1)
-             //gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo) 
-             //gl.BufferData(gl.ARRAY_BUFFER, size_of(rs.new_player_vertices[0]) * len(rs.new_player_vertices), raw_data(rs.new_player_vertices), gl.STATIC_DRAW) 
-             //gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_ebo)
-             //gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(pi[0]) * len(pi), raw_data(pi), gl.STATIC_DRAW)
-        //}
+        pfi := rs.player_fill_indices
+        poi := rs.player_outline_indices
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
+        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(poi[0]) * len(poi), raw_data(poi), gl.STATIC_DRAW)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
+        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(pfi[0]) * len(pfi), raw_data(pfi), gl.STATIC_DRAW)
     }
 
     gl.Enable(gl.CULL_FACE)

@@ -58,7 +58,7 @@ void main() {
     float dist_fact = max(0, min(1, offset_dist / interval));
     vec4 avg_pos = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
     vec4 disp = (avg_pos - te_out[0].obj_pos) * dist_fact * dist_fact * dist_fact * 2;
-    disp.z *= 0.15;
+    disp.z *= 0.75;
     // vec4 disp = vec4(0);
     t0_pos = te_out[0].t0_pos;
     t1_pos = te_out[0].t1_pos;
@@ -71,7 +71,7 @@ void main() {
         vec4 new_pos = gl_in[i].gl_Position;
         vec4 new_avg = avg_pos + disp;
         new_pos += disp;   
-        new_pos += normalize(new_avg - new_pos) * dist_fact;
+        new_pos += (new_avg - new_pos) * dist_fact;
         vec4 proj_pos = te_out[0].projection * new_pos;
         vec4 snapped_pos = proj_pos;
         // snapped_pos.xyz /= proj_pos.w;

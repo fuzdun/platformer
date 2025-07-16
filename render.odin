@@ -2,6 +2,7 @@ package main
 
 import "core:math"
 import "core:slice"
+import "core:fmt"
 import str "core:strings"
 import gl "vendor:OpenGL"
 import la "core:math/linalg"
@@ -58,7 +59,8 @@ Render_State :: struct {
 
     standard_ebo: u32,
     background_ebo: u32,
-    player_ebo: u32,
+    player_fill_ebo: u32,
+    player_outline_ebo: u32,
 
     standard_vbo: u32,
     player_vbo: u32,
@@ -71,7 +73,6 @@ Render_State :: struct {
     indirect_buffer: u32,
 
     transforms_ssbo: u32,
-    player_transforms_ssbo: u32,
     z_widths_ssbo: u32,
 
     common_ubo: u32,
@@ -85,8 +86,8 @@ Render_State :: struct {
     player_particle_poss: [dynamic]glm.vec3,
     player_particles: [PLAYER_PARTICLE_COUNT][4]f32,
     player_geometry: Shape_Data,
-    new_player_indices: [dynamic]u32,
-    new_player_vertices: []Vertex,
+    player_outline_indices: []u32,
+    player_fill_indices: []u32,
 
     vertex_offsets: Vertex_Offsets,
     index_offsets: Index_Offsets,
@@ -194,30 +195,38 @@ add_player_sphere_data :: proc(rs: ^Render_State) {
         }
     }
 
-    ind := 0
-    rs.player_geometry.indices = make([]u32, SPHERE_I_COUNT)
-    indices := &rs.player_geometry.indices
+    // ind := 0
+    rs.player_outline_indices = make([]u32, SPHERE_I_COUNT * 2)
+    rs.player_fill_indices = make([]u32, SPHERE_I_COUNT)
+    fill_indices := &rs.player_fill_indices
+    outline_indices := &rs.player_outline_indices
+    outline_idx := 0
+    fill_idx := 0
     for i in 0..<vertical_count {
         vr1 = u32(i * (horizontal_count + 1))
         vr2 = vr1 + u32(horizontal_count) + 1
 
         for j := 0; j < horizontal_count; {
             if i != 0 {
-                indices[ind] = vr1
-                indices[ind+1] = vr2
-                indices[ind+2] = vr1+1
-                ind += 3
+                fill_indices[fill_idx] = vr1
+                fill_indices[fill_idx+1] = vr2
+                fill_indices[fill_idx+2] = vr1+1
+                fill_idx += 3
+                outline_indices[outline_idx] = vr1
+                outline_indices[outline_idx + 1] = vr1 + 1
+                outline_idx += 2
             }
             if i != vertical_count - 1 {
-                indices[ind] = vr1 + 1
-                indices[ind+1] = vr2
-                indices[ind+2] = vr2 + 1
-                ind += 3
+                fill_indices[fill_idx] = vr1 + 1
+                fill_indices[fill_idx+1] = vr2
+                fill_indices[fill_idx+2] = vr2 + 1
+                fill_idx += 3
             }
-            //append(&outline_indices, vr1, vr2)
-            if i != 0 {
-                //append(&outline_indices, vr1, vr1 + 1)
-            }
+            outline_indices[outline_idx] = vr1
+            outline_indices[outline_idx + 1] = vr2
+            outline_idx += 2
+            // if i != 0 {
+            // }
             j += 1 
             vr1 += 1
             vr2 += 1
@@ -259,6 +268,7 @@ update_vertices :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, rs: ^Re
     // clear(&lgs.dirty_entities)
     //slice.sort_by(rs.static_transforms[:], proc(a: glm.mat4, b: glm.mat4) -> bool { return a[3][2] < b[3][2] })
 }
+
 
 update_player_particles :: proc(rs: ^Render_State, ps: Player_State, time: f32) {
     vertical_count := PLAYER_PARTICLE_STACK_COUNT
