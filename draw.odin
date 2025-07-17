@@ -280,28 +280,30 @@ draw :: proc(
         af_rot_mat := la.matrix4_rotate_f32(-f32(pls.anim_angle), {0, 1, 0})
         vel_len := la.length(pls.velocity)
         animation_frame: [4][3]f32 = {
-            {.5, -1.25, f32(math.sin(time / 60) * 1.5)},
-            {-.5, -1.25, -f32(math.sin(time / 60) * 1.5)},
-            {1.25, .25, -f32(math.sin(time / 60))},
-            {-1.25, .25, f32(math.sin(time / 60))},
+            {.5, -1.25, f32(math.sin(time / 45) * 1.5)},
+            {-.5, -1.25, -f32(math.sin(time / 45) * 1.5)},
+            {1.15, .25, -f32(math.sin(time / 45))},
+            {-1.15, .25, f32(math.sin(time / 45))},
         } 
+
         for &af in animation_frame {
             af = la.matrix_mul_vector(af_rot_mat, [4]f32{af[0], af[1], af[2], 1.0}).xyz
         }
 
+        rot_mat := la.matrix4_rotate_f32(f32(time) / 200, la.cross([3]f32{0, 1, 0}, la.normalize(pls.velocity)))
+        // rot_mat: matrix[4, 4]f32 = la.matrix4_rotate_f32(f32(time / 2000), {1, 1, .5})
         for &v, idx in offset_vertices {
             rand.reset(u64(idx))
-            offset := math.sin(rand.float32() * 100 + f32(time) / 300) / 10.0 + 0.95
-            rot_mat: matrix[4, 4]f32 = la.matrix4_rotate_f32(f32(time / 2000), {1, 1, .5})
             v.pos = la.matrix_mul_vector(rot_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 1.0}).xyz
-            v.pos *= offset
+            // offset := math.sin(rand.float32() * 100 + f32(time) / 100) / 3.0 + 0.66
+            // v.pos *= offset
 
             if pls.state == .ON_GROUND {
                 for af in animation_frame {
                     anim_fact := la.dot(la.normalize0(v.pos), la.normalize0(af))
-                    if anim_fact > 0.950 {
+                    if anim_fact > 0.700 {
                         // diff :=  1 - (anim_fact - 0.9) / 0.1
-                        t := (anim_fact - 0.9) / 0.1
+                        t := (anim_fact - 0.7) / 0.3
                         vl := la.length(v.pos)
                         afl := la.length(af)
                         // v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, 1 - (diff * diff))
@@ -335,7 +337,7 @@ draw :: proc(
         use_shader(shst, rs, .Player_Outline)
         set_vec3_uniform(shst, "p_color", 1, &p_color)
         set_matrix_uniform(shst, "transform", &player_mat)
-        gl.LineWidth(1.0)
+        gl.LineWidth(1.2)
         gl.DrawElements(gl.LINES, i32(len(rs.player_outline_indices)), gl.UNSIGNED_INT, nil)
 
         gl.Enable(gl.CULL_FACE)
