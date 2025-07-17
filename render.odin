@@ -104,7 +104,6 @@ Char_Tex :: struct {
 Vertex :: struct{
     pos: glm.vec3,
     uv: glm.vec2,
-    b_uv: glm.vec2,
     normal: glm.vec3
 }
 
@@ -164,6 +163,72 @@ free_render_state :: proc(rs: ^Render_State) {
     delete(rs.player_geometry.indices)
 }
 
+ICO_H_ANGLE :: math.PI / 180 * 72
+ICO_V_ANGLE := math.atan(0.5)
+
+new_add_player_sphere_data :: proc(rs: ^Render_State) {
+    rs.player_geometry.vertices = make([]Vertex, ICOSPHERE_V_COUNT)
+    vertices := &rs.player_geometry.vertices
+    indices := &rs.player_fill_indices
+
+    // rs.player_outline_indices = make([]u32, ICOSPHERE_I_COUNT * 2)
+    // rs.player_fill_indices = make([]u32, ICOSPHERE_I_COUNT)
+
+    hedron_tmp_vertices: [12][3]f32
+    hedron_tmp_indices := make([dynamic]int); defer delete(hedron_tmp_indices)
+    h_angle_1 := f32(-math.PI / 2 - ICO_H_ANGLE / 2)
+    h_angle_2 := f32(-math.PI / 2)
+    z := f32(CORE_RADIUS * math.sin(ICO_V_ANGLE))
+    xy := f32(CORE_RADIUS * math.cos(ICO_V_ANGLE))
+    hedron_tmp_vertices[0] = {0, 0, CORE_RADIUS}
+    for i in 1..=5 {
+        hedron_tmp_vertices[i] = {
+            xy * math.cos(h_angle_1),
+            xy * math.sin(h_angle_1),
+            z
+        }
+        hedron_tmp_vertices[i + 5] = {
+            xy * math.cos(h_angle_2),
+            xy * math.sin(h_angle_2),
+            -z
+        }
+        h_angle_1 += ICO_H_ANGLE
+        h_angle_2 += ICO_H_ANGLE
+        i0 := 0
+        i1 := i
+        i2 := i + 1
+        i3 := i + 5
+        i4 := i + 6
+        i5 := 11
+        append(&hedron_tmp_indices, i0, i1, i2, i1, i3, i2, i2, i3, i4, i3, i5, i4)
+    }
+    hedron_tmp_vertices[11] = {0, 0, -CORE_RADIUS}
+
+    for i := 0; i < len(hedron_tmp_indices); i += 3 {
+        v1 := hedron_tmp_vertices[hedron_tmp_indices[i]] 
+        v2 := hedron_tmp_vertices[hedron_tmp_indices[i + 1]] 
+        v3 := hedron_tmp_vertices[hedron_tmp_indices[i + 2]] 
+
+        for j := 1; j <= ICOSPHERE_SUBDIVISION; j += 1 {
+            t := j / ICOSPHERE_SUBDIVISION
+            new_v0 := math.lerp(v1, v2, t)
+            new_v1 := math.lerp(v1, v3, t)
+            for k in 0..=j {
+                if k == 0 {
+                    // add new v0
+                } else if k == j {
+                    // add new v1
+                } else {
+                    t = k / j
+                    new_v := math.lerp(new_v0, new_v1, t)
+                    // add new_v
+                }
+                
+            }
+        }
+    }
+}
+
 add_player_sphere_data :: proc(rs: ^Render_State) {
     vertical_count := SPHERE_STACK_COUNT
     horizontal_count := SPHERE_SECTOR_COUNT
@@ -195,7 +260,6 @@ add_player_sphere_data :: proc(rs: ^Render_State) {
             }
             uv: glm.vec2 = {f32(j) / f32(horizontal_count), f32(i) / f32(vertical_count)}
             v.uv = uv
-            v.b_uv = uv
             vertices[(horizontal_count + 1) * i + j] = v
         }
     }

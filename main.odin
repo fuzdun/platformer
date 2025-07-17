@@ -124,7 +124,7 @@ main :: proc () {
 
     // init render state
     rs.player_particle_poss = make([dynamic]glm.vec3)
-    add_player_sphere_data(&rs)
+    new_add_player_sphere_data(&rs)
 
     // init player state
     pls.state = .IN_AIR
@@ -264,7 +264,7 @@ main :: proc () {
     gl.EnableVertexAttribArray(1)
     gl.EnableVertexAttribArray(2)
     gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, b_uv))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, uv))
     gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, normal))
 
     gl.BindVertexArray(rs.player_vao)
@@ -274,7 +274,7 @@ main :: proc () {
     gl.EnableVertexAttribArray(1)
     gl.EnableVertexAttribArray(2)
     gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, b_uv))
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, uv))
     gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, normal))
 
     gl.BindVertexArray(rs.particle_vao)

@@ -133,7 +133,7 @@ read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: [
         sd.vertices = make([]Vertex, len(pos_data))
         sd.indices = make([]u32, len(indices_data))
         for pos, pi in pos_data {
-            sd.vertices[pi] = {{pos[0], pos[1], pos[2]}, uv_data[pi], uv_data[pi], norm_data[pi]}
+            sd.vertices[pi] = {{pos[0], pos[1], pos[2]}, uv_data[pi], norm_data[pi]}
         }
         for ind, ind_i in indices_data {
             sd.indices[ind_i] = u32(ind)

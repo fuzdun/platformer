@@ -159,7 +159,7 @@ draw :: proc(
             af = la.matrix_mul_vector(af_rot_mat, [4]f32{af[0], af[1], af[2], 1.0}).xyz
         }
 
-        rot_mat := la.matrix4_rotate_f32(f32(time) / 200, la.cross([3]f32{0, 1, 0}, la.normalize(pls.velocity)))
+        rot_mat := la.matrix4_rotate_f32(f32(time) / 600, la.cross([3]f32{0, 1, 0}, la.normalize(pls.velocity)))
         // rot_mat: matrix[4, 4]f32 = la.matrix4_rotate_f32(f32(time / 2000), {1, 1, .5})
         for &v, idx in offset_vertices {
             rand.reset(u64(idx))
@@ -168,17 +168,17 @@ draw :: proc(
             // v.pos *= offset
 
             if pls.state == .ON_GROUND {
-                for af in animation_frame {
-                    anim_fact := la.dot(la.normalize0(v.pos), la.normalize0(af))
-                    if anim_fact > 0.700 {
-                        // diff :=  1 - (anim_fact - 0.9) / 0.1
-                        t := (anim_fact - 0.7) / 0.3
-                        vl := la.length(v.pos)
-                        afl := la.length(af)
-                        // v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, 1 - (diff * diff))
-                        v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, t * t)
-                    }
-                }
+                // for af in animation_frame {
+                //     anim_fact := la.dot(la.normalize0(v.pos), la.normalize0(af))
+                //     if anim_fact > 0.700 {
+                //         // diff :=  1 - (anim_fact - 0.9) / 0.1
+                //         t := (anim_fact - 0.7) / 0.3
+                //         vl := la.length(v.pos)
+                //         afl := la.length(af)
+                //         // v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, 1 - (diff * diff))
+                //         v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, t * t)
+                //     }
+                // }
             }
 
             displacement_fact := la.dot(displacement_dir, la.normalize0(v.pos))
