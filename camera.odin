@@ -12,8 +12,8 @@ import glm "core:math/linalg/glsl"
 // CAMERA_Y_LERP :: 0.07
 // CAMERA_Z_LERP :: 0.15
 
-CAMERA_PLAYER_Y_OFFSET :: 6 
-CAMERA_PLAYER_Z_OFFSET :: 12 
+CAMERA_PLAYER_Y_OFFSET :: 3 
+CAMERA_PLAYER_Z_OFFSET :: 6 
 CAMERA_POS_LERP :: 1.00
 CAMERA_X_LERP :: 1.00
 CAMERA_Y_LERP :: 1.00
@@ -38,7 +38,7 @@ interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {
     c_right := glm.normalize(glm.cross(up, c_dir))
     c_up := glm.normalize(glm.cross(c_dir, c_right))
     view := glm.mat4LookAt(c_pos, tgt, up)
-    proj := glm.mat4Perspective(1.0, WIDTH / HEIGHT, 10.0, 10000)
+    proj := glm.mat4Perspective(1.0, WIDTH / HEIGHT, 1.0, 10000)
     offset := glm.mat4Translate({f32(-c_pos.x), f32(-c_pos.y), f32(-c_pos.z)})
     return proj * view
 }

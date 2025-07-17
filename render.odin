@@ -8,6 +8,7 @@ import gl "vendor:OpenGL"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import ft "shared:freetype"
+import rand "core:math/rand"
 
 //UBO_VEC3_SIZE :: size_of(glm.vec4)
 
@@ -188,6 +189,10 @@ add_player_sphere_data :: proc(rs: ^Render_State) {
             x = xz * math.cos(horizontal_angle)
             z = xz * math.sin(horizontal_angle)
             v.pos = {x, y, z}
+            if j % 2 == 0 || i % 2 == 0 {
+                v.pos.xyz = v.pos.xyz * 0.5
+            // } else if i % 2 == 0{
+            }
             uv: glm.vec2 = {f32(j) / f32(horizontal_count), f32(i) / f32(vertical_count)}
             v.uv = uv
             v.b_uv = uv
