@@ -40,7 +40,8 @@ ProgramName :: enum {
     Dash_Line,
     Screen_Dither,
     Player_Fill,
-    Player_Outline
+    Player_Outline,
+    Postprocessing
 }
 
 PROGRAM_CONFIGS :: #partial[ProgramName]Program {
@@ -103,6 +104,11 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         pipeline = {"player_outline_vertex", "player_outline_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"transform"}
+    },
+    .Postprocessing = {
+        pipeline = {"postprocessing_vertex", "postprocessing_frag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {}
     }
 }
 

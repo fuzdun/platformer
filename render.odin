@@ -46,6 +46,10 @@ PARTICLE_VERTICES :: [4]Quad_Vertex {
 }
 
 Render_State :: struct {
+    postprocessing_fbo: u32,
+    postprocessing_tcb: u32,
+    postprocessing_rbo: u32,
+
     ft_lib: ft.Library,
     face: ft.Face,
 

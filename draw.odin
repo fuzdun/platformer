@@ -236,6 +236,13 @@ draw :: proc(
         // gl.Disable(gl.BLEND)
 
     } else {
+        gl.Viewport(0, 0, WIDTH, HEIGHT)
+
+        gl.BindFramebuffer(gl.FRAMEBUFFER, rs.postprocessing_fbo)
+        gl.ClearColor(0, 0, 0, 1)
+        gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+        gl.Enable(gl.DEPTH_TEST)
+
         // draw background 
         use_shader(shst, rs, .Background)
         gl.BindVertexArray(rs.background_vao)
@@ -394,7 +401,15 @@ draw :: proc(
         // gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, PLAYER_PARTICLE_COUNT)
         // gl.Disable(gl.BLEND)
 
-        
+        gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
+        gl.ClearColor(1, 1, 1, 1)
+        gl.Clear(gl.COLOR_BUFFER_BIT)
+
+        use_shader(shst, rs, .Postprocessing)
+        gl.BindVertexArray(rs.background_vao)
+        gl.BindTexture(gl.TEXTURE_2D, rs.postprocessing_tcb)
+        gl.Disable(gl.DEPTH_TEST)
+        gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
 }
 

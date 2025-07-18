@@ -196,7 +196,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
@@ -233,6 +233,28 @@ main :: proc () {
     //}
 
     // init mesh rendering
+    
+    gl.GenFramebuffers(1, &rs.postprocessing_fbo)
+    gl.GenTextures(1, &rs.postprocessing_tcb)
+    gl.GenRenderbuffers(1, &rs.postprocessing_rbo)
+
+    gl.BindFramebuffer(gl.FRAMEBUFFER, rs.postprocessing_fbo)
+    gl.BindTexture(gl.TEXTURE_2D, rs.postprocessing_tcb)  
+    gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, WIDTH, HEIGHT, 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.BindTexture(gl.TEXTURE_2D, 0)
+    gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, rs.postprocessing_tcb, 0)
+    gl.BindRenderbuffer(gl.RENDERBUFFER, rs.postprocessing_rbo)
+    gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, WIDTH, HEIGHT)
+    gl.BindRenderbuffer(gl.RENDERBUFFER, 0)
+    gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, rs.postprocessing_rbo)
+
+    if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
+        fmt.println("framebuffer gen error")
+    }
+    gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+
     gl.GenBuffers(1, &rs.standard_vbo)
     gl.GenBuffers(1, &rs.player_vbo)
     gl.GenBuffers(1, &rs.standard_ebo)
@@ -240,7 +262,7 @@ main :: proc () {
     gl.GenBuffers(1, &rs.player_outline_ebo)
     gl.GenBuffers(1, &rs.indirect_buffer)
     gl.GenBuffers(1, &rs.transforms_ssbo)
-    // gl.GenBuffers(1, &rs.player_transforms_ssbo)
+
     gl.GenBuffers(1, &rs.z_widths_ssbo)
     gl.GenBuffers(1, &rs.common_ubo)
     gl.GenBuffers(1, &rs.dash_ubo)
@@ -463,10 +485,6 @@ main :: proc () {
         }
 
         // Render
-        gl.Viewport(0, 0, WIDTH, HEIGHT)
-        gl.ClearColor(0, 0, 0, 1)
-        gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-        
         // update_vertices(&lgs, sr, &rs)
         update_player_particles(&rs, pls, f32(elapsed_time))
         draw_time := tm.now()
