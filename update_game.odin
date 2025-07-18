@@ -194,6 +194,13 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
         pls.can_press_dash = !is.x_pressed && pls.state == .ON_GROUND
     }
 
+    // lerp spike compression
+    if pls.state == .ON_GROUND {
+        pls.spike_compression = math.lerp(pls.spike_compression, 0.35, 0.15) 
+    } else {
+        pls.spike_compression = math.lerp(pls.spike_compression, 1.00, 0.15) 
+    }
+
     // handle reset level
     if is.r_pressed {
         pls.position = INIT_PLAYER_POS

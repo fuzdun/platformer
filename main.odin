@@ -126,6 +126,8 @@ main :: proc () {
     rs.player_particle_poss = make([dynamic]glm.vec3)
     new_add_player_sphere_data(&rs)
 
+    //fmt.println(rs.player_geometry.vertices)
+
     // init player state
     pls.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
@@ -133,6 +135,7 @@ main :: proc () {
     pls.can_press_jump = false
     pls.ground_x = {1, 0, 0}
     pls.ground_z = {0, 0, -1}
+    pls.spike_compression = 1.0
     ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
 
     // init level resources
@@ -193,7 +196,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
@@ -360,6 +363,8 @@ main :: proc () {
         }}
         append(&indices, ..rs.player_geometry.indices)
         append(&vertices, ..rs.player_geometry.vertices)
+        pv := rs.player_geometry.vertices 
+        //fmt.println(pv)
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
         gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices[0]) * len(vertices), raw_data(vertices), gl.STATIC_DRAW) 
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)

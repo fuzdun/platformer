@@ -155,15 +155,18 @@ draw :: proc(
             {-1.15, .25, f32(math.sin(time / 60))},
         } 
 
-        for &af in animation_frame {
-            af = la.matrix_mul_vector(af_rot_mat, [4]f32{af[0], af[1], af[2], 1.0}).xyz
-        }
+        //for &af in animation_frame {
+        //    af = la.matrix_mul_vector(af_rot_mat, [4]f32{af[0], af[1], af[2], 1.0}).xyz
+        //}
 
-        rot_mat := la.matrix4_rotate_f32(f32(time) / 600, la.cross([3]f32{0, 1, 0}, la.normalize(pls.velocity)))
-        // rot_mat: matrix[4, 4]f32 = la.matrix4_rotate_f32(f32(time / 2000), {1, 1, .5})
+        //rot_mat := la.matrix4_rotate_f32(f32(time) / 600, la.cross([3]f32{0, 1, 0}, la.normalize(pls.velocity)))
+         rot_mat: matrix[4, 4]f32 = la.matrix4_rotate_f32(f32(time / 2000), {1, 1, .5})
         for &v, idx in offset_vertices {
             rand.reset(u64(idx))
             v.pos = la.matrix_mul_vector(rot_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 1.0}).xyz
+            if v.uv.x != 1.0 {
+                v.pos *= f32(pls.spike_compression)
+            }
             // offset := math.sin(rand.float32() * 100 + f32(time) / 100) / 3.0 + 0.66
             // v.pos *= offset
 
@@ -186,7 +189,8 @@ draw :: proc(
                 displacement_fact *= 0.5
             }
             // v.pos = la.clamp_length(v.pos + pls.particle_displacement * displacement_fact * 0.030, 3.0)
-            v.pos += pls.particle_displacement * displacement_fact * 0.030
+            //v.pos += pls.particle_displacement * displacement_fact * 0.030
+
         }
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
         gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
@@ -194,7 +198,7 @@ draw :: proc(
         player_mat := interpolated_player_matrix(pls, f32(interp_t))
 
         gl.Disable(gl.CULL_FACE)
-
+        //
         use_shader(shst, rs, .Player_Fill)
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
         set_vec3_uniform(shst, "p_color", 1, &p_color)
@@ -202,11 +206,12 @@ draw :: proc(
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
         gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_fill_indices)), gl.UNSIGNED_INT, nil)
 
-        // gl.Disable(gl.DEPTH_TEST)
+         //gl.Disable(gl.DEPTH_TEST)
         use_shader(shst, rs, .Player_Outline)
         set_vec3_uniform(shst, "p_color", 1, &p_color)
         set_matrix_uniform(shst, "transform", &player_mat)
-        gl.LineWidth(1.2)
+        gl.LineWidth(2)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
         gl.DrawElements(gl.LINES, i32(len(rs.player_outline_indices)), gl.UNSIGNED_INT, nil)
 
         gl.Enable(gl.CULL_FACE)
@@ -285,44 +290,50 @@ draw :: proc(
         af_rot_mat := la.matrix4_rotate_f32(-f32(pls.anim_angle), {0, 1, 0})
         vel_len := la.length(pls.velocity)
         animation_frame: [4][3]f32 = {
-            {.5, -1.25, f32(math.sin(time / 80) * 1.5)},
-            {-.5, -1.25, -f32(math.sin(time / 80) * 1.5)},
-            {1.15, .25, -f32(math.sin(time / 80))},
-            {-1.15, .25, f32(math.sin(time / 80))},
+            {.5, -1.25, f32(math.sin(time / 60) * 1.5)},
+            {-.5, -1.25, -f32(math.sin(time / 60) * 1.5)},
+            {1.15, .25, -f32(math.sin(time / 60))},
+            {-1.15, .25, f32(math.sin(time / 60))},
         } 
 
-        for &af in animation_frame {
-            af = la.matrix_mul_vector(af_rot_mat, [4]f32{af[0], af[1], af[2], 1.0}).xyz
-        }
+        //for &af in animation_frame {
+        //    af = la.matrix_mul_vector(af_rot_mat, [4]f32{af[0], af[1], af[2], 1.0}).xyz
+        //}
 
-        rot_mat := la.matrix4_rotate_f32(f32(time) / 200, la.cross([3]f32{0, 1, 0}, la.normalize(pls.velocity)))
-        // rot_mat: matrix[4, 4]f32 = la.matrix4_rotate_f32(f32(time / 2000), {1, 1, .5})
+        rot_mat := la.matrix4_rotate_f32(f32(time) / 100, la.cross([3]f32{0, 1, 0}, la.normalize(pls.velocity)))
+         //rot_mat: matrix[4, 4]f32 = la.matrix4_rotate_f32(f32(time / 2000), {1, 1, .5})
         for &v, idx in offset_vertices {
             rand.reset(u64(idx))
             v.pos = la.matrix_mul_vector(rot_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 1.0}).xyz
+            if v.uv.x != 1.0 {
+                v.pos *= f32(pls.spike_compression)
+            } else {
+                v.pos *= 1.2
+            }
             // offset := math.sin(rand.float32() * 100 + f32(time) / 100) / 3.0 + 0.66
             // v.pos *= offset
 
             if pls.state == .ON_GROUND {
-                for af in animation_frame {
-                    anim_fact := la.dot(la.normalize0(v.pos), la.normalize0(af))
-                    if anim_fact > 0.700 {
-                        // diff :=  1 - (anim_fact - 0.9) / 0.1
-                        t := (anim_fact - 0.7) / 0.3
-                        vl := la.length(v.pos)
-                        afl := la.length(af)
-                        // v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, 1 - (diff * diff))
-                        v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, t * t)
-                    }
-                }
+                // for af in animation_frame {
+                //     anim_fact := la.dot(la.normalize0(v.pos), la.normalize0(af))
+                //     if anim_fact > 0.700 {
+                //         // diff :=  1 - (anim_fact - 0.9) / 0.1
+                //         t := (anim_fact - 0.7) / 0.3
+                //         vl := la.length(v.pos)
+                //         afl := la.length(af)
+                //         // v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, 1 - (diff * diff))
+                //         v.pos = la.normalize0(v.pos) * la.lerp(vl, afl, t * t)
+                //     }
+                // }
             }
 
             displacement_fact := la.dot(displacement_dir, la.normalize0(v.pos))
             if displacement_fact > 0.25 {
                 displacement_fact *= 0.5
             }
-            // v.pos = la.clamp_length(v.pos + pls.particle_displacement * displacement_fact * 0.030, 3.0)
+            v.pos = la.clamp_length(v.pos + pls.particle_displacement * displacement_fact * 0.030, 3.0)
             v.pos += pls.particle_displacement * displacement_fact * 0.030
+
         }
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
         gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
@@ -330,7 +341,7 @@ draw :: proc(
         player_mat := interpolated_player_matrix(pls, f32(interp_t))
 
         gl.Disable(gl.CULL_FACE)
-
+        //
         use_shader(shst, rs, .Player_Fill)
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
         set_vec3_uniform(shst, "p_color", 1, &p_color)
@@ -338,11 +349,12 @@ draw :: proc(
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
         gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_fill_indices)), gl.UNSIGNED_INT, nil)
 
-        // gl.Disable(gl.DEPTH_TEST)
+         //gl.Disable(gl.DEPTH_TEST)
         use_shader(shst, rs, .Player_Outline)
         set_vec3_uniform(shst, "p_color", 1, &p_color)
         set_matrix_uniform(shst, "transform", &player_mat)
-        gl.LineWidth(1.2)
+        gl.LineWidth(1)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
         gl.DrawElements(gl.LINES, i32(len(rs.player_outline_indices)), gl.UNSIGNED_INT, nil)
 
         gl.Enable(gl.CULL_FACE)

@@ -161,26 +161,28 @@ free_render_state :: proc(rs: ^Render_State) {
     delete(rs.char_tex_map)
     delete(rs.player_geometry.vertices)
     delete(rs.player_geometry.indices)
+    delete(rs.player_fill_indices)
+    delete(rs.player_outline_indices)
 }
 
 ICO_H_ANGLE :: math.PI / 180 * 72
 ICO_V_ANGLE := math.atan(0.5)
 
 new_add_player_sphere_data :: proc(rs: ^Render_State) {
-    rs.player_geometry.vertices = make([]Vertex, ICOSPHERE_V_COUNT)
-    vertices := &rs.player_geometry.vertices
-    indices := &rs.player_fill_indices
-
-    // rs.player_outline_indices = make([]u32, ICOSPHERE_I_COUNT * 2)
-    // rs.player_fill_indices = make([]u32, ICOSPHERE_I_COUNT)
+    vertices := make([dynamic]Vertex); defer delete(vertices) 
 
     hedron_tmp_vertices: [12][3]f32
     hedron_tmp_indices := make([dynamic]int); defer delete(hedron_tmp_indices)
+
     h_angle_1 := f32(-math.PI / 2 - ICO_H_ANGLE / 2)
     h_angle_2 := f32(-math.PI / 2)
+
     z := f32(CORE_RADIUS * math.sin(ICO_V_ANGLE))
     xy := f32(CORE_RADIUS * math.cos(ICO_V_ANGLE))
+
     hedron_tmp_vertices[0] = {0, 0, CORE_RADIUS}
+    i0 := 0
+    i5 := 11
     for i in 1..=5 {
         hedron_tmp_vertices[i] = {
             xy * math.cos(h_angle_1),
@@ -194,39 +196,98 @@ new_add_player_sphere_data :: proc(rs: ^Render_State) {
         }
         h_angle_1 += ICO_H_ANGLE
         h_angle_2 += ICO_H_ANGLE
-        i0 := 0
-        i1 := i
-        i2 := i + 1
-        i3 := i + 5
-        i4 := i + 6
-        i5 := 11
-        append(&hedron_tmp_indices, i0, i1, i2, i1, i3, i2, i2, i3, i4, i3, i5, i4)
     }
     hedron_tmp_vertices[11] = {0, 0, -CORE_RADIUS}
 
+    for i in 0..<5 {
+        i1 := i + 1
+        i2 := i == 4 ? 1 : i + 2
+        i3 := i + 6
+        i4 := i == 4 ? 6 : i + 7
+        append(&hedron_tmp_indices, i0, i1, i2, i1, i3, i2, i2, i3, i4, i3, i5, i4)
+    }
+
+
+    new_vs := make([dynamic]([4]f32)); defer delete(new_vs) // 4th float is for marking spikes
     for i := 0; i < len(hedron_tmp_indices); i += 3 {
+        clear(&new_vs)
         v1 := hedron_tmp_vertices[hedron_tmp_indices[i]] 
         v2 := hedron_tmp_vertices[hedron_tmp_indices[i + 1]] 
         v3 := hedron_tmp_vertices[hedron_tmp_indices[i + 2]] 
+        append(&new_vs, [4]f32{v1.x, v1.y, v1.z, 1})
 
-        for j := 1; j <= ICOSPHERE_SUBDIVISION; j += 1 {
-            t := j / ICOSPHERE_SUBDIVISION
-            new_v0 := math.lerp(v1, v2, t)
-            new_v1 := math.lerp(v1, v3, t)
+        for j in 1..=ICOSPHERE_SUBDIVISION {
+            t := f32(j) / f32(ICOSPHERE_SUBDIVISION)
+            new_v0 := la.vector_slerp(v1, v2, t)
+            new_v1 := la.vector_slerp(v1, v3, t)
             for k in 0..=j {
+
+                spike := (j + k) % 3 == 0 ? 1.0 : 0.0
+                new_v: [4]f32
+                new_v.w = f32(spike)
+
                 if k == 0 {
-                    // add new v0
+                    new_v.xyz = new_v0
                 } else if k == j {
-                    // add new v1
+                    new_v.xyz = new_v1 
                 } else {
-                    t = k / j
-                    new_v := math.lerp(new_v0, new_v1, t)
-                    // add new_v
+                    new_v.xyz = la.vector_slerp(new_v0, new_v1, f32(k) / f32(j))
                 }
-                
+                append(&new_vs, new_v) 
             }
         }
+        for j in 1..=ICOSPHERE_SUBDIVISION {
+            for k in 0..<j {
+                i1 := int(math.floor((f32(j) - 1.0) * f32(j) / 2.0 + f32(k)))
+                i2 := int(math.floor(f32(j) * (f32(j) + 1.0) / 2.0 + f32(k)))
+                v1: Vertex = {
+                    pos = new_vs[i1].xyz,
+                    uv = {new_vs[i1].w, new_vs[i1].w},
+                    normal = la.normalize(new_vs[i1].xyz)
+                }
+                v2: Vertex = {
+                    pos = new_vs[i2].xyz,
+                    uv = {new_vs[i2].w, new_vs[i2].w},
+                    normal = la.normalize(new_vs[i2].xyz)
+                }
+                v3: Vertex = {
+                    pos = new_vs[i2 + 1].xyz,
+                    uv = {new_vs[i2 + 1].w, new_vs[i2 + 1].w},
+                    normal = la.normalize(new_vs[i2 + 1].xyz)
+                }
+                append(&vertices, v1, v2, v3)
+
+                if k < (j - 1) {
+                    i2 = i1 + 1
+                    v2 = {
+                        pos = new_vs[i2].xyz,
+                        uv = {new_vs[i2].w, new_vs[i2].w},
+                        normal = la.normalize(new_vs[i2].xyz)
+
+                    }
+                    append(&vertices, v1, v3, v2)
+                }
+            } 
+        }
     }
+
+    rs.player_fill_indices = make([]u32, len(vertices))
+    rs.player_outline_indices = make([]u32, len(vertices) * 2)
+
+    for i in 0..<len(vertices) {
+        rs.player_fill_indices[i] = u32(i)
+    }
+    for i := 0; i < len(vertices); i += 3 {
+        rs.player_outline_indices[i * 2] = u32(i)
+        rs.player_outline_indices[i * 2 + 1] = u32(i + 1)
+        rs.player_outline_indices[i * 2 + 2] = u32(i + 1)
+        rs.player_outline_indices[i * 2 + 3] = u32(i + 2)
+        rs.player_outline_indices[i * 2 + 4] = u32(i + 2)
+        rs.player_outline_indices[i * 2 + 5] = u32(i)
+    }
+
+    rs.player_geometry.vertices = make([]Vertex, len(vertices))
+    copy(rs.player_geometry.vertices, vertices[:])
 }
 
 add_player_sphere_data :: proc(rs: ^Render_State) {

@@ -64,8 +64,8 @@ SPHERE_STACK_COUNT :: 20
 SPHERE_V_COUNT :: (SPHERE_STACK_COUNT + 1) * (SPHERE_SECTOR_COUNT + 1)
 SPHERE_I_COUNT :: (SPHERE_STACK_COUNT - 1) * SPHERE_SECTOR_COUNT * 6 
 
-ICOSPHERE_SUBDIVISION :: 3
-ICOSPHERE_V_COUNT :: (ICOSPHERE_SUBDIVISION + 1) * (ICOSPHERE_SUBDIVISION + 2) / 2
+ICOSPHERE_SUBDIVISION :: 3 
+ICOSPHERE_V_COUNT :: f32(ICOSPHERE_SUBDIVISION + 1) * f32(ICOSPHERE_SUBDIVISION + 2) / 2.0
 
 Player_State :: struct {
     state: Player_States,
@@ -105,7 +105,9 @@ Player_State :: struct {
     particle_displacement: [3]f32,
     tgt_particle_displacement: [3]f32,
 
-    anim_angle: f32
+    anim_angle: f32,
+
+    spike_compression: f64
 }
 
 free_player_state :: proc(ps: ^Player_State) {}
