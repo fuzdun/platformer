@@ -8,6 +8,6 @@ uniform vec3 p_color;
 out vec4 fragColor;
 
 void main() {
-    vec3 color = {.75, .0, .0};
+    vec3 color = {.5, 0, .5};
     fragColor = vec4(color, 1.0);
 }
