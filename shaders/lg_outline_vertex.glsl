@@ -14,9 +14,11 @@ layout (std140, binding = 0) uniform Common
 };
 
 out vec2 uv;
+out vec3 obj_pos;
 
 void main() {
     mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
+    obj_pos = vec3(transform[3][0], transform[3][1], transform[3][2]);
     gl_Position = projection * transform * aPos;
     uv = vertexUV;
 }

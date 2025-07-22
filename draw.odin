@@ -269,7 +269,7 @@ draw :: proc(
         copy(offset_vertices, rs.player_geometry.vertices[:])
         displacement_dir := la.normalize0(pls.particle_displacement)
 
-        rot_mat := la.matrix4_rotate_f32(f32(time) / 300, la.cross([3]f32{0, 1, 0}, la.normalize(pls.velocity)))
+        rot_mat := la.matrix4_rotate_f32(f32(time) / 100, la.cross([3]f32{0, 1, 0}, la.normalize(pls.velocity)))
         stretch_dir := la.normalize(-la.normalize(pls.velocity) - {0, 0.5, 0})
         right_vec := la.cross([3]f32{0, 1, 0}, la.normalize(pls.velocity))
         //stretch_dir := -la.normalize(pls.velocity) - {0, 0.5, 0}
@@ -337,7 +337,7 @@ draw :: proc(
         // draw player dash trail
         use_shader(shst, rs, .Dash_Line)
         gl.BindVertexArray(rs.lines_vao)
-        green := [3]f32{1.0, 0.0, 0.0}
+        green := [3]f32{1.0, 0.0, 1.0}
         set_vec3_uniform(shst, "color", 1, &green)
         set_float_uniform(shst, "resolution", f32(20))
         dash_line_start := pls.dash_start_pos + pls.dash_dir * 4.5;
@@ -369,10 +369,19 @@ draw :: proc(
         // gl.Disable(gl.BLEND)
 
         gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
-        gl.ClearColor(1, 1, 1, 1)
+        gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT)
 
         use_shader(shst, rs, .Postprocessing)
+
+        //proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{pls.crunch_pt.x, pls.crunch_pt.y, pls.crunch_pt.z, 1})
+        //proj_ppos /= proj_ppos.w
+        //proj_ppos2 := proj_ppos.xy / 2.0 + 0.5
+        screen_crunch_pt := pls.screen_crunch_pt
+
+        set_float_uniform(shst, "time", f32(time))
+        set_float_uniform(shst, "crunch_time", f32(pls.crunch_time))
+        set_vec2_uniform(shst, "ppos", 1, &screen_crunch_pt)
         gl.BindVertexArray(rs.background_vao)
         gl.BindTexture(gl.TEXTURE_2D, rs.postprocessing_tcb)
         gl.Disable(gl.DEPTH_TEST)

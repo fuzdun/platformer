@@ -108,7 +108,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Postprocessing = {
         pipeline = {"postprocessing_vertex", "postprocessing_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {}
+        uniforms = {"time", "ppos", "crunch_time"}
     }
 }
 
@@ -127,6 +127,10 @@ set_matrix_uniform :: proc(sh: ^Shader_State, name: string, data: ^glm.mat4) {
 
 set_float_uniform :: proc(sh: ^Shader_State, name: string, data: f32) {
     gl.Uniform1f(sh.active_programs[sh.loaded_program_name].locations[name], data)
+}
+
+set_vec2_uniform :: proc(sh: ^Shader_State, name: string, count: i32, data: ^glm.vec2) {
+    gl.Uniform2fv(sh.active_programs[sh.loaded_program_name].locations[name], count, &data[0])
 }
 
 set_vec3_uniform :: proc(sh: ^Shader_State, name: string, count: i32, data: ^glm.vec3) {

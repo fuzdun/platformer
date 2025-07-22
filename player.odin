@@ -26,6 +26,7 @@ SLOPE_JUMP_FORCE :: 40
 // forces
 GROUND_FRICTION :: 0.05
 GRAV: f32: 135
+//GRAV: f32: 205
 WALL_GRAV: f32: 20 
 SLOPE_GRAV: f32: 60 
 
@@ -75,6 +76,7 @@ Player_State :: struct {
     touch_pt: [3]f32,
     touch_time: f32,
     crunch_pt: [3]f32,
+    screen_crunch_pt: [2]f32,
     bunny_hop_y: f32,
     crunch_time: f32,
     last_dash: f32,

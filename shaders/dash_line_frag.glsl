@@ -18,7 +18,7 @@ void main() {
     float fade_in_t = clamp(cur_time / fade_in_len, 0, 1);
     float fade_out_t = clamp((cur_time - fade_in_len) / fade_out_len, 0, 1);
     float a = fade_in_t - fade_out_t;
-    t_color.b = t;
+    // t_color.b = t;
     fragColor = vec4(t_color, a);
 }
 

@@ -100,9 +100,15 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
         if la.length(pls.velocity.xz) > MIN_BUNNY_XZ_VEL {
             pls.velocity.xz += la.normalize(pls.velocity.xz) * GROUND_BUNNY_H_SPEED
         }
+
         pls.crunch_pt = pls.position - {0, 0, 0.5}
         pls.crunch_time = f32(elapsed_time)
         pls.last_dash = f32(elapsed_time)
+
+        proj_mat :=  construct_camera_matrix(cs)
+        proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{pls.crunch_pt.x, pls.crunch_pt.y, pls.crunch_pt.z, 1})
+        //proj_ppos /= proj_ppos.w
+        pls.screen_crunch_pt = ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
     }
 
     // check for jump
@@ -196,7 +202,7 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
 
     // lerp spike compression
     if pls.state == .ON_GROUND {
-        pls.spike_compression = math.lerp(pls.spike_compression, 0.75, 0.15) 
+        pls.spike_compression = math.lerp(pls.spike_compression, 0.25, 0.15) 
     } else {
         pls.spike_compression = math.lerp(pls.spike_compression, 1.00, 0.15) 
     }

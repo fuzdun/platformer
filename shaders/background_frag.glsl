@@ -15,7 +15,7 @@ vec4 colormap(float x) {
         v = 510.0 - v;
     }
     v = v / 255.0;
-    return vec4(v, v, v, 1.0);
+    return vec4(v, v * 2, v, 1.0);
 }
 
 
@@ -54,9 +54,10 @@ float pattern( in vec2 p )
 }
 
 void main() {
-    vec2 pixellated_uv = floor(uv * 250) / 250;
+    // vec2 pixellated_uv = floor(uv * 250) / 250;
+    vec2 pixellated_uv = uv;
     float shade = pattern(pixellated_uv);
     vec3 pattern_col = vec3(colormap(shade).rgb) * .8;
-    fragColor = vec4(pattern_col * 0.25, 1.0);
+    fragColor = vec4(pattern_col * 0.5, 1.0);
 }
 

@@ -8,7 +8,8 @@ CAMERA_PLAYER_Y_OFFSET :: 20
 CAMERA_PLAYER_Z_OFFSET :: 40 
 CAMERA_POS_LERP :: 0.03
 // CAMERA_POS_LERP :: 0.004
-CAMERA_X_LERP :: 0.20
+CAMERA_X_LERP :: 0.15
+//CAMERA_X_LERP :: 0.015
 CAMERA_Y_LERP :: 0.07
 CAMERA_Z_LERP :: 0.15
 
@@ -39,7 +40,6 @@ interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {
     c_up := glm.normalize(glm.cross(c_dir, c_right))
     view := glm.mat4LookAt(c_pos, tgt, up)
     proj := glm.mat4Perspective(1.0, WIDTH / HEIGHT, 1.0, 10000)
-    offset := glm.mat4Translate({f32(-c_pos.x), f32(-c_pos.y), f32(-c_pos.z)})
     return proj * view
 }
 
@@ -51,7 +51,7 @@ construct_camera_matrix :: proc(cs: ^Camera_State) -> glm.mat4 {
     c_right := glm.normalize(glm.cross(up, c_dir))
     c_up := glm.normalize(glm.cross(c_dir, c_right))
     view := glm.mat4LookAt(c_pos, tgt, up)
-    proj := glm.mat4Perspective(.4, WIDTH / HEIGHT, 1.0, 10000)
+    proj := glm.mat4Perspective(1.0, WIDTH / HEIGHT, 1.0, 10000)
     return proj * view
 }
 
