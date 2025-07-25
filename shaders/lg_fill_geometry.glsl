@@ -9,22 +9,17 @@ in VS_OUT {
     vec4 obj_pos;
     float player_dist;
     vec3 player_pos;
-    vec3 pos;
-    int v_id;
     mat4 projection;
     float i_time;
-    // vec3 t0_pos;
-    // vec3 t1_pos;
-    // vec3 t2_pos;
-    // vec2 t0_uv;
-    // vec2 t1_uv;
-    // vec2 t2_uv;
+    float plane_dist;
+    vec3 pos;
 } vs_out[];
 
 out vec3 global_pos;
 out vec2 perspective_uv;
 out vec3 normal_frag;
 out vec3 player_pos;
+out float plane_dist;
 out float i_time;
 out float displacement;
 out vec3 t0_pos;
@@ -53,6 +48,7 @@ void main() {
     float dist_fact = max(0, min(1, offset_dist / interval));
     vec4 avg_pos = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
     vec4 disp = (avg_pos - vs_out[0].obj_pos) * dist_fact * dist_fact * dist_fact * 4;
+    vec4 new_avg = avg_pos + disp;
     disp.z *= 0.75;
 
     t0_pos = vs_out[0].pos;
@@ -61,10 +57,14 @@ void main() {
     t0_uv = vs_out[0].uv;
     t1_uv = vs_out[1].uv;
     t2_uv = vs_out[2].uv;
+    plane_dist = vs_out[0].plane_dist; 
+    displacement = dist_fact;
+    i_time = vs_out[0].i_time;
+    player_pos = vs_out[0].player_pos;
+    normal_frag = vs_out[0].normal_frag;
 
     for(int i=0; i < 3; i++) {
         vec4 new_pos = gl_in[i].gl_Position;
-        vec4 new_avg = avg_pos + disp;
         new_pos += disp;   
         new_pos += (new_avg - new_pos) * dist_fact;
         vec4 proj_pos = vs_out[0].projection * new_pos;
@@ -74,14 +74,8 @@ void main() {
         // snapped_pos.xy = floor(100 * snapped_pos.xy) / 100;
         // snapped_pos.xyz *= proj_pos.w;
         gl_Position = snapped_pos;
-
         global_pos = new_pos.xyz;
-        player_pos = vs_out[i].player_pos;
         perspective_uv = vs_out[i].uv;
-        normal_frag = vs_out[i].normal_frag;
-        i_time = vs_out[i].i_time;
-        displacement = dist_fact;
-
         EmitVertex();
     }
     EndPrimitive();

@@ -479,7 +479,9 @@ main :: proc () {
             if EDIT {
                 editor_update(&lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
+                //physics_time := tm.now()
                 game_update(lgs, is, &pls, phs, &cs, &ts, f32(elapsed_time), FIXED_DELTA_TIME)
+                //fmt.println(tm.since(physics_time))
             }
             accumulator -= target_frame_clocks 
         }

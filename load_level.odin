@@ -44,8 +44,8 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
 
     if PERF_TEST {
         // perf test load======================
-        loaded_level_geometry = make([]Level_Geometry, 500)
-        for i in 0..<500 {
+        loaded_level_geometry = make([]Level_Geometry, 5000)
+        for i in 0..< 5000 {
             rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
             //shape: SHAPE = rnd.choice([]SHAPE{ .CUBE, .WEIRD })
             shape: SHAPE = rnd.choice([]SHAPE{ .CUBE })

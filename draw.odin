@@ -252,7 +252,7 @@ draw :: proc(
         set_matrix_uniform(shst, "inverse_projection", &inverse_proj)
         set_vec3_uniform(shst, "camera_pos", 1, &cs.position)
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.TRIANGLES)
 
         // draw level geometry outline
         use_shader(shst, rs, .Level_Geometry_Outline)

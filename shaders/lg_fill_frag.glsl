@@ -213,6 +213,7 @@ void main()
     // float visibility = 1.0;
     // fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
+    // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
     // fragColor = vec4();
     // fragColor = glassColor;
     // vec3 draw_normal = t_normal / 2.0 + vec3(0.5);
