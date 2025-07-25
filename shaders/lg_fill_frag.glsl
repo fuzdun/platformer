@@ -3,9 +3,7 @@
 out vec4 fragColor;
 
 in vec3 global_pos;
-in noperspective vec2 affine_uv;
 in vec2 perspective_uv;
-in flat int in_view;
 in vec3 normal_frag;
 in vec3 player_pos;
 in float i_time;
@@ -107,9 +105,6 @@ float reshapeUniformToTriangle(float v) {
 
 void main()
 {
-    // vec2 uv = in_view == 1 ? affine_uv : perspective_uv;
-    // vec2 uv = perspective_uv;
-
     float screen_width = 1920.0;
     float screen_height = 1080.0;
 

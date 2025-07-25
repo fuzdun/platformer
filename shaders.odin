@@ -50,9 +50,14 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {}
     },
+    //.Level_Geometry_Fill = {
+    //    pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "lg_fill_frag"},
+    //    shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
+    //    uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view"},
+    //},
     .Level_Geometry_Fill = {
-        pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "lg_fill_frag"},
-        shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
+        pipeline = {"lg_fill_vertex", "lg_fill_geometry", "lg_fill_frag"},
+        shader_types = {.VERTEX_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
         uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view"},
     },
     .Player = {

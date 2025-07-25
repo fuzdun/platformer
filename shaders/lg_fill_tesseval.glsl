@@ -11,7 +11,6 @@ in TC_OUT {
     int v_id;
     mat4 projection;
     float i_time;
-    // float plane_dist;
     vec3 pos;
 } tc_out[];
 
@@ -24,7 +23,6 @@ out TE_OUT {
     int v_id;
     mat4 projection;
     float i_time;
-    // float plane_dist;
     vec3 t0_pos;
     vec3 t1_pos;
     vec3 t2_pos;
@@ -54,7 +52,6 @@ void main() {
     te_out.player_pos = tc_out[0].player_pos;
     te_out.projection = tc_out[0].projection;
     te_out.i_time = tc_out[0].i_time;
-    // te_out.plane_dist = tc_out[0].plane_dist;
     te_out.t0_pos = tc_out[0].pos;
     te_out.t1_pos = tc_out[1].pos;
     te_out.t2_pos = tc_out[2].pos;

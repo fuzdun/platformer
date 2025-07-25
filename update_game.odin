@@ -211,6 +211,7 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
     if is.r_pressed {
         pls.position = INIT_PLAYER_POS
         pls.velocity = [3]f32 {0, 0, 0}
+        
     }
 
     pls.prev_position = pls.position
