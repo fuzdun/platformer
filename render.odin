@@ -20,7 +20,7 @@ SHAPE :: enum {
 }
 
 SHAPE_FILENAME := [SHAPE]string {
-    .CUBE = "subdivided_cube",
+    .CUBE = "basic_cube",
     .WEIRD = "weird"
 }
 

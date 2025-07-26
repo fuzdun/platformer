@@ -3,17 +3,6 @@
 layout (triangles) in; 
 layout (triangle_strip, max_vertices = 3) out;
 
-
-in VS_OUT {
-    vec2 uv;
-    vec3 normal_frag;
-    vec4 obj_pos;
-    float player_dist;
-    float plane_dist;
-    vec3 pos;
-    float crack_time;
-} vs_out[];
-
 layout (std140, binding = 0) uniform Common
 {
     mat4 projection;
@@ -25,11 +14,29 @@ layout (std140, binding = 2) uniform Player_Pos
     vec3 player_pos;
 };
 
+in TE_OUT {
+    vec2 uv;
+    vec3 normal_frag;
+    vec4 obj_pos;
+    float player_dist;
+    float plane_dist;
+    // vec3 pos;
+    float crack_time;
+
+    vec3 t0_pos;
+    vec3 t1_pos;
+    vec3 t2_pos;
+    vec2 t0_uv;
+    vec2 t1_uv;
+    vec2 t2_uv;
+} te_out[];
+
 out vec3 global_pos;
 out vec2 perspective_uv;
 out vec3 normal_frag;
 out float plane_dist;
 out float displacement;
+
 out vec3 t0_pos;
 out vec3 t1_pos;
 out vec3 t2_pos;
@@ -39,15 +46,13 @@ out vec2 t2_uv;
 
 #define MAX_INTERVAL 200.0 
 
-// #define CRACK_TIME 1200.0
-// #define SHATTER_TIME 2000.0
 #define SHATTER_DELAY 1000.0
 #define SHATTER_INTERVAL 1000.0
 #define SHATTER_WINDOW 1200.0
 #define SHATTER_HORIZONTAL_DIST 70.0
 #define SHATTER_VERTICAL_DIST 200.0
 #define CRACK_WIDTH 0.09
-#define CRACK_ROT_AMT 1.5
+#define CRACK_ROT_AMT 0.5
 
 #define ASSEMBLE true
 #define SHATTER true
@@ -82,12 +87,12 @@ float random2 (vec2 st) {
 }
 
 void main() {
-    float seed_val_1 = random2(vs_out[0].pos.xy + vs_out[1].pos.xy + vs_out[2].pos.xy) * 0.5 + .5;
+    float seed_val_1 = random2(te_out[0].uv + te_out[1].uv + te_out[2].uv) * 0.5 + .5;
     float seed_val_2 = fract(seed_val_1 * 43758.5453123);
     float seed_val_3 = fract(seed_val_2 * 43758.5453123);
     float interval = MAX_INTERVAL * seed_val_2;
     float offset = (MAX_INTERVAL - interval) * seed_val_2;
-    float offset_dist = vs_out[0].player_dist - offset;
+    float offset_dist = te_out[0].player_dist - offset;
     if (offset_dist > interval) {
         EndPrimitive();
         return;  
@@ -95,24 +100,25 @@ void main() {
     float dist_fact = max(0, min(1, offset_dist / interval));
     vec4 avg_pos = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
 
-    vec4 disp = ASSEMBLE ? (avg_pos - vs_out[0].obj_pos) * dist_fact * dist_fact * dist_fact * 4 : vec4(0);
+    vec4 disp = ASSEMBLE ? (avg_pos - te_out[0].obj_pos) * dist_fact * dist_fact * dist_fact * 4 : vec4(0);
     disp.z *= 0.75;
     vec4 new_avg = avg_pos + disp;
 
-    t0_pos = vs_out[0].pos;
-    t1_pos = vs_out[1].pos;
-    t2_pos = vs_out[2].pos;
-    t0_uv = vs_out[0].uv;
-    t1_uv = vs_out[1].uv;
-    t2_uv = vs_out[2].uv;
-    plane_dist = vs_out[0].plane_dist; 
+    t0_pos = te_out[0].t0_pos;
+    t1_pos = te_out[0].t1_pos;
+    t2_pos = te_out[0].t2_pos;
+    t0_uv = te_out[0].t0_uv;
+    t1_uv = te_out[0].t1_uv;
+    t2_uv = te_out[0].t2_uv;
+
+    plane_dist = te_out[0].plane_dist; 
     displacement = dist_fact;
-    normal_frag = vs_out[0].normal_frag;
+    normal_frag = te_out[0].normal_frag;
     vec3 rot_vec = vec3(random(seed_val_1), random(seed_val_2), random(seed_val_3));
     mat4 rot_mat = rotation3d(rot_vec, (seed_val_2 - 0.5) * CRACK_ROT_AMT);
-    float dist = vs_out[0].player_dist;
+    float dist = te_out[0].player_dist;
 
-    float crack_time = vs_out[0].crack_time;
+    float crack_time = te_out[0].crack_time;
     float shatter_time = crack_time + SHATTER_DELAY;
 
     float shatter_offset = (SHATTER_WINDOW - SHATTER_INTERVAL) * seed_val_2;
@@ -149,6 +155,7 @@ void main() {
 
 
         vec4 proj_pos = projection * new_pos;
+        // vec4 proj_pos = projection * gl_in[i].gl_Position;
         vec4 snapped_pos = proj_pos;
         // snapped_pos.xyz /= proj_pos.w;
         // bool in_ndc = snapped_pos.x >= -1 && snapped_pos.x <= 1 && snapped_pos.y >= -1 && snapped_pos.y <= 1;
@@ -156,7 +163,7 @@ void main() {
         // snapped_pos.xyz *= proj_pos.w;
         gl_Position = snapped_pos;
         global_pos = new_pos.xyz;
-        perspective_uv = vs_out[i].uv;
+        perspective_uv = te_out[i].uv;
         EmitVertex();
     }
     EndPrimitive();
