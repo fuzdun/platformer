@@ -34,6 +34,7 @@ draw :: proc(
     sorted_rd          := make([]Lg_Render_Data, lg_count);                 defer delete(sorted_rd)
     sorted_transforms  := make([]glm.mat4, lg_count);                       defer delete(sorted_transforms)
     sorted_z_widths    := make([]f32, lg_count);                            defer delete(sorted_z_widths)
+    sorted_crack_times := make([]f32, lg_count);                            defer delete(sorted_crack_times)
     lg_render_commands := make([]gl.DrawElementsIndirectCommand, lg_count); defer delete(lg_render_commands) 
 
     // sort level geometry by shader and shape
@@ -45,6 +46,7 @@ draw :: proc(
             render_group = render_group,
             transform_mat = trans_to_mat4(lg.transform),
             z_width =  30, // need to change this
+            crack_time = lg.crack_time
         }
     }
 
@@ -73,15 +75,19 @@ draw :: proc(
     for rd, idx in sorted_rd {
         sorted_transforms[idx] = rd.transform_mat
         sorted_z_widths[idx] = rd.z_width
+        sorted_crack_times[idx] = rd.crack_time
     }
 
     // load sorted matrices and z_widths into SSBOs
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
     gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_transforms[0]) * len(sorted_transforms), raw_data(sorted_transforms), gl.DYNAMIC_DRAW)
-    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.transforms_ssbo)
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
     gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_z_widths[0]) * len(sorted_z_widths), raw_data(sorted_z_widths), gl.DYNAMIC_DRAW)
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.crack_time_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_crack_times[0]) * len(sorted_crack_times), raw_data(sorted_crack_times), gl.DYNAMIC_DRAW)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.transforms_ssbo)
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 2, rs.crack_time_ssbo)
 
     // get projection matrix
     proj_mat := EDIT ? construct_camera_matrix(cs) : interpolated_camera_matrix(cs, f32(interp_t))
@@ -235,7 +241,6 @@ draw :: proc(
         gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
         gl.Enable(gl.DEPTH_TEST)
         gl.Enable(gl.CULL_FACE)
-
 
         // draw level geometry
         use_shader(shst, rs, .Level_Geometry_Fill)

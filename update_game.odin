@@ -2,9 +2,10 @@ package main
 
 import la "core:math/linalg"
 import "core:math"
+import "core:fmt"
 
 
-game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, elapsed_time: f32, delta_time: f32) {
+game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, elapsed_time: f32, delta_time: f32) {
 
     // ====================================
     // HANDLE INPUT, UPDATE PLAYER VELOCITY
@@ -211,7 +212,9 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
     if is.r_pressed {
         pls.position = INIT_PLAYER_POS
         pls.velocity = [3]f32 {0, 0, 0}
-        
+        for &lg in lgs.entities {
+            lg.crack_time = 0;
+        } 
     }
 
     pls.prev_position = pls.position
@@ -249,32 +252,34 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
 
         for lg, id in lgs.entities {
             coll := phs.level_colliders[lg.collider] 
-            if filter <= lg.attributes {
-                if sphere_aabb_collision(pls.position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
-                    vertices := transformed_coll_vertices[tv_offset:tv_offset + len(coll.vertices)] 
-                    l := len(coll.indices)
-                    for i := 0; i <= l - 3; i += 3 {
-                        t0 := vertices[coll.indices[i]]
-                        t1 := vertices[coll.indices[i+1]]
-                        t2 := vertices[coll.indices[i+2]]
-                        did_collide, t, normal, contact := player_lg_collision(
-                            pls.position,
-                            PLAYER_SPHERE_RADIUS,
-                            t0, t1, t2,
-                            player_velocity,
-                            player_velocity_len,
-                            player_velocity_normal,
-                            ppos_end,
-                            pls.contact_ray,
-                            GROUNDED_RADIUS2
-                        )
-                        if did_collide {
-                            append(collisions, Collision{id, normal, t})
+            if lg.crack_time == 0 || et < lg.crack_time + 1000 {
+                if filter <= lg.attributes {
+                    if sphere_aabb_collision(pls.position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
+                        vertices := transformed_coll_vertices[tv_offset:tv_offset + len(coll.vertices)] 
+                        l := len(coll.indices)
+                        for i := 0; i <= l - 3; i += 3 {
+                            t0 := vertices[coll.indices[i]]
+                            t1 := vertices[coll.indices[i+1]]
+                            t2 := vertices[coll.indices[i+2]]
+                            did_collide, t, normal, contact := player_lg_collision(
+                                pls.position,
+                                PLAYER_SPHERE_RADIUS,
+                                t0, t1, t2,
+                                player_velocity,
+                                player_velocity_len,
+                                player_velocity_normal,
+                                ppos_end,
+                                pls.contact_ray,
+                                GROUNDED_RADIUS2
+                            )
+                            if did_collide {
+                                append(collisions, Collision{id, normal, t})
+                            }
+                            got_contact^ = got_contact^ || contact
                         }
-                        got_contact^ = got_contact^ || contact
                     }
-                }
-            }         
+                }         
+            }
             tv_offset += len(coll.vertices)
         }
         return
@@ -344,8 +349,13 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
     }
     // end func ==========
 
-    get_collisions(lgs, pls^, phs, elapsed_time, delta_time, &collisions, &got_contact)
+    get_collisions(lgs^, pls^, phs, elapsed_time, delta_time, &collisions, &got_contact)
     update_contact_state(pls, collisions[:], elapsed_time, got_contact)
+
+    for collision in collisions {
+        lg := &lgs.entities[collision.id]
+        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time : lg.crack_time
+    }
 
     if remaining_vel > 0 {
         loops := 0
@@ -365,8 +375,9 @@ game_update :: proc(lgs: Level_Geometry_State, is: Input_State, pls: ^Player_Sta
             velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
             pls.velocity = (velocity_normal * remaining_vel) / delta_time
 
-            get_collisions(lgs, pls^, phs, elapsed_time, delta_time, &collisions, &got_contact)
+            get_collisions(lgs^, pls^, phs, elapsed_time, delta_time, &collisions, &got_contact)
             update_contact_state(pls, collisions[:], elapsed_time, got_contact)
+
         }
         pls.position += velocity_normal * remaining_vel
         pls.velocity = velocity_normal * init_velocity_len

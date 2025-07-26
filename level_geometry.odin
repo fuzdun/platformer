@@ -23,6 +23,7 @@ Level_Geometry :: struct {
     render_type: Level_Geometry_Render_Type,
     attributes: Level_Geometry_Attributes,
     aabb: Aabb,
+    crack_time: f32
 }
 
 Transform :: struct{

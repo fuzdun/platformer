@@ -2,11 +2,22 @@
 
 out vec4 fragColor;
 
+layout (std140, binding = 0) uniform Common
+{
+    mat4 projection;
+    float i_time;
+};
+
+layout (std140, binding = 2) uniform Player_Pos
+{
+    vec3 player_pos;
+};
+
 in vec3 global_pos;
 in vec2 perspective_uv;
 in vec3 normal_frag;
-in vec3 player_pos;
-in float i_time;
+// in vec3 player_pos;
+// in float i_time;
 in float displacement;
 
 in float plane_dist;
@@ -73,14 +84,14 @@ float noise(vec2 p) {
 
 float fbm (vec2 p )
 {
-    float intv1 = sin((i_time / 4.0 + 12.0) / 10.0);
-    float intv2 = cos((i_time / 4.0 + 12.0) / 10.0);
+    float intv1 = sin((i_time / 1000 / 4.0 + 12.0) / 10.0);
+    float intv2 = cos((i_time / 1000 / 4.0 + 12.0) / 10.0);
 
     mat2 mtx_off = mat2(intv1, 1.0, intv2, 1.0);
     mat2 mtx = mat2(1.6, 1.2, -1.2, 1.6);
     mtx = mtx_off * mtx;
     float f = 0.0;
-    f += 0.25*noise( p + i_time / 4.0 * 1.5); p = mtx*p;
+    f += 0.25*noise( p + i_time / 1000 / 4.0 * 1.5); p = mtx*p;
     f += 0.25*noise( p ); p = mtx*p;
     f += 0.25*noise( p ); p = mtx*p;
     f += 0.25*noise( p );
@@ -99,41 +110,35 @@ float jaggy(float x)
 
 float reshapeUniformToTriangle(float v) {
     v = v * 2.0 - 1.0;
-    v = sign(v) * (1.0 - sqrt(max(0.0, 1.0 - abs(v)))); // [-1, 1], max prevents NaNs
-    return v + 0.5; // [-0.5, 1.5]
+    v = sign(v) * (1.0 - sqrt(max(0.0, 1.0 - abs(v))));
+    return v + 0.5;
 }
 
 void main()
 {
+    float time = i_time / 1000.0;
+
+    // get floored uv
     float screen_width = 1920.0;
     float screen_height = 1080.0;
-
-    // float screen_width = 900.0;
-    // float screen_height = 900.0;
-
     vec4 rounded_frag =  gl_FragCoord;
     vec2 screen_uv = gl_FragCoord.xy;
     screen_uv.x /= screen_width;
     screen_uv.y /= screen_width;
     screen_uv = floor(screen_uv * 512.0) / 512.0;
-    // rounded_frag.xy = ceil(gl_FragCoord.xy / 6.0) * 6.0;
     rounded_frag.xy = screen_uv * screen_width;
-
     vec3 ndc = vec3(
         (rounded_frag.x / screen_width - 0.5) * 2.0,
         (rounded_frag.y / screen_height - 0.5) * 2.0,
         1.0
     );
-    // vec3 t_normal = normalize(cross(t1_pos - t0_pos, t2_pos - t0_pos));
     vec4 ray_clip = vec4(ndc.xy, -1.0, 1.0);
-    // ray_clip = ray_clip / ray_clip.w;
     vec4 ray_eye = inverse_projection * ray_clip;
     vec3 ray_wor = normalize((inverse_view * vec4(ray_eye.xy, -1.0, 0.0)).xyz);
     vec3 camera_off = -camera_pos;
     float plane_dist = dot(t0_pos, normal_frag);
     vec3 intersection = (plane_dist + dot(camera_off, normal_frag)) / dot(-normal_frag, ray_wor) * ray_wor + camera_off;
     intersection *= -1;
-
     vec3 v0 = t1_pos - t0_pos;
     vec3 v1 = t2_pos - t0_pos;
     vec3 v2 = intersection - t0_pos;
@@ -146,10 +151,8 @@ void main()
     float bary_1 = (d11 * d20 - d01 * d21) / denom;
     float bary_2 = (d00 * d21 - d01 * d20) / denom;
     float bary_0 = 1.0 - bary_1 - bary_2;
-
     vec2 uv = t0_uv * bary_0 + t1_uv * bary_1 + t2_uv * bary_2;
 
-    // uv = floor(uv * 64.0) / 64.0;
     float plane_off = dot(normal_frag, global_pos);
     float dist = dot(normal_frag, player_pos) - plane_off;
     vec3 proj_pt = player_pos - dist * normal_frag;
@@ -160,13 +163,11 @@ void main()
     float a = atan(diff.x / diff.z) * 5;
     vec3 planar_diff = proj_pt - global_pos;
     float uvd = length(planar_diff);
-    float d1 = dist + noise(a + i_time * 100) * .3;
-    float dfrac = d1 / uvd;
+    float d1 = dist + noise(a + time * 100) * .3;
     float absd = abs(uvd - d1);
     float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.0, 0.1, absd);
 
     vec3 proximity_outline_col = vec3(1.0, .6, 1.0) * noise_border;
-    vec3 proximity_shadow_col = d1 < uvd ? vec3(.5, .15, max(1.0 - (d1 / uvd) * .5, 0.6)) : vec3(.25, .45, 0.6);
 
     float shade = pattern(uv);
     vec3 pattern_col = vec3(colormap(shade).rgb);
@@ -180,14 +181,14 @@ void main()
     d += t * 0.69;
     float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
     float freq = 2.0 * line_len;
-    float width =  sin(-i_time * 70.0 + t * TWOPI * freq) * 2.0 + 30.0;
+    float width =  sin(-time * 70.0 + t * TWOPI * freq) * 2.0 + 30.0;
     float border_d = 0.050 * width;
     vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.6, 0.0, 0.15), t);
     trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
 
     vec3 impact_col = vec3(0.0);
     float crunch_dist = distance(global_pos, crunch_pt);    
-    float k = crunch_dist - (i_time - crunch_time) * 30;
+    float k = crunch_dist - (time - crunch_time) * 30;
     float angle = atan(global_pos.z - crunch_pt.z, global_pos.x - crunch_pt.x);
     float w = crunch_dist + 25.7 * floor(angle / TWOPI * 10);
     angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, .5) * 20;
@@ -197,31 +198,12 @@ void main()
         impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
     }
 
-    // vec3 col = mix(pattern_col + proximity_outline_col + trail_col + impact_col, proximity_shadow_col, 0.5);
     vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
 
-    // float mask = texture(ditherTexture, perspective_uv).r;
-    // float mask = texture(ditherTexture, uv * 16.0).r;
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * 8.0).r;
-    // float mask = texture(ditherTexture, perspective_uv * 4.0).r;
     mask = reshapeUniformToTriangle(mask);
     mask = min(1.0, max(floor(mask + length(t_diff) / 5.0) / 10.0, 0.15)); 
-    // mask = 0.0; 
-    // float visibility = length(diff) * 0.0025;
-    // visibility = max(min(1.0, floor((visibility + mask / SHADES) * SHADES) / SHADES), .2);
     vec4 glassColor = mix(vec4(0.04, 0.08, 0.10, 0.40), vec4(0.20, 0.2, 0.2, 0.60), displacement);
-    // float visibility = 1.0;
-    // fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
-    // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
-    // fragColor = vec4();
-    // fragColor = glassColor;
-    // vec3 draw_normal = t_normal / 2.0 + vec3(0.5);
-    // fragColor = vec4(ray_eye.x, bary_1, bary_2, 1.0);
-    // fragColor = vec4(normal_frag.x, 0, 0, 1.0);
-    // fragColor = vec4(intersection.x, intersection.y, intersection.z, 1.0);
-    // if (sign(intersection.x) == 0) {
-    //     fragColor = vec4(1.0, 0, 0, 1.0);
-    // }
 }
 

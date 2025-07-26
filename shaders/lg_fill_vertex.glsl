@@ -12,6 +12,10 @@ layout (std430, binding = 1) buffer z_width {
     float z_width_data[];
 };
 
+layout (std430, binding = 2) buffer crack_time {
+    float crack_time_data[];
+};
+
 layout (std140, binding = 0) uniform Common
 {
     mat4 projection;
@@ -28,30 +32,24 @@ out VS_OUT {
     vec3 normal_frag;
     vec4 obj_pos;
     float player_dist;
-    vec3 player_pos;
-    mat4 projection;
-    float i_time;
     float plane_dist;
     vec3 pos;
+    float crack_time;
 } vs_out;
 
 
 void main() {
     mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
-    
     vec4 new_pos = transform * aPos;
-    float dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 30 - new_pos.z);
-    new_pos.xy += (projection * new_pos).xy * dist * dist * .000006;
     gl_Position = new_pos;
+    vec3 rot_normal = normalize(mat3(transpose(inverse(matrices_data[gl_BaseInstance + gl_InstanceID]))) * normal_in).xyz;
+
     vs_out.obj_pos = vec4(transform[3][0], transform[3][1], transform[3][2], 1.0);
     vs_out.uv = vertexUV;
-    vec3 rot_normal = normalize(mat3(transpose(inverse(matrices_data[gl_BaseInstance + gl_InstanceID]))) * normal_in).xyz;
     vs_out.normal_frag = rot_normal;
-    vs_out.player_pos = player_pos;
-    vs_out.player_dist = dist;
-    vs_out.projection = projection;
-    vs_out.i_time = i_time / 1000;
+    vs_out.player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 30 - new_pos.z);;
     vs_out.plane_dist = dot((transform * aPos).xyz, rot_normal);
     vs_out.pos = vec3(transform * aPos);
+    vs_out.crack_time = crack_time_data[gl_BaseInstance + gl_InstanceID];
 }
 

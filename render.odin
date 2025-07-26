@@ -79,6 +79,7 @@ Render_State :: struct {
 
     transforms_ssbo: u32,
     z_widths_ssbo: u32,
+    crack_time_ssbo: u32,
 
     common_ubo: u32,
     dash_ubo: u32,
@@ -141,6 +142,7 @@ Lg_Render_Data :: struct {
     render_group: int,
     transform_mat: glm.mat4,
     z_width: f32,
+    crack_time: f32
 }
 
 Level_Geometry_Render_Type :: enum {

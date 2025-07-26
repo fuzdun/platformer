@@ -264,6 +264,7 @@ main :: proc () {
     gl.GenBuffers(1, &rs.transforms_ssbo)
 
     gl.GenBuffers(1, &rs.z_widths_ssbo)
+    gl.GenBuffers(1, &rs.crack_time_ssbo)
     gl.GenBuffers(1, &rs.common_ubo)
     gl.GenBuffers(1, &rs.dash_ubo)
     gl.GenBuffers(1, &rs.ppos_ubo)
@@ -480,7 +481,7 @@ main :: proc () {
                 editor_update(&lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
                 //physics_time := tm.now()
-                game_update(lgs, is, &pls, phs, &cs, &ts, f32(elapsed_time), FIXED_DELTA_TIME)
+                game_update(&lgs, is, &pls, phs, &cs, &ts, f32(elapsed_time), FIXED_DELTA_TIME)
                 //fmt.println(tm.since(physics_time))
             }
             accumulator -= target_frame_clocks 
