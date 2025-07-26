@@ -52,7 +52,7 @@ out vec2 t2_uv;
 #define SHATTER_HORIZONTAL_DIST 70.0
 #define SHATTER_VERTICAL_DIST 200.0
 #define CRACK_WIDTH 0.09
-#define CRACK_ROT_AMT 0.5
+#define CRACK_ROT_AMT 0.75
 
 #define ASSEMBLE true
 #define SHATTER true
