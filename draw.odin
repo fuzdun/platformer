@@ -117,7 +117,19 @@ draw :: proc(
     camera_up_worldspace = la.normalize(camera_up_worldspace)
 
     if EDIT {
-        // draw level geometry (edit mode)
+
+        gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
+        gl.ClearColor(0, 0, 0, 1)
+        gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+        //gl.BindFramebuffer(gl.FRAMEBUFFER, rs.postprocessing_fbo)
+        //gl.ClearColor(0, 0, 0, 1)
+        //gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+        //gl.Enable(gl.DEPTH_TEST)
+        gl.BindVertexArray(rs.standard_vao)
+        use_shader(shst, rs, .Level_Geometry_Outline)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.TRIANGLES)
+
         use_shader(shst, rs, .Editor_Geometry)
         set_matrix_uniform(shst, "projection", &proj_mat)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.TRIANGLES)
@@ -145,6 +157,7 @@ draw :: proc(
             gl.BufferData(gl.ARRAY_BUFFER, size_of(connection_vertices[0]) * len(connection_vertices), &connection_vertices[0], gl.DYNAMIC_DRAW)
             gl.DrawArrays(gl.LINES, 0, i32(len(connection_vertices)))
         }
+
     } else if PLAYER_DRAW {
         // draw player
         gl.Viewport(0, 0, WIDTH, HEIGHT)

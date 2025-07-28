@@ -26,6 +26,7 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     }
 
     bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC)
+    fmt.println("here") 
     defer delete(bin)
     os.write_entire_file("levels/test_level.bin", bin)
 }
@@ -47,21 +48,14 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
         loaded_level_geometry = make([]Level_Geometry, 1000)
         for i in 0..< 1000 {
             rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
-            //shape: SHAPE = rnd.choice([]SHAPE{ .CUBE, .WEIRD })
-            shape: SHAPE = rnd.choice([]SHAPE{ .CUBE })
-            // fmt.println(shape)
-            // shader: ProgramName = .Level_Geometry_Fill
-            render_group: Level_Geometry_Render_Type = .Standard
             lg: Level_Geometry
-            lg.shape = shape
-            lg.collider = shape
+            lg.shape = .CUBE
+            lg.collider = .CUBE
 
             x := f32(i % 10)
             y := math.floor(f32(i) / 4)
             lg.transform = {{x * 120, y * 1 - 80, y * -45 + 200},{40, 40, 40}, rot}
-            // lg.transform_mat4 = trans_to_mat4(lg.transform)
-            // lg.shaders = {shader}
-            lg.render_type = render_group
+            lg.render_type = .Standard
             lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
 
             loaded_level_geometry[i] = lg
@@ -91,6 +85,15 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             // lg.shaders = trim_bit_set(lg.shaders)
             loaded_level_geometry[idx] = lg
         }
+        //rot := la.quaternion_from_euler_angles_f32(0, 0, 0, .XYZ)
+        //shape: SHAPE = .CUBE
+        //lg: Level_Geometry
+        //lg.shape = shape
+        //lg.collider = shape
+        //lg.transform = {{0, -1000, 0},{1000, 1000, 1000}, rot}
+        //lg.render_type = .Standard 
+        //lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+        //loaded_level_geometry[0] = lg
         // ==========================================
     }
     add_geometry_to_physics(ps, loaded_level_geometry)

@@ -167,6 +167,14 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
     if is.tab_pressed && es.can_switch {
         es.selected_entity = (es.selected_entity + 1) % len(lgs.entities)
     }
+    if is.ent_pressed {
+        if !es.saved {
+            encode_test_level_cbor(lgs)
+            es.saved = true
+        }
+    } else {
+        es.saved = false
+    }
 
     es.can_switch = !is.tab_pressed
 }
