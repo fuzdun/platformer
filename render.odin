@@ -16,12 +16,12 @@ I_MAT :: glm.mat4(1.0)
 
 SHAPE :: enum {
     CUBE,
-    WEIRD,
+    ANGULAR
 }
 
 SHAPE_FILENAME := [SHAPE]string {
     .CUBE = "basic_cube",
-    .WEIRD = "weird"
+    .ANGULAR = "angular"
 }
 
 TEXT_VERTICES :: [4]Quad_Vertex4 {
@@ -136,8 +136,6 @@ Vertex_Offsets :: [len(SHAPE)]u32
 
 Index_Offsets :: [len(SHAPE)]u32
 
-Shader_Render_Queues :: [ProgramName][dynamic]gl.DrawElementsIndirectCommand
-
 Lg_Render_Data :: struct {
     render_group: int,
     transform_mat: glm.mat4,
@@ -160,6 +158,8 @@ Dash_Ubo :: struct {
     dash_end_time: f32,
     constrain_dir: glm.vec3,
 }
+
+Render_Groups :: [Level_Geometry_Render_Type][dynamic]gl.DrawElementsIndirectCommand 
 
 free_render_state :: proc(rs: ^Render_State) {
     ft.done_face(rs.face)

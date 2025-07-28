@@ -354,7 +354,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     for collision in collisions {
         lg := &lgs.entities[collision.id]
-        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time : lg.crack_time
+        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + 500 : lg.crack_time
     }
 
     if remaining_vel > 0 {
