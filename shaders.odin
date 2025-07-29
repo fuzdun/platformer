@@ -103,7 +103,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Player_Fill = {
         pipeline = {"player_fill_vertex", "player_fill_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"transform"}
+        uniforms = {"p_color", "transform"}
     },
     .Player_Outline = {
         pipeline = {"player_outline_vertex", "player_outline_frag"},

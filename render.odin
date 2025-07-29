@@ -480,10 +480,10 @@ render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [
         h := f32(char_tex.size.y) * scale
 
         vertices := [4]Quad_Vertex4 {
-            {{x_off,     y_off,     0, 1},     {0, 1}},
-            {{x_off + w, y_off,     0, 1},     {1, 1}},
-            {{x_off,     y_off + h, 0, 1},     {0, 0}},
-            {{x_off + w, y_off + h, 0, 1},     {1, 0}},
+            {{x_off,     y_off,     0, 1}, {0, 1}},
+            {{x_off + w, y_off,     0, 1}, {1, 1}},
+            {{x_off,     y_off + h, 0, 1}, {0, 0}},
+            {{x_off + w, y_off + h, 0, 1}, {1, 0}},
         }
         for &v in vertices {
             v.position.xyz = cam_right * v.position.x + cam_up * v.position.y
@@ -494,6 +494,40 @@ render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [
         gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
     
         x += f32(char_tex.next >> 6) * scale
+    } 
+}
+
+render_screen_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [3]f32, proj: glm.mat4, scale: f32) {
+    screen_pos := proj * [4]f32 {pos.x, pos.y, pos.z, 1}
+    screen_pos /= screen_pos.w
+    // x: f32 = 0
+    x := screen_pos.x
+    y := screen_pos.y + .05
+    // trans_mat: = la.matrix4_translate(screen_pos.xyz)
+    // set_matrix_uniform(shst, "transform", &trans_mat)
+    for c in str.trim_null(text) {
+        char_tex := rs.char_tex_map[c]
+        x_off := x + (f32(char_tex.bearing.x) * scale) / WIDTH
+        y_off := y + (-f32(char_tex.size.y - char_tex.bearing.y) * scale) / HEIGHT
+        w := (f32(char_tex.size.x) * scale) / WIDTH
+        h := (f32(char_tex.size.y) * scale) / HEIGHT
+
+        vertices := [4]Quad_Vertex4 {
+            {{x_off,     y_off,     0, 1}, {0, 1}},
+            {{x_off + w, y_off,     0, 1}, {1, 1}},
+            {{x_off,     y_off + h, 0, 1}, {0, 0}},
+            {{x_off + w, y_off + h, 0, 1}, {1, 0}},
+        }
+        // fmt.println(vertices)
+        // for &v in vertices {
+        //     v.position.xyz = cam_right * v.position.x + cam_up * v.position.y
+        // }
+        gl.BindTexture(gl.TEXTURE_2D, char_tex.id)
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.text_vbo)
+        gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(vertices), &vertices[0])
+        gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    
+        x += (f32(char_tex.next >> 6) * scale) / WIDTH
     } 
 }
 

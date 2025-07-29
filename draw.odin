@@ -128,7 +128,7 @@ draw :: proc(
 
     if EDIT {
         // draw edit mode UI/level geometry
-        edit_draw(rs, shs, pls, es, lg_render_groups, camera_up_worldspace, camera_right_worldspace)
+        edit_draw(rs, shs, pls, es, lg_render_groups, proj_mat)
 
     } else if PLAYER_DRAW {
         // -- see player draw func below
@@ -198,7 +198,7 @@ draw :: proc(
     }
 }
 
-edit_draw :: proc(rs: ^Render_State, shs: ^Shader_State, pls: Player_State, es: Editor_State, rg: Render_Groups, cam_up: [3]f32, cam_right: [3]f32) {
+edit_draw :: proc(rs: ^Render_State, shs: ^Shader_State, pls: Player_State, es: Editor_State, rg: Render_Groups, proj_mat: glm.mat4) {
     gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
     gl.ClearColor(0, 0, 0, 1)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -216,17 +216,20 @@ edit_draw :: proc(rs: ^Render_State, shs: ^Shader_State, pls: Player_State, es: 
     // draw geometry connections
     if len(es.connections) > 0 {
         gl.BindVertexArray(rs.text_vao)
-        use_shader(shs, rs, .Text)
         connection_vertices := make([dynamic]Line_Vertex); defer delete(connection_vertices)
+        gl.Enable(gl.BLEND)
+        gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+        // scale := es.zoom / 800
+        scale: f32 = 0.2
+        use_shader(shs, rs, .Text)
         for el in es.connections {
             append(&connection_vertices, Line_Vertex{el.poss[0], 0}, Line_Vertex{el.poss[1], 1})
             avg_pos := el.poss[0] + (el.poss[1] - el.poss[0]) / 2
             dist_txt_buf: [3]byte            
             strcnv.itoa(dist_txt_buf[:], el.dist)
-            scale := es.zoom / 400 * .02
-            //render_text(shs, rs, string(dist_txt_buf[:]), avg_pos, cam_up, cam_right, scale)
+            render_screen_text(shs, rs, string(dist_txt_buf[:]), avg_pos, proj_mat, scale)
         }
-
+        gl.Disable(gl.BLEND)
         gl.BindVertexArray(rs.lines_vao)
         use_shader(shs, rs, .Connection_Line)
         red := [3]f32{1.0, 0.0, 0.0}
@@ -236,18 +239,16 @@ edit_draw :: proc(rs: ^Render_State, shs: ^Shader_State, pls: Player_State, es: 
         gl.DrawArrays(gl.LINES, 0, i32(len(connection_vertices)))
     }
 
-    pv := rs.player_geometry.vertices 
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), raw_data(pv), gl.STATIC_DRAW) 
-
     // draw body
     gl.BindVertexArray(rs.player_vao)
     use_shader(shs, rs, .Player_Fill)
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
     p_color := [3]f32 {1.0, 1.0, 0.0}
     set_vec3_uniform(shs, "p_color", 1, &p_color)
     player_mat := interpolated_player_matrix(pls, 1.0)
     set_matrix_uniform(shs, "transform", &player_mat)
+    pv := rs.player_geometry.vertices 
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), raw_data(pv), gl.STATIC_DRAW) 
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
     gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_fill_indices)), gl.UNSIGNED_INT, nil)
 }

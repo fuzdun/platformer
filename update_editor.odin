@@ -85,7 +85,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
             rot_x -= OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
-            selected_obj.transform.scale.z += 0.1;
+            selected_obj.transform.scale.z += OBJ_SCALE_SPD;
         } else {
             selected_obj.transform.position.z -=  OBJ_MOVE_SPD * delta_time
         }
@@ -96,7 +96,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
             rot_x += OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
-            selected_obj.transform.scale.z -= 0.1;
+            selected_obj.transform.scale.z -= OBJ_SCALE_SPD;
         } else {
             selected_obj.transform.position.z +=  OBJ_MOVE_SPD * delta_time
         }
@@ -107,7 +107,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
             rot_z += OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
-            selected_obj.transform.scale.x -= 0.1;
+            selected_obj.transform.scale.x -= OBJ_SCALE_SPD;
         } else {
             selected_obj.transform.position.x -=  OBJ_MOVE_SPD * delta_time
         }
@@ -118,7 +118,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
             rot_z -= OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
-            selected_obj.transform.scale.x += 0.1;
+            selected_obj.transform.scale.x += OBJ_SCALE_SPD;
         } else {
             selected_obj.transform.position.x +=  OBJ_MOVE_SPD * delta_time
         }
@@ -129,7 +129,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
             rot_y -= OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
-            selected_obj.transform.scale.y += 0.1;
+            selected_obj.transform.scale.y += OBJ_SCALE_SPD;
         } else {
             selected_obj.transform.position.y +=  OBJ_MOVE_SPD * delta_time
         }
@@ -140,23 +140,23 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
             rot_y += OBJ_ROT_SPD * delta_time
             selected_obj.transform.rotation = la.quaternion_from_euler_angles_f32(rot_x, rot_y, rot_z, .XYZ)
         } else if scaling {
-            selected_obj.transform.scale.y -= 0.1;
+            selected_obj.transform.scale.y -= OBJ_SCALE_SPD;
         } else {
             selected_obj.transform.position.y -=  OBJ_MOVE_SPD * delta_time
         }
         append(&lgs.dirty_entities, es.selected_entity)
     }
     if is.a_pressed {
-        es.x_rot -= .01
+        es.x_rot -= CAM_ROT_SPD
     }
     if is.d_pressed {
-        es.x_rot += .01
+        es.x_rot += CAM_ROT_SPD
     }
     if is.s_pressed {
-        es.y_rot += .01
+        es.y_rot += CAM_ROT_SPD
     }
     if is.w_pressed {
-        es.y_rot -= .01
+        es.y_rot -= CAM_ROT_SPD
     }
     if is.z_pressed {
         es.zoom = es.zoom + 5

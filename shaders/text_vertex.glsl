@@ -15,7 +15,7 @@ out vec2 uv;
 
 void main() {
     uv = uv_in;
-    gl_Position = projection * transform * aPos;
-    // gl_Position = projection * aPos;
+    // gl_Position = projection * transform * aPos;
+    gl_Position = aPos;
 }
 
