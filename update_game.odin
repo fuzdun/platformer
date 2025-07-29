@@ -252,7 +252,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
         for lg, id in lgs.entities {
             coll := phs.level_colliders[lg.collider] 
-            if lg.crack_time == 0 || et < lg.crack_time + 1000 {
+            if lg.crack_time == 0 || et < lg.crack_time + 2000 {
                 if filter <= lg.attributes {
                     if sphere_aabb_collision(pls.position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
                         vertices := transformed_coll_vertices[tv_offset:tv_offset + len(coll.vertices)] 
@@ -354,7 +354,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     for collision in collisions {
         lg := &lgs.entities[collision.id]
-        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + 500 : lg.crack_time
+        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + 10000 : lg.crack_time
     }
 
     if remaining_vel > 0 {

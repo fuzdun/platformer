@@ -16,8 +16,6 @@ layout (std140, binding = 2) uniform Player_Pos
 in vec3 global_pos;
 in vec2 perspective_uv;
 in vec3 normal_frag;
-// in vec3 player_pos;
-// in float i_time;
 in float displacement;
 
 in float plane_dist;
@@ -181,10 +179,12 @@ void main()
     d += t * 0.69;
     float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
     float freq = 2.0 * line_len;
-    float width =  sin(-time * 70.0 + t * TWOPI * freq) * 2.0 + 30.0;
+    float width =  sin(-time * 70.0 + t * TWOPI * freq) * 3.0 + 35.0;
     float border_d = 0.050 * width;
     vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.6, 0.0, 0.15), t);
-    trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
+    if (dot(normal_frag, vec3(0, 1, 0)) < 0.85) {
+        trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
+    }
 
     vec3 impact_col = vec3(0.0);
     float crunch_dist = distance(global_pos, crunch_pt);    
@@ -205,5 +205,6 @@ void main()
     mask = min(1.0, max(floor(mask + length(t_diff) / 5.0) / 10.0, 0.15)); 
     vec4 glassColor = mix(vec4(0.04, 0.08, 0.10, 0.40), vec4(0.20, 0.2, 0.2, 0.60), displacement);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
+    fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 4.0 + .75;
 }
 

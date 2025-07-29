@@ -74,7 +74,7 @@ draw :: proc(
         append(&lg_render_groups[render_type], command)
     }
 
-    // sort and distribute level geometry transforms and z_widths 
+    // sort and distribute level geometry attributes 
     slice.sort_by(sorted_rd[:], proc(a: Lg_Render_Data, b: Lg_Render_Data) -> bool { return a.render_group < b.render_group })
     for rd, idx in sorted_rd {
         sorted_transforms[idx] = rd.transform_mat
@@ -82,7 +82,7 @@ draw :: proc(
         sorted_crack_times[idx] = rd.crack_time
     }
 
-    // load sorted matrices and z_widths into SSBOs
+    // load level geometry attributes into buffers
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
     gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_transforms[0]) * len(sorted_transforms), raw_data(sorted_transforms), gl.DYNAMIC_DRAW)
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
@@ -96,7 +96,7 @@ draw :: proc(
     // get projection matrix
     proj_mat := EDIT ? construct_camera_matrix(cs) : interpolated_camera_matrix(cs, f32(interp_t))
 
-    // load data into UBOs
+    // load shared uniform data into UBOs
     common_ubo: Common_Ubo = {
         projection = proj_mat,
         time = f32(time)
@@ -127,11 +127,11 @@ draw :: proc(
     gl.Viewport(0, 0, WIDTH, HEIGHT)
 
     if EDIT {
-        // draw edit mode geometry/ui
-        edit_draw(rs, shs, es, lg_render_groups, camera_up_worldspace, camera_right_worldspace)
+        // draw edit mode UI/level geometry
+        edit_draw(rs, shs, pls, es, lg_render_groups, camera_up_worldspace, camera_right_worldspace)
 
     } else if PLAYER_DRAW {
-        // draw player (see below)
+        // -- see player draw func below
         draw_player(rs, pls, shs, f32(time), f32(interp_t))
       
     } else {
@@ -141,12 +141,14 @@ draw :: proc(
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         gl.Enable(gl.DEPTH_TEST)
 
+        gl.Disable(gl.DEPTH_TEST)
+        gl.Disable(gl.CULL_FACE)
+
         // draw background 
         use_shader(shs, rs, .Background)
         gl.BindVertexArray(rs.background_vao)
-        gl.Disable(gl.DEPTH_TEST)
-        gl.Disable(gl.CULL_FACE)
         gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
         gl.Enable(gl.DEPTH_TEST)
         gl.Enable(gl.CULL_FACE)
 
@@ -176,7 +178,7 @@ draw :: proc(
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
 
-        // draw player (see below)
+        // draw player -- see player draw func below
         draw_player(rs, pls, shs, f32(time), f32(interp_t))
 
         // draw to main framebuffer with postprocessing effects
@@ -196,7 +198,7 @@ draw :: proc(
     }
 }
 
-edit_draw :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, rg: Render_Groups, cam_up: [3]f32, cam_right: [3]f32) {
+edit_draw :: proc(rs: ^Render_State, shs: ^Shader_State, pls: Player_State, es: Editor_State, rg: Render_Groups, cam_up: [3]f32, cam_right: [3]f32) {
     gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
     gl.ClearColor(0, 0, 0, 1)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -222,8 +224,9 @@ edit_draw :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, rg: R
             dist_txt_buf: [3]byte            
             strcnv.itoa(dist_txt_buf[:], el.dist)
             scale := es.zoom / 400 * .02
-            render_text(shs, rs, string(dist_txt_buf[:]), avg_pos, cam_up, cam_right, scale)
+            //render_text(shs, rs, string(dist_txt_buf[:]), avg_pos, cam_up, cam_right, scale)
         }
+
         gl.BindVertexArray(rs.lines_vao)
         use_shader(shs, rs, .Connection_Line)
         red := [3]f32{1.0, 0.0, 0.0}
@@ -232,6 +235,21 @@ edit_draw :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, rg: R
         gl.BufferData(gl.ARRAY_BUFFER, size_of(connection_vertices[0]) * len(connection_vertices), &connection_vertices[0], gl.DYNAMIC_DRAW)
         gl.DrawArrays(gl.LINES, 0, i32(len(connection_vertices)))
     }
+
+    pv := rs.player_geometry.vertices 
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(pv[0]) * len(pv), raw_data(pv), gl.STATIC_DRAW) 
+
+    // draw body
+    gl.BindVertexArray(rs.player_vao)
+    use_shader(shs, rs, .Player_Fill)
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
+    p_color := [3]f32 {1.0, 1.0, 0.0}
+    set_vec3_uniform(shs, "p_color", 1, &p_color)
+    player_mat := interpolated_player_matrix(pls, 1.0)
+    set_matrix_uniform(shs, "transform", &player_mat)
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
+    gl.DrawElements(gl.TRIANGLES, i32(len(rs.player_fill_indices)), gl.UNSIGNED_INT, nil)
 }
 
 draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, time: f32, interp_t: f32) {
@@ -284,7 +302,6 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
 
     // draw body
     use_shader(shs, rs, .Player_Fill)
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
     set_vec3_uniform(shs, "p_color", 1, &p_color)
     set_matrix_uniform(shs, "transform", &player_mat)
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
