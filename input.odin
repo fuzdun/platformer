@@ -26,6 +26,7 @@ Input_State :: struct {
     r_pressed: bool,
     ent_pressed: bool,
     spc_pressed: bool,
+    alt_pressed: bool,
     hor_axis: f32,
     vert_axis: f32
 }
@@ -113,6 +114,8 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
                 is.c_pressed = true
             case .SPACE:
                 is.spc_pressed = true
+            case .LALT:
+                is.alt_pressed = true
             }
         case .KEYUP:
             #partial switch event.key.keysym.sym {
@@ -160,6 +163,8 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
                 is.c_pressed = false
             case .SPACE:
                 is.spc_pressed = false
+            case .LALT:
+                is.alt_pressed = false
             }
         case .QUIT:
             quit_handler()

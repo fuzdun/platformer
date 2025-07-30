@@ -82,14 +82,14 @@ float noise(vec2 p) {
 
 float fbm (vec2 p )
 {
-    float intv1 = sin((i_time / 1000 / 4.0 + 12.0) / 10.0);
-    float intv2 = cos((i_time / 1000 / 4.0 + 12.0) / 10.0);
+    float intv1 = sin((i_time / 500 / 4.0 + 12.0) / 10.0);
+    float intv2 = cos((i_time / 500 / 4.0 + 12.0) / 10.0);
 
     mat2 mtx_off = mat2(intv1, 1.0, intv2, 1.0);
     mat2 mtx = mat2(1.6, 1.2, -1.2, 1.6);
     mtx = mtx_off * mtx;
     float f = 0.0;
-    f += 0.25*noise( p + i_time / 1000 / 4.0 * 1.5); p = mtx*p;
+    f += 0.25*noise( p + i_time / 500 / 4.0 * 1.5); p = mtx*p;
     f += 0.25*noise( p ); p = mtx*p;
     f += 0.25*noise( p ); p = mtx*p;
     f += 0.25*noise( p );
@@ -119,12 +119,13 @@ void main()
     // get floored uv
     float screen_width = 1920.0;
     float screen_height = 1080.0;
-    vec4 rounded_frag =  gl_FragCoord;
+
     vec2 screen_uv = gl_FragCoord.xy;
     screen_uv.x /= screen_width;
     screen_uv.y /= screen_width;
     screen_uv = floor(screen_uv * 512.0) / 512.0;
-    rounded_frag.xy = screen_uv * screen_width;
+
+    vec2 rounded_frag = screen_uv * screen_width;
     vec3 ndc = vec3(
         (rounded_frag.x / screen_width - 0.5) * 2.0,
         (rounded_frag.y / screen_height - 0.5) * 2.0,
@@ -133,10 +134,9 @@ void main()
     vec4 ray_clip = vec4(ndc.xy, -1.0, 1.0);
     vec4 ray_eye = inverse_projection * ray_clip;
     vec3 ray_wor = normalize((inverse_view * vec4(ray_eye.xy, -1.0, 0.0)).xyz);
-    vec3 camera_off = -camera_pos;
-    float plane_dist = dot(t0_pos, normal_frag);
-    vec3 intersection = (plane_dist + dot(camera_off, normal_frag)) / dot(-normal_frag, ray_wor) * ray_wor + camera_off;
+    vec3 intersection = (plane_dist + dot(-camera_pos, normal_frag)) / dot(-normal_frag, ray_wor) * ray_wor - camera_pos;
     intersection *= -1;
+
     vec3 v0 = t1_pos - t0_pos;
     vec3 v1 = t2_pos - t0_pos;
     vec3 v2 = intersection - t0_pos;
@@ -152,20 +152,23 @@ void main()
     vec2 uv = t0_uv * bary_0 + t1_uv * bary_1 + t2_uv * bary_2;
 
     float plane_off = dot(normal_frag, global_pos);
-    float dist = dot(normal_frag, player_pos) - plane_off;
+    float dist = (dot(normal_frag, player_pos) - plane_off) - 2;
     vec3 proj_pt = player_pos - dist * normal_frag;
 
     vec3 diff = global_pos - player_pos;
     vec3 t_diff = intersection - player_pos;
-
     float a = atan(diff.x / diff.z) * 5;
     vec3 planar_diff = proj_pt - global_pos;
     float uvd = length(planar_diff);
-    float d1 = dist + noise(a + time * 100) * .3;
+    float d1 = dist + noise(a + time * 100) * 2.0;
     float absd = abs(uvd - d1);
     float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.0, 0.1, absd);
 
-    vec3 proximity_outline_col = vec3(1.0, .6, 1.0) * noise_border;
+    if (dist < .25) {
+        noise_border = 0;
+    }
+
+    vec3 proximity_outline_col = vec3(1.0, 1.0, 1.0) * noise_border;
 
     float shade = pattern(uv);
     vec3 pattern_col = vec3(colormap(shade).rgb);
@@ -203,7 +206,7 @@ void main()
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * 8.0).r;
     mask = reshapeUniformToTriangle(mask);
     mask = min(1.0, max(floor(mask + length(t_diff) / 5.0) / 10.0, 0.15)); 
-    vec4 glassColor = mix(vec4(0.04, 0.08, 0.10, 0.40), vec4(0.20, 0.2, 0.2, 0.60), displacement);
+    vec4 glassColor = mix(vec4(0.15, 0.15, 0.25, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 4.0 + .75;
 }

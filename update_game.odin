@@ -4,12 +4,16 @@ import la "core:math/linalg"
 import "core:math"
 import "core:fmt"
 
+CRACK_DELAY :: 2000
+BREAK_DELAY :: 2000
+
 
 game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, elapsed_time: f32, delta_time: f32) {
 
     // ====================================
     // HANDLE INPUT, UPDATE PLAYER VELOCITY
     // ====================================
+
     // update trail
     ring_buffer_push(&pls.trail, [3]f32 {f32(pls.position.x), f32(pls.position.y), f32(pls.position.z)})
     pls.prev_trail_sample = pls.trail_sample
@@ -59,7 +63,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     }
 
     // register jump button pressed
-    if is.z_pressed {
+    if is.z_pressed && !pls.jump_held {
         pls.jump_pressed_time = f32(elapsed_time)
     }
 
@@ -205,7 +209,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     if pls.state == .ON_GROUND {
         pls.spike_compression = math.lerp(pls.spike_compression, 0.25, 0.15) 
     } else {
-        pls.spike_compression = math.lerp(pls.spike_compression, 1.00, 0.15) 
+        pls.spike_compression = math.lerp(pls.spike_compression, 1.1, 0.15) 
     }
 
     // handle reset level
@@ -218,6 +222,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     }
 
     pls.prev_position = pls.position
+    pls.jump_held = is.z_pressed
 
 
     // ========================================
@@ -241,7 +246,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     ) {
         clear(collisions)
         got_contact^ = false
-        filter: bit_set[Level_Geometry_Component_Name; u64] = { .Collider, .Transform }
         player_velocity := pls.velocity * dt
         player_velocity_len := la.length(player_velocity)
         player_velocity_normal := la.normalize(player_velocity)
@@ -250,9 +254,10 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         transformed_coll_vertices := phs.static_collider_vertices
         tv_offset := 0
 
+        filter: Level_Geometry_Attributes = { .Collider, .Transform }
         for lg, id in lgs.entities {
             coll := phs.level_colliders[lg.collider] 
-            if lg.crack_time == 0 || et < lg.crack_time + 2000 {
+            if lg.crack_time == 0 || et < lg.crack_time + BREAK_DELAY {
                 if filter <= lg.attributes {
                     if sphere_aabb_collision(pls.position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
                         vertices := transformed_coll_vertices[tv_offset:tv_offset + len(coll.vertices)] 
@@ -354,7 +359,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     for collision in collisions {
         lg := &lgs.entities[collision.id]
-        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + 10000 : lg.crack_time
+        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.crack_time
     }
 
     if remaining_vel > 0 {

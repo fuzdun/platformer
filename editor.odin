@@ -3,13 +3,23 @@ package main
 import "core:math"
 
 
-OBJ_MOVE_SPD :: 30.0
+OBJ_MOVE_SPD :: 100.0
 OBJ_ROT_SPD :: 2.0
 OBJ_SCALE_SPD :: 1.0
 CAM_ROT_SPD :: 0.055
 
 MAX_DRAW_GEOMETRY_DIST :: 350
 MAX_DRAW_GEOMETRY_DIST2 :: MAX_DRAW_GEOMETRY_DIST * MAX_DRAW_GEOMETRY_DIST
+
+GUIDELINE_LEN :: 200
+GUIDELINE_COL: [3]f32 : {0.5, 0, 0.5}
+
+SPAWN_MARKER_LEN :: 20
+SPAWN_MARKER_COL: [3]f32 : {0, 1, 0}
+
+GRID_LINES :: 100
+GRID_LEN :: 10000
+GRID_COL: [3]f32 : {.75, .75, .75}
 
 Editor_State :: struct {
     selected_entity: int,
@@ -21,7 +31,8 @@ Editor_State :: struct {
     x_rot: f32,
     y_rot: f32,
     zoom: f32,
-    connections: [dynamic]Connection
+    connections: [dynamic]Connection,
+    pos: [3]f32
 }
 
 free_editor_state :: proc(es: ^Editor_State) {

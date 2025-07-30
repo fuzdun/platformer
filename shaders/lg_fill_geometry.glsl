@@ -31,6 +31,8 @@ in TE_OUT {
     vec2 t2_uv;
 } te_out[];
 
+uniform float shatter_delay;
+
 out vec3 global_pos;
 out vec2 perspective_uv;
 out vec3 normal_frag;
@@ -44,15 +46,17 @@ out vec2 t0_uv;
 out vec2 t1_uv;
 out vec2 t2_uv;
 
-#define MAX_INTERVAL 200.0 
+#define MIN_INTERVAL 200.0
+#define MAX_INTERVAL 400.0 
+#define ASSEMBLE_WINDOW 600.0
 
-#define SHATTER_DELAY 1000.0
-#define SHATTER_INTERVAL 1000.0
-#define SHATTER_WINDOW 1200.0
+// #define SHATTER_DELAY 2000.0
+#define SHATTER_INTERVAL 1300.0
+#define SHATTER_WINDOW 1500.0
 #define SHATTER_HORIZONTAL_DIST 70.0
 #define SHATTER_VERTICAL_DIST 200.0
-#define CRACK_WIDTH 0.09
-#define CRACK_ROT_AMT 0.75
+#define CRACK_WIDTH 0.02
+#define CRACK_ROT_AMT 0.35
 
 #define ASSEMBLE true
 #define SHATTER true
@@ -90,8 +94,8 @@ void main() {
     float seed_val_1 = random2(te_out[0].uv + te_out[1].uv + te_out[2].uv) * 0.5 + .5;
     float seed_val_2 = fract(seed_val_1 * 43758.5453123);
     float seed_val_3 = fract(seed_val_2 * 43758.5453123);
-    float interval = MAX_INTERVAL * seed_val_2;
-    float offset = (MAX_INTERVAL - interval) * seed_val_2;
+    float interval = MIN_INTERVAL + (MAX_INTERVAL - MIN_INTERVAL) * seed_val_2;
+    float offset = (ASSEMBLE_WINDOW - interval) * seed_val_2;
     float offset_dist = te_out[0].player_dist - offset;
     if (offset_dist > interval) {
         EndPrimitive();
@@ -100,7 +104,7 @@ void main() {
     float dist_fact = max(0, min(1, offset_dist / interval));
     vec4 avg_pos = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
 
-    vec4 disp = ASSEMBLE ? (avg_pos - te_out[0].obj_pos) * dist_fact * dist_fact * dist_fact * 4 : vec4(0);
+    vec4 disp = ASSEMBLE ? (avg_pos - te_out[0].obj_pos) * easeOutCubic(easeInCubic(dist_fact)) * 6 : vec4(0);
     disp.z *= 0.75;
     vec4 new_avg = avg_pos + disp;
 
@@ -119,7 +123,7 @@ void main() {
     float dist = te_out[0].player_dist;
 
     float crack_time = te_out[0].crack_time;
-    float shatter_time = crack_time + SHATTER_DELAY;
+    float shatter_time = crack_time + shatter_delay;
 
     float shatter_offset = (SHATTER_WINDOW - SHATTER_INTERVAL) * seed_val_2;
     float t = max(0, min(1, (i_time - (shatter_time + shatter_offset)) / SHATTER_INTERVAL)); 
@@ -135,7 +139,7 @@ void main() {
 
     for(int i=0; i < 3; i++) {
         vec4 new_pos = gl_in[i].gl_Position;
-        new_pos.xy += (projection * new_pos).xy * dist * dist * .000008;
+        // new_pos.xy += (projection * new_pos).xy * dist * dist * .000008;
         new_pos += disp;   
         vec4 local_pos = new_pos - new_avg;
         local_pos = cracked ? rot_mat * local_pos : local_pos;

@@ -13,7 +13,7 @@ void main() {
     vec2 sample_uv = uv;
     vec2 diff = ppos - uv;
     float elapsed = time - crunch_time;
-    float wave_f = sin(length(diff) * 5 - elapsed / 100 + 1.4);
+    float wave_f = sin(length(diff) * 10 - elapsed / 100 + 1.4);
     float fact = 1;
     float decay = max(elapsed / 100, 1);
     if (wave_f > 0) {

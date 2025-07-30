@@ -26,7 +26,6 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     }
 
     bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC)
-    fmt.println("here") 
     defer delete(bin)
     os.write_entire_file("levels/test_level.bin", bin)
 }
@@ -82,7 +81,6 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             defer delete(entry_bin)
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
-            // lg.shaders = trim_bit_set(lg.shaders)
             loaded_level_geometry[idx] = lg
         }
         //rot := la.quaternion_from_euler_angles_f32(0, 0, 0, .XYZ)

@@ -124,9 +124,7 @@ main :: proc () {
 
     // init render state
     rs.player_particle_poss = make([dynamic]glm.vec3)
-    new_add_player_sphere_data(&rs)
-
-    //fmt.println(rs.player_geometry.vertices)
+    add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices)
 
     // init player state
     pls.state = .IN_AIR
@@ -339,6 +337,8 @@ main :: proc () {
     gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Line_Vertex), offset_of(Line_Vertex, position))
     gl.EnableVertexAttribArray(1)
     gl.VertexAttribPointer(1, 1, gl.FLOAT, false, size_of(Line_Vertex), offset_of(Line_Vertex, t))
+    gl.EnableVertexAttribArray(2)
+    gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(Line_Vertex), offset_of(Line_Vertex, color))
 
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     gl.BindVertexArray(0)
@@ -480,23 +480,17 @@ main :: proc () {
             if EDIT {
                 editor_update(&lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
-                //physics_time := tm.now()
                 game_update(&lgs, is, &pls, phs, &cs, &ts, f32(elapsed_time), FIXED_DELTA_TIME)
-                //fmt.println(tm.since(physics_time))
             }
             accumulator -= target_frame_clocks 
         }
 
         // Render
         // update_vertices(&lgs, sr, &rs)
-        update_player_particles(&rs, pls, f32(elapsed_time))
         draw_time := tm.now()
         draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
 
-        //fmt.println("draw time:", tm.since(draw_time))
         SDL.GL_SwapWindow(window)
-        //fmt.println("frame time:", tm.since(frame_time))
-        //frame_time = tm.now()
     }
 }
 

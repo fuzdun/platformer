@@ -24,6 +24,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
     selfie_stick := rot_mat * [4]f32{0, 0, es.zoom, 1}
     lg := lgs.entities[es.selected_entity]
     cs.target = lg.transform.position.xyz
+    es.pos = lg.transform.position.xyz
     tgt := lg.transform.position + selfie_stick.xyz
     cs.position = math.lerp(cs.position, tgt, f32(0.075))
 
@@ -31,6 +32,17 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
     selected_obj := &lgs.entities[es.selected_entity]
     rotating := is.r_pressed
     scaling := is.e_pressed
+
+    proj_mat := construct_camera_matrix(cs)
+    camera_right_vec: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
+    camera_right_vec = la.normalize(camera_right_vec)
+    camera_up_vec: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
+    camera_up_vec = la.normalize(camera_up_vec)
+    camera_fwd_vec := la.normalize(la.cross(camera_up_vec, camera_right_vec))
+
+    fwd_move_vec := is.alt_pressed ? camera_fwd_vec : [3]f32{0, 0, -1}
+    right_move_vec := is.alt_pressed ? camera_right_vec : [3]f32{1, 0, 0}
+    up_move_vec := is.alt_pressed ? camera_up_vec : [3]f32{0, 1, 0}
     
     rot_x, rot_y, rot_z := la.euler_angles_xyz_from_quaternion(selected_obj.transform.rotation)
     if is.q_pressed && es.can_add {
@@ -87,7 +99,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else if scaling {
             selected_obj.transform.scale.z += OBJ_SCALE_SPD;
         } else {
-            selected_obj.transform.position.z -=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position +=  OBJ_MOVE_SPD * fwd_move_vec * delta_time
         }
         append(&lgs.dirty_entities, es.selected_entity)
     }
@@ -98,7 +110,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else if scaling {
             selected_obj.transform.scale.z -= OBJ_SCALE_SPD;
         } else {
-            selected_obj.transform.position.z +=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position -=  OBJ_MOVE_SPD * fwd_move_vec * delta_time
         }
         append(&lgs.dirty_entities, es.selected_entity)
     }
@@ -109,7 +121,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else if scaling {
             selected_obj.transform.scale.x -= OBJ_SCALE_SPD;
         } else {
-            selected_obj.transform.position.x -=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position -= OBJ_MOVE_SPD * right_move_vec * delta_time
         }
         append(&lgs.dirty_entities, es.selected_entity)
     }
@@ -120,7 +132,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else if scaling {
             selected_obj.transform.scale.x += OBJ_SCALE_SPD;
         } else {
-            selected_obj.transform.position.x +=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position += OBJ_MOVE_SPD * right_move_vec * delta_time
         }
         append(&lgs.dirty_entities, es.selected_entity)
     }
@@ -131,7 +143,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else if scaling {
             selected_obj.transform.scale.y += OBJ_SCALE_SPD;
         } else {
-            selected_obj.transform.position.y +=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position +=  OBJ_MOVE_SPD * up_move_vec * delta_time
         }
         append(&lgs.dirty_entities, es.selected_entity)
     }
@@ -142,7 +154,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else if scaling {
             selected_obj.transform.scale.y -= OBJ_SCALE_SPD;
         } else {
-            selected_obj.transform.position.y -=  OBJ_MOVE_SPD * delta_time
+            selected_obj.transform.position -=  OBJ_MOVE_SPD * up_move_vec * delta_time
         }
         append(&lgs.dirty_entities, es.selected_entity)
     }

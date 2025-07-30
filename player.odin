@@ -87,6 +87,7 @@ Player_State :: struct {
     can_press_jump: bool,
     can_press_dash: bool,
     jump_pressed_time: f32,
+    jump_held: bool,
     dash_time: f32,
     dash_end_time: f32,
     dashing: bool,

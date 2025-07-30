@@ -15,7 +15,7 @@ vec4 colormap(float x) {
         v = 510.0 - v;
     }
     v = v / 255.0;
-    return vec4(v, v * 2, v, 1.0);
+    return vec4(v, v * 1, v, 1.0);
 }
 
 

@@ -35,7 +35,8 @@ ProgramName :: enum {
     Editor_Geometry,
     Background,
     Player_Particle,
-    Connection_Line,
+    Static_Line,
+    Grid_Line,
     Text,
     Dash_Line,
     Screen_Dither,
@@ -53,13 +54,8 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Level_Geometry_Fill = {
         pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "lg_fill_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view"},
+        uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view", "shatter_delay"},
     },
-    //.Level_Geometry_Fill = {
-    //    pipeline = {"lg_fill_vertex", "lg_fill_geometry", "lg_fill_frag"},
-    //    shader_types = {.VERTEX_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-    //    uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view"},
-    //},
     .Player = {
         pipeline = {"player_vertex", "player_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
@@ -80,10 +76,15 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {},
     },
-    .Connection_Line = {
-        pipeline = {"connection_line_vertex", "connection_line_frag"},
+    .Static_Line = {
+        pipeline = {"static_line_vertex", "static_line_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"projection", "color"},
+        uniforms = {"color"},
+    },
+    .Grid_Line = {
+        pipeline = {"grid_line_vertex", "grid_line_frag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"color", "edit_pos"},
     },
     .Dash_Line = {
         pipeline = {"dash_line_vertex", "dash_line_geometry", "dash_line_frag"},
