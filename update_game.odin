@@ -182,7 +182,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         pls.velocity = 0
         dash_t := (f32(elapsed_time) - pls.dash_time) / DASH_LEN
         dash_delta := pls.dash_end_pos - pls.dash_start_pos
-        pls.position = pls.dash_start_pos; //pls.dash_start_pos + dash_delta * dash_t
+        pls.position = pls.dash_start_pos + dash_delta * dash_t; //pls.dash_start_pos + dash_delta * dash_t
     }
 
     // bunny hop time dilation
@@ -208,7 +208,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     // lerp spike compression
     if pls.state == .ON_GROUND {
-        pls.spike_compression = math.lerp(pls.spike_compression, 0.25, 0.15) 
+        pls.spike_compression = math.lerp(pls.spike_compression, 0.35, 0.15) 
     } else {
         pls.spike_compression = math.lerp(pls.spike_compression, 1.1, 0.15) 
     }

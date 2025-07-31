@@ -46,9 +46,9 @@ out vec2 t0_uv;
 out vec2 t1_uv;
 out vec2 t2_uv;
 
-#define MIN_INTERVAL 200.0
+#define MIN_INTERVAL 100.0
 #define MAX_INTERVAL 400.0 
-#define ASSEMBLE_WINDOW 600.0
+#define ASSEMBLE_WINDOW 400.0
 
 // #define SHATTER_DELAY 2000.0
 #define SHATTER_INTERVAL 1300.0
@@ -104,7 +104,7 @@ void main() {
     float dist_fact = max(0, min(1, offset_dist / interval));
     vec4 avg_pos = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
 
-    vec4 disp = ASSEMBLE ? (avg_pos - te_out[0].obj_pos) * easeOutCubic(easeInCubic(dist_fact)) * 6 : vec4(0);
+    vec4 disp = ASSEMBLE ? (avg_pos - te_out[0].obj_pos) * easeOutCubic(easeInCubic(dist_fact)) * 2.5 : vec4(0);
     disp.z *= 0.75;
     vec4 new_avg = avg_pos + disp;
 

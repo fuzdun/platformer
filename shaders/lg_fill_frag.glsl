@@ -200,7 +200,7 @@ void main()
 
     vec3 impact_col = vec3(0.0);
     float crunch_dist = distance(global_pos, crunch_pt);    
-    float k = crunch_dist - (time - crunch_time) * 30;
+    float k = crunch_dist - (time - crunch_time) * 20;
     float angle = atan(global_pos.z - crunch_pt.z, global_pos.x - crunch_pt.x);
     float w = crunch_dist + 25.7 * floor(angle / TWOPI * 10);
     angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, .5) * 20;
@@ -215,8 +215,8 @@ void main()
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * (SAMPLE_RES / 64.0)).r;
     mask = reshapeUniformToTriangle(mask);
     mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 5.0, 0.15)); 
-    vec4 glassColor = mix(vec4(0.025, 0.025, 0.05, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
+    vec4 glassColor = mix(vec4(0.05, 0.05, 0.075, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
-    fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 4.0 + .75;
+    fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
 }
 

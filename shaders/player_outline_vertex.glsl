@@ -19,7 +19,7 @@ layout (std140, binding = 1) uniform Dash
 {
     float dash_time;
     float dash_end_time;
-    vec3 constrain_dir;
+    vec3 constrain_dir_in;
 };
 
 // layout (std430, binding = 2) buffer matrices {
@@ -35,6 +35,7 @@ float easeout(float n) {
 
 void main() {
     // mat4 offset_mat = matrices_data[gl_VertexID];
+    vec3 constrain_dir = cross(constrain_dir_in, vec3(0, 1, 0));
     vec3 constrain_proj = constrain_dir * dot(constrain_dir, aPos.xyz);
     vec3 constrained_pos = aPos.xyz - constrain_proj;
 
