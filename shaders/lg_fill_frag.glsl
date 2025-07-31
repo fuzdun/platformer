@@ -103,7 +103,7 @@ vec3 pattern(vec2 uv_in) {
         float dist = cos(p.y * 0.5 + t * 3.7) + sin(p.x * 0.25 + t * 1.3) + p.z;
         float stepSize = .01 + dist / 6.0;
         z += stepSize;
-            col = (sin(z / 2.0 + vec3(9.1, 4.4, 5.1)) + 1.0) / (stepSize * 2.0);
+            col = (sin(z / 2.0 + vec3(9.1, 4.4, 5.1)) + 1.0) / (stepSize * 1.0);
     }
     return tonemap(col);
 }
@@ -169,9 +169,9 @@ void main()
     float a = atan(diff.x / diff.z) * 5;
     vec3 planar_diff = proj_pt - global_pos;
     float uvd = length(planar_diff);
-    float d1 = dist + noise(a + time * 50) * 2.0;
+    float d1 = dist + noise(a + time * 50) * 1.0;
     float absd = abs(uvd - d1);
-    float noise_border = smoothstep(-0.3, 0.0, absd) - smoothstep(0.0, 0.3, absd);
+    float noise_border = smoothstep(-0.05, 0.0, absd) - smoothstep(0.15, 0.20, absd);
 
     if (dist < .25) {
         noise_border = 0;
@@ -214,7 +214,7 @@ void main()
 
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * (SAMPLE_RES / 64.0)).r;
     mask = reshapeUniformToTriangle(mask);
-    mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.35)); 
+    mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 5.0, 0.15)); 
     vec4 glassColor = mix(vec4(0.025, 0.025, 0.05, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 4.0 + .75;

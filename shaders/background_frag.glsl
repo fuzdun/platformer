@@ -1,7 +1,7 @@
 #version 460 core
 
 
-uniform vec4[8] crunch_pts;
+uniform vec4[16] crunch_pts;
 uniform int crunch_pt_count;
 
 in vec2 uv;
@@ -66,22 +66,35 @@ float pattern( in vec2 p )
 	return fbm(p + fbm(p + fbm(p)));
 }
 
+vec3 tonemap(vec3 x)
+{
+    x *= 16.0;
+    const float A = 0.15;
+    const float B = 0.50;
+    const float C = 0.10;
+    const float D = 0.20;
+    const float E = 0.02;
+    const float F = 0.30;
+    
+    return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;
+}
+
 void main() {
     float shade = pattern(uv);
     vec3 pattern_col = vec3(colormap(shade).rgb) * .8;
     fragColor = vec4(0);
-    // fragColor = vec4(pattern_col * 0.5, 1.0);
+    vec4 col = vec4(pattern_col * 0.5, 0.3);
 
     // float t = i_time / 1000.0;
     vec2 center_uv = uv * 2.0 - 1.0;
 
     vec2 floored_uv = round(center_uv * 10.0) / 10.0;
     vec2 diff = center_uv - floored_uv;
-    center_uv = center_uv + diff * diff * 20.;
+    center_uv = center_uv + diff * diff * 60.;
 
     // vec2 crunch_pts[CRUNCH_PT_COUNT] = vec2[](vec2(-0.5, -0.5), vec2(0.0, 0.0));
 
-    vec4 col = vec4(0.0);
+    // vec4 col = vec4(0.0);
 
     for (int i = 0; i < crunch_pt_count; i++) {
         vec4 cpt = crunch_pts[i]; 
@@ -90,14 +103,14 @@ void main() {
         vec2 pt = (proj_pt / proj_pt.w).xy;
         vec2 pt_diff = center_uv - pt;
         float et = max((i_time - cpt.w), 0.01);
-        float t = et / 300.0;
-        float noise_sample = noise(i_time / 1000.0 + i + normalize(pt_diff) + t * vec2(0.5, 0.5)) * 2.5;
+        float t = et / 400.0;
+        float noise_sample = noise(i_time / 5000.0 + i + normalize(pt_diff) + t * vec2(0.5, 0.5)) * 2.0;
         float noise_disp = noise_sample * ease_out(t) * .2;
-        float diffusion = length(pt_diff) / ((t * .75) - noise_disp);
-        vec4 this_col = vec4(abs(sin(vec3(4.1, 0.0, 0.0) + diffusion * vec3(1.0, 0.2, 1.0))), 1.0);
-        float mix_fact = clamp(diffusion * diffusion * 0.7 + 0.3 + et / 2000.0, 0, 1);
+        float diffusion = length(pt_diff) / ((t * 1) - noise_disp);
+        vec4 this_col = vec4(tonemap(abs(sin(vec3(1.0, 0.0, -2.8) + diffusion * vec3(20.0, 0.0, 4.8)))), 1.0);
+        float mix_fact = clamp(diffusion * diffusion * 0.5 + 0.5 + et / 3000.0, 0, 1);
         col = mix(this_col, col, mix_fact);
-        col = clamp(col, 0, .6);
+        col = clamp(col, 0, .5);
     }
     fragColor = col;
     

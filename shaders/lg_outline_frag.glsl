@@ -26,7 +26,7 @@ void main()
     if (cracked != 0) {
         border_fact = 0;
     }
-    fragColor = mix(vec4(0.0), vec4(0.5, 0.5, 0.5, 1.0), border_fact * dist_fact);
+    fragColor = mix(vec4(0.0), vec4(0.75, 0.75, 0.75, 1.0), border_fact * dist_fact);
     // fragColor = vec4(crack_time, 0, 0, 1.0);
     if (fragColor.a < .85) {
         discard;
