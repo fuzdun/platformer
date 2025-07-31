@@ -145,14 +145,10 @@ draw :: proc(
         gl.BindVertexArray(rs.background_vao)
         gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
-        // draw level geometry outline
-        use_shader(shs, rs, .Level_Geometry_Outline)
-        gl.BindVertexArray(rs.standard_vao)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.TRIANGLES)
 
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
-        gl.Enable(gl.BLEND)
+        // gl.Enable(gl.BLEND)
 
         // draw level geometry
         use_shader(shs, rs, .Level_Geometry_Fill)
@@ -172,7 +168,15 @@ draw :: proc(
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
 
-        gl.Disable(gl.BLEND)
+        // gl.Disable(gl.BLEND)
+        // draw level geometry outline
+        gl.Disable(gl.CULL_FACE)
+        gl.Disable(gl.DEPTH_TEST)
+        use_shader(shs, rs, .Level_Geometry_Outline)
+        gl.BindVertexArray(rs.standard_vao)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.TRIANGLES)
+        gl.Enable(gl.CULL_FACE)
+        gl.Enable(gl.DEPTH_TEST)
 
         // draw player -- see player draw func below
         draw_player(rs, pls, shs, f32(time), f32(interp_t))

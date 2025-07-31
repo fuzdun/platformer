@@ -38,17 +38,6 @@ uniform sampler2D ditherTexture;
 #define TWOPI 6.2831853
 #define SHADES 3.0
 
-vec3 colormap(float t) {
-    const vec3 c0 = vec3(0.042660,0.186181,0.409512);
-    const vec3 c1 = vec3(-0.703712,1.094974,2.049478);
-    const vec3 c2 = vec3(7.995725,-0.686110,-4.998203);
-    const vec3 c3 = vec3(-24.421963,2.680736,7.532937);
-    const vec3 c4 = vec3(47.519089,-4.615112,-5.126531);
-    const vec3 c5 = vec3(-46.038418,2.606781,0.685560);
-    const vec3 c6 = vec3(16.586546,-0.279280,0.447047);
-    return c0+t*(c1+t*(c2+t*(c3+t*(c4+t*(c5+t*c6)))));
-}
-
 
 vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
 {
@@ -80,25 +69,43 @@ float noise(vec2 p) {
                u.y);
 }
 
-float fbm (vec2 p )
+vec3 tonemap(vec3 x)
 {
-    float intv1 = sin((i_time / 500 / 4.0 + 12.0) / 10.0);
-    float intv2 = cos((i_time / 500 / 4.0 + 12.0) / 10.0);
-
-    mat2 mtx_off = mat2(intv1, 1.0, intv2, 1.0);
-    mat2 mtx = mat2(1.6, 1.2, -1.2, 1.6);
-    mtx = mtx_off * mtx;
-    float f = 0.0;
-    f += 0.25*noise( p + i_time / 500 / 4.0 * 1.5); p = mtx*p;
-    f += 0.25*noise( p ); p = mtx*p;
-    f += 0.25*noise( p ); p = mtx*p;
-    f += 0.25*noise( p );
-    return f;
+    x *= 16.0;
+    const float A = 0.15;
+    const float B = 0.50;
+    const float C = 0.10;
+    const float D = 0.20;
+    const float E = 0.02;
+    const float F = 0.30;
+    
+    return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;
 }
 
-float pattern( in vec2 p )
-{
-	return fbm(p + fbm(p + fbm(p)));
+vec3 pattern(vec2 uv_in) {
+    float t = i_time / 500.;
+    float z = 0.0;
+    float d = 0.0;
+    vec2 uv = uv_in * 2.0 - 1.0;
+    vec3 ray = normalize(vec3(uv, -6.0));
+    vec3 col = vec3(0.0);
+
+    for (float i = 0.0; i < 10.; i++) {
+        vec3 p = z * ray;
+        p.z += 80.;   
+        p.xy *= mat2(cos(p.z * .15 + vec4(2.5,2.5,2.5,0)));
+        for (float freq = 1.1; freq <= 2.0; freq *= 1.4) {
+            vec3 dir = p.zxy + vec3(t * 1.2, t * 1.1, -t * 1.9);
+            vec3 off = cos(dir * freq) / freq;
+            p += off;
+        }
+            
+        float dist = cos(p.y * 0.5 + t * 3.7) + sin(p.x * 0.25 + t * 1.3) + p.z;
+        float stepSize = .01 + dist / 6.0;
+        z += stepSize;
+            col = (sin(z / 2.0 + vec3(9.1, 4.4, 5.1)) + 1.0) / (stepSize * 2.0);
+    }
+    return tonemap(col);
 }
 
 float jaggy(float x)
@@ -112,6 +119,8 @@ float reshapeUniformToTriangle(float v) {
     return v + 0.5;
 }
 
+#define SAMPLE_RES 640.0
+
 void main()
 {
     float time = i_time / 1000.0;
@@ -123,7 +132,7 @@ void main()
     vec2 screen_uv = gl_FragCoord.xy;
     screen_uv.x /= screen_width;
     screen_uv.y /= screen_width;
-    screen_uv = floor(screen_uv * 512.0) / 512.0;
+    screen_uv = floor(screen_uv * SAMPLE_RES) / SAMPLE_RES;
 
     vec2 rounded_frag = screen_uv * screen_width;
     vec3 ndc = vec3(
@@ -160,9 +169,9 @@ void main()
     float a = atan(diff.x / diff.z) * 5;
     vec3 planar_diff = proj_pt - global_pos;
     float uvd = length(planar_diff);
-    float d1 = dist + noise(a + time * 100) * 2.0;
+    float d1 = dist + noise(a + time * 50) * 2.0;
     float absd = abs(uvd - d1);
-    float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.0, 0.1, absd);
+    float noise_border = smoothstep(-0.3, 0.0, absd) - smoothstep(0.0, 0.3, absd);
 
     if (dist < .25) {
         noise_border = 0;
@@ -170,8 +179,8 @@ void main()
 
     vec3 proximity_outline_col = vec3(1.0, 1.0, 1.0) * noise_border;
 
-    float shade = pattern(uv);
-    vec3 pattern_col = vec3(colormap(shade).rgb);
+    vec3 pattern_col = pattern(uv);
+    // vec3 pattern_col = vec3(colormap(shade).rgb);
 
     vec3 trail_col = vec3(0.0, 0, 0);
     vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);
@@ -203,10 +212,10 @@ void main()
 
     vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
 
-    float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * 8.0).r;
+    float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * (SAMPLE_RES / 64.0)).r;
     mask = reshapeUniformToTriangle(mask);
-    mask = min(1.0, max(floor(mask + length(t_diff) / 5.0) / 10.0, 0.15)); 
-    vec4 glassColor = mix(vec4(0.15, 0.15, 0.25, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
+    mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.35)); 
+    vec4 glassColor = mix(vec4(0.025, 0.025, 0.05, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 4.0 + .75;
 }
