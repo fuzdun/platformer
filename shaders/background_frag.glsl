@@ -1,16 +1,19 @@
-#version 450 core
+#version 460 core
+
+
+uniform vec4[8] crunch_pts;
+uniform int crunch_pt_count;
 
 in vec2 uv;
 out vec4 fragColor;
 
 layout (std140, binding = 0) uniform Common
 {
-    mat4 _;
+    mat4 projection;
     float i_time;
 };
 
 #define RADIUS 0.5
-#define CRUNCH_PT_COUNT 2
 
 
 vec4 colormap(float x) {
@@ -69,28 +72,34 @@ void main() {
     fragColor = vec4(0);
     // fragColor = vec4(pattern_col * 0.5, 1.0);
 
-    float t = i_time / 1000.0;
+    // float t = i_time / 1000.0;
     vec2 center_uv = uv * 2.0 - 1.0;
 
     vec2 floored_uv = round(center_uv * 10.0) / 10.0;
     vec2 diff = center_uv - floored_uv;
-    center_uv = center_uv + diff * diff * 20.0;
+    center_uv = center_uv + diff * diff * 20.;
 
-    vec2 crunch_pts[CRUNCH_PT_COUNT] = vec2[](vec2(-0.5, -0.5), vec2(0.5, 0.5));
+    // vec2 crunch_pts[CRUNCH_PT_COUNT] = vec2[](vec2(-0.5, -0.5), vec2(0.0, 0.0));
 
-    vec3 col = vec3(0.0);
+    vec4 col = vec4(0.0);
 
-    for (int i = 0; i < CRUNCH_PT_COUNT; i++) {
-        vec2 pt = crunch_pts[i]; 
+    for (int i = 0; i < crunch_pt_count; i++) {
+        vec4 cpt = crunch_pts[i]; 
+        vec4 proj_pt = projection * vec4(cpt.xyz, 1.0);
+        // vec2 pt = (proj_pt / proj_pt.w).xy * 2.0 - 1.0;
+        vec2 pt = (proj_pt / proj_pt.w).xy;
         vec2 pt_diff = center_uv - pt;
-        float noise_sample = noise(i + normalize(pt_diff) + i_time * vec2(0.5, 0.5));
+        float et = max((i_time - cpt.w), 0.01);
+        float t = et / 300.0;
+        float noise_sample = noise(i_time / 1000.0 + i + normalize(pt_diff) + t * vec2(0.5, 0.5)) * 2.5;
         float noise_disp = noise_sample * ease_out(t) * .2;
-        float diffusion = length(pt_diff) / (t - noise_disp);
-        vec3 this_col = abs(sin(vec3(2.1, 0.0, 0.0) + diffusion * vec3(1.0, 0.0, 1.0)));
-        float mix_fact = clamp(diffusion * diffusion * 0.7 + 0.3 + i_time / 4000.0, 0, 1);
+        float diffusion = length(pt_diff) / ((t * .75) - noise_disp);
+        vec4 this_col = vec4(abs(sin(vec3(4.1, 0.0, 0.0) + diffusion * vec3(1.0, 0.2, 1.0))), 1.0);
+        float mix_fact = clamp(diffusion * diffusion * 0.7 + 0.3 + et / 2000.0, 0, 1);
         col = mix(this_col, col, mix_fact);
+        col = clamp(col, 0, .6);
     }
-    fragColor = vec4(col, 1.0);
+    fragColor = col;
     
     // float noise_sample = noise(normalize(center_uv) + i_time * vec2(0.5, 0.5));
     // float noise_disp = noise_sample * ease_out(t) * .2;

@@ -13,10 +13,10 @@ void main() {
     vec2 sample_uv = uv;
     vec2 diff = ppos - uv;
     float elapsed = time - crunch_time;
-    float wave_f = sin(length(diff) * 3.5 * 3.14 - elapsed / 300 + .4);
+    float wave_f = sin(length(diff) * 4.5 * 3.14 - elapsed / 500 + .4);
     float fact = 1.0;
-    float delay = clamp(elapsed / 400, .0001, 1.0);
-    float decay = max(elapsed, 1) / 2000;
+    float delay = clamp(elapsed / 200, .0001, 1.0);
+    float decay = max(elapsed, 1) / 1000;
     float edge_dist = max(abs(uv.x - 0.5), abs(uv.y - 0.5));
     float edge_decay = 0.5 - edge_dist;
     float center_dist = length(diff);
@@ -25,7 +25,8 @@ void main() {
     float magnitude = fact * edge_decay * center_decay * delay;
     sample_uv += normalize(diff) * magnitude;
     vec4 tex_color = texture(screenTexture, sample_uv);
-    vec4 bw = tex_color * ((delay * wave_f * 0.5 + 1.0) * 0.5 + 0.65);
+    vec4 bw = tex_color;// * ((delay * wave_f * 0.5 + 1.0) * 0.5 + 0.65);
+    // vec4 bw = tex_color * ((delay * wave_f * 0.5 + 1.0) * 0.5 + 0.65);
     // bw.r *= 2.0;
     fragColor = mix(tex_color, bw,  clamp(wave_f / decay - 0.25, 0, 1));
 }

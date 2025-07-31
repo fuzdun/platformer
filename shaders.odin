@@ -74,7 +74,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Background = {
         pipeline = {"background_vertex", "background_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {},
+        uniforms = {"crunch_pt_count", "crunch_pts"},
     },
     .Static_Line = {
         pipeline = {"static_line_vertex", "static_line_frag"},
@@ -135,11 +135,19 @@ set_float_uniform :: proc(sh: ^Shader_State, name: string, data: f32) {
     gl.Uniform1f(sh.active_programs[sh.loaded_program_name].locations[name], data)
 }
 
+set_int_uniform :: proc(sh: ^Shader_State, name: string, data: i32) {
+    gl.Uniform1i(sh.active_programs[sh.loaded_program_name].locations[name], data)
+}
+
 set_vec2_uniform :: proc(sh: ^Shader_State, name: string, count: i32, data: ^glm.vec2) {
     gl.Uniform2fv(sh.active_programs[sh.loaded_program_name].locations[name], count, &data[0])
 }
 
 set_vec3_uniform :: proc(sh: ^Shader_State, name: string, count: i32, data: ^glm.vec3) {
     gl.Uniform3fv(sh.active_programs[sh.loaded_program_name].locations[name], count, &data[0])
+}
+
+set_vec4_uniform :: proc(sh: ^Shader_State, name: string, count: i32, data: ^glm.vec4) {
+    gl.Uniform4fv(sh.active_programs[sh.loaded_program_name].locations[name], count, &data[0])
 }
 

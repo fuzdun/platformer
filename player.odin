@@ -75,11 +75,13 @@ Player_State :: struct {
     dash_dir: [3]f32,
     touch_pt: [3]f32,
     touch_time: f32,
-    crunch_pt: [3]f32,
-    screen_crunch_pt: [2]f32,
     bunny_hop_y: f32,
-    crunch_time: f32,
     last_dash: f32,
+
+    crunch_pt: [3]f32,
+    crunch_pts: [dynamic][4]f32,
+    screen_crunch_pt: [2]f32,
+    crunch_time: f32,
 
     position: [3]f32,
     velocity: [3]f32,

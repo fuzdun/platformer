@@ -134,6 +134,9 @@ main :: proc () {
     pls.ground_x = {1, 0, 0}
     pls.ground_z = {0, 0, -1}
     pls.spike_compression = 1.0
+    pls.crunch_time = -10000.0;
+    pls.crunch_pts = make([dynamic][4]f32); defer delete(pls.crunch_pts)
+
     ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
 
     // init level resources

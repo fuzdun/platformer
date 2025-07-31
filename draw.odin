@@ -141,14 +141,8 @@ draw :: proc(
         gl.Disable(gl.CULL_FACE)
 
         // draw background 
-        use_shader(shs, rs, .Background)
-        gl.BindVertexArray(rs.background_vao)
-        gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
-
-
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
-        // gl.Enable(gl.BLEND)
 
         // draw level geometry
         use_shader(shs, rs, .Level_Geometry_Fill)
@@ -168,7 +162,20 @@ draw :: proc(
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
 
-        // gl.Disable(gl.BLEND)
+        gl.Enable(gl.BLEND)
+        gl.Disable(gl.DEPTH_TEST)
+        use_shader(shs, rs, .Background)
+        if len(pls.crunch_pts) > 0 {
+            cpts := pls.crunch_pts[:]
+            proj_pt := proj_mat * [4]f32{cpt1.x, cpt1.y, cpt1.z, 1.0}
+            set_vec4_uniform(shs, "crunch_pts", i32(len(pls.crunch_pts)), &cpts[0])
+        }
+        set_int_uniform(shs, "crunch_pt_count", i32(len(pls.crunch_pts)))
+        gl.BindVertexArray(rs.background_vao)
+        gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        gl.Disable(gl.BLEND)
+        gl.Enable(gl.DEPTH_TEST)
+
         // draw level geometry outline
         gl.Disable(gl.CULL_FACE)
         gl.Disable(gl.DEPTH_TEST)

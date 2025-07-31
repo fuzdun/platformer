@@ -106,14 +106,15 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
             pls.velocity.xz += la.normalize(pls.velocity.xz) * GROUND_BUNNY_H_SPEED
         }
 
-        pls.crunch_pt = pls.position - {0, 0, 0.5}
+        pls.crunch_pt = pls.position
         pls.crunch_time = f32(elapsed_time)
         pls.last_dash = f32(elapsed_time)
 
         proj_mat :=  construct_camera_matrix(cs)
         proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{pls.crunch_pt.x, pls.crunch_pt.y, pls.crunch_pt.z, 1})
-        //proj_ppos /= proj_ppos.w
         pls.screen_crunch_pt = ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
+        bg_crunch_pt := cs.position + la.normalize0(pls.position - cs.position) * 1000.0;
+        append(&pls.crunch_pts, [4]f32{bg_crunch_pt.x, bg_crunch_pt.y, bg_crunch_pt.z, pls.crunch_time})
     }
 
     // check for jump
@@ -406,5 +407,15 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     cs.target.x = math.lerp(cs.target.x, ppos.x, f32(CAMERA_X_LERP))
     cs.target.y = math.lerp(cs.target.y, ppos.y, f32(CAMERA_Y_LERP))
     cs.target.z = math.lerp(cs.target.z, ppos.z, f32(CAMERA_Z_LERP))
+
+    idx := 0
+    for _ in 0..<len(pls.crunch_pts) {
+        cpt := pls.crunch_pts[idx]
+        if elapsed_time - cpt[3] > 2000 {
+            ordered_remove(&pls.crunch_pts, idx) 
+        } else {
+            idx += 1
+        }
+    }
 }
 
