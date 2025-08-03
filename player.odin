@@ -70,11 +70,18 @@ ICOSPHERE_V_COUNT :: f32(ICOSPHERE_SUBDIVISION + 1) * f32(ICOSPHERE_SUBDIVISION 
 
 Player_State :: struct {
     state: Player_States,
+    touch_time: f32,
+    left_ground: f32,
+    left_slope: f32,
+    left_wall: f32,
+    contact_ray: [3]f32,
+    ground_x: [3]f32,
+    ground_z: [3]f32,
+
     dash_start_pos: [3]f32,
     dash_end_pos: [3]f32,
     dash_dir: [3]f32,
     touch_pt: [3]f32,
-    touch_time: f32,
     bunny_hop_y: f32,
     last_dash: f32,
 
@@ -94,13 +101,6 @@ Player_State :: struct {
     dash_end_time: f32,
     dashing: bool,
 
-    left_ground: f32,
-    left_slope: f32,
-    left_wall: f32,
-
-    contact_ray: [3]f32,
-    ground_x: [3]f32,
-    ground_z: [3]f32,
     prev_position: [3]f32,
 
     trail_sample: [3]glm.vec3,
