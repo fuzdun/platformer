@@ -233,8 +233,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     init_velocity_len := la.length(pls.velocity)
     remaining_vel := init_velocity_len * delta_time
     velocity_normal := la.normalize(pls.velocity)
-    collisions := make([dynamic]Collision); defer delete(collisions)
-    got_contact := false
+    // collisions := make([dynamic]Collision); defer delete(collisions)
+    // got_contact := false
 
     // inline func ========
     get_collisions :: proc(
@@ -243,11 +243,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         phs: Physics_State,
         et: f32,
         dt: f32,
-        collisions: ^[dynamic]Collision,
-        got_contact: ^bool
-    ) {
-        clear(collisions)
-        got_contact^ = false
+    ) -> (collisions: [dynamic]Collision, got_contact: bool) {
+        collisions = make([dynamic]Collision)
+        got_contact = false
         player_velocity := pls.velocity * dt
         player_velocity_len := la.length(player_velocity)
         player_velocity_normal := la.normalize(player_velocity)
@@ -280,9 +278,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
                                 GROUNDED_RADIUS2
                             )
                             if did_collide {
-                                append(collisions, Collision{id, normal, t})
+                                append(&collisions, Collision{id, normal, t})
                             }
-                            got_contact^ = got_contact^ || contact
+                            got_contact = got_contact || contact
                         }
                     }
                 }         
@@ -373,7 +371,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         return pls
     }
 
-    get_collisions(lgs^, pls^, phs, elapsed_time, delta_time, &collisions, &got_contact)
+    collisions, got_contact := get_collisions(lgs^, pls^, phs, elapsed_time, delta_time)
+    defer delete(collisions)
     pls^ = update_player_contact_state(pls^, collisions[:], got_contact, elapsed_time)
 
     for collision in collisions {
@@ -399,9 +398,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
             velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
             pls.velocity = (velocity_normal * remaining_vel) / delta_time
 
-            get_collisions(lgs^, pls^, phs, elapsed_time, delta_time, &collisions, &got_contact)
+            delete(collisions)
+            collisions, got_contact = get_collisions(lgs^, pls^, phs, elapsed_time, delta_time)
             pls^ = update_player_contact_state(pls^, collisions[:], got_contact, elapsed_time)
-            // update_contact_state(pls, collisions[:], elapsed_time, got_contact)
 
         }
         pls.position += velocity_normal * remaining_vel
