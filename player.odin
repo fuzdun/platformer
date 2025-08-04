@@ -68,7 +68,7 @@ SPHERE_I_COUNT :: (SPHERE_STACK_COUNT - 1) * SPHERE_SECTOR_COUNT * 6
 ICOSPHERE_SUBDIVISION :: 3 
 ICOSPHERE_V_COUNT :: f32(ICOSPHERE_SUBDIVISION + 1) * f32(ICOSPHERE_SUBDIVISION + 2) / 2.0
 
-Player_State :: struct {
+Contact_State :: struct {
     state: Player_States,
     touch_time: f32,
     left_ground: f32,
@@ -77,6 +77,18 @@ Player_State :: struct {
     contact_ray: [3]f32,
     ground_x: [3]f32,
     ground_z: [3]f32,
+}
+
+Player_State :: struct {
+    contact_state: Contact_State,
+    //state: Player_States,
+    //touch_time: f32,
+    //left_ground: f32,
+    //left_slope: f32,
+    //left_wall: f32,
+    //contact_ray: [3]f32,
+    //ground_x: [3]f32,
+    //ground_z: [3]f32,
 
     dash_start_pos: [3]f32,
     dash_end_pos: [3]f32,

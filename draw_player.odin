@@ -20,7 +20,7 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
         v.pos = la.matrix_mul_vector(rot_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 1.0}).xyz
         if v.uv.x != 1.0 {
             v.pos *= f32(pls.spike_compression)
-        } else if pls.state == .ON_GROUND {
+        } else if pls.contact_state.state == .ON_GROUND {
             norm_pos := la.normalize(v.pos - (la.dot(v.pos, right_vec) * right_vec * 0.5))
             down_alignment := max(0.25, min(0.75, la.dot(norm_pos, [3]f32{0, -1, 0})))
             down_alignment = (down_alignment - 0.25) / 0.5
@@ -34,7 +34,7 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
             v.pos *= 1.2
         }
 
-        if pls.state == .ON_GROUND {
+        if pls.contact_state.state == .ON_GROUND {
         }
 
         displacement_fact := la.dot(displacement_dir, la.normalize0(v.pos))
@@ -64,7 +64,7 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
     use_shader(shs, rs, .Player_Outline)
     set_vec3_uniform(shs, "p_color", 1, &p_color)
     set_matrix_uniform(shs, "transform", &player_mat)
-    if pls.state == .ON_GROUND {
+    if pls.contact_state.state == .ON_GROUND {
         gl.LineWidth(1)
     } else {
         gl.LineWidth(4)
