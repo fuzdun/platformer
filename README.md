@@ -1,10 +1,10 @@
 Working titles: **Durian**, **Echinocyte**, **Aka Uni**
 
-A psychedelic arcade platformer inspired by Thumper, Hyper Demon and the games of Jeff Minter
+An arcade platformer platformer inspired by Thumper, Hyper Demon and Jeff Minter games. The goal is to induce a platforming flow state of nonstop forward momentum, with clear audiovisual gameplay cues set against progressive levels of psychedelic obfuscation. The game will feature a reactive soundtrack mixing live drums, cavernous ambient and jungle
 
 Built with Odin, SDL and OpenGL
 
-Currently in active development
+Currently in active development, playable soon. Planned for release sometime in 2026
 
 
 ![gif10](https://github.com/user-attachments/assets/a14e0979-7e81-43b4-9420-be9481e31121)
