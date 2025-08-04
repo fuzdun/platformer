@@ -2,6 +2,130 @@ package main
 
 import la "core:math/linalg"
 import "core:math"
+import "core:fmt"
+
+
+updated_spike_compression :: proc(spike_compression: f64, state: Player_States) -> f64 {
+    if state == .ON_GROUND {
+        return math.lerp(spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
+    } 
+    return math.lerp(spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
+}
+
+updated_trail_buffer :: proc(player_position: [3]f32, trail: RingBuffer(TRAIL_SIZE, [3]f32)) -> RingBuffer(TRAIL_SIZE, [3]f32) {
+    new_trail := ring_buffer_copy(trail)
+    ring_buffer_push(&new_trail, [3]f32 {f32(player_position.x), f32(player_position.y), f32(player_position.z)})
+    return new_trail
+}
+
+updated_trail_sample :: proc(trail: RingBuffer(TRAIL_SIZE, [3]f32)) -> [3][3]f32 {
+    return {ring_buffer_at(trail, -4), ring_buffer_at(trail, -8), ring_buffer_at(trail, -12)}
+}
+
+updated_jump_pressed_time :: proc(jump_pressed_time: f32, is: Input_State, jump_held: bool, elapsed_time: f32) -> f32 {
+    return (is.z_pressed && !jump_held) ? elapsed_time : jump_pressed_time
+}
+
+updated_crunch_pt :: proc(player_position: [3]f32, crunch_pt: [3]f32, did_bunny_hop: bool) -> [3]f32 {
+    return did_bunny_hop ? player_position : crunch_pt
+}
+
+updated_can_press_dash :: proc(last_dash: f32, did_dash: bool, can_press_dash: bool, contact_state: Contact_State, is: Input_State, jump_pressed_time: f32, elapsed_time: f32) -> bool {
+    can_bunny_hop := f32(elapsed_time) - last_dash > BUNNY_DASH_DEBOUNCE
+    got_bunny_hop_input := contact_state.state != .IN_AIR && math.abs(contact_state.touch_time - jump_pressed_time) < BUNNY_WINDOW
+    pressed_dash := is.x_pressed && can_press_dash
+    if got_bunny_hop_input && can_bunny_hop {
+        return true
+    } 
+    if did_dash {
+        return false
+    }
+    if !can_press_dash {
+        return !is.x_pressed && contact_state.state == .ON_GROUND
+    } 
+    return true
+}
+
+updated_crunch_time :: proc(did_bunny_hop: bool, crunch_time: f32, elapsed_time: f32) -> f32 {
+    return did_bunny_hop ? elapsed_time : crunch_time 
+}
+
+apply_directional_input_to_velocity :: proc(contact_state: Contact_State, is: Input_State, velocity: [3]f32, move_spd: f32, delta_time: f32) -> [3]f32 {
+    velocity := velocity
+    grounded := contact_state.state == .ON_GROUND || contact_state.state == .ON_SLOPE
+    right_vec := grounded ? contact_state.ground_x : [3]f32{1, 0, 0}
+    fwd_vec := grounded ? contact_state.ground_z : [3]f32{0, 0, -1}
+    if is.left_pressed {
+        velocity -= move_spd * delta_time * right_vec
+    }
+    if is.right_pressed {
+        velocity += move_spd * delta_time * right_vec
+    }
+    if is.up_pressed {
+        velocity += move_spd * delta_time * fwd_vec
+    }
+    if is.down_pressed {
+        velocity -= move_spd * delta_time * fwd_vec
+    }
+    if is.hor_axis != 0 {
+        velocity += move_spd * delta_time * is.hor_axis * right_vec
+    }
+    if is.vert_axis != 0 {
+        velocity += move_spd * delta_time * is.vert_axis * fwd_vec
+    }
+    return velocity
+}
+
+clamp_horizontal_velocity_to_max_speed :: proc(velocity: [3]f32) -> [3]f32 {
+    velocity := velocity
+    clamped_xz := la.clamp_length(velocity.xz, MAX_PLAYER_SPEED)
+    velocity.xz = math.lerp(velocity.xz, clamped_xz, f32(0.05))
+    velocity.y = math.clamp(velocity.y, -MAX_FALL_SPEED, MAX_FALL_SPEED)
+    return velocity
+}
+
+apply_friction_to_velocity :: proc(state: Player_States, velocity: [3]f32, got_dir_input: bool, delta_time: f32) -> [3]f32 {
+    return (state == .ON_GROUND && !got_dir_input) ? velocity * math.pow(GROUND_FRICTION, delta_time) : velocity
+}
+
+apply_gravity_to_velocity :: proc(velocity: [3]f32, contact_state: Contact_State, delta_time: f32) -> [3]f32 {
+    if contact_state.state != .ON_GROUND {
+        down: [3]f32 = {0, -1, 0}
+        norm_contact := la.normalize(contact_state.contact_ray)
+        grav_force := GRAV
+        if contact_state.state == .ON_SLOPE {
+            grav_force = SLOPE_GRAV
+        }
+        if contact_state.state == .ON_WALL {
+            grav_force = WALL_GRAV
+        }
+        if contact_state.state == .ON_WALL || contact_state.state == .ON_SLOPE {
+            down -= la.dot(norm_contact, down) * norm_contact
+        }
+        return velocity + down * grav_force * delta_time
+    }
+    return velocity
+}
+
+apply_jumps_to_velocity :: proc(velocity: [3]f32, did_bunny_hop: bool, ground_jumped: bool, slope_jumped: bool, wall_jumped: bool, contact_ray: [3]f32) -> [3]f32 {
+    velocity := velocity
+    if did_bunny_hop {
+        velocity.y = GROUND_BUNNY_V_SPEED
+        if la.length(velocity.xz) > MIN_BUNNY_XZ_VEL {
+            velocity.xz += la.normalize(velocity.xz) * GROUND_BUNNY_H_SPEED
+        }
+    } else if ground_jumped {
+        velocity.y = P_JUMP_SPEED
+    } else if slope_jumped {
+        velocity += -la.normalize(contact_ray) * SLOPE_JUMP_FORCE
+        velocity.y = SLOPE_V_JUMP_FORCE
+    } else if wall_jumped {
+        velocity.y = P_JUMP_SPEED
+        velocity += -contact_ray * WALL_JUMP_FORCE 
+    }
+    return velocity
+}
+
 
 apply_velocity :: proc(
     contact_state: Contact_State,

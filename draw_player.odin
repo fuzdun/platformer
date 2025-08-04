@@ -31,7 +31,9 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
 
             v.pos *= (1.0 - down_alignment * 0.5)
             v.pos *= 1 + stretch_amt
-            v.pos *= 1.2
+            // v.pos *= 1.2
+        } else {
+            v.pos *= 1.5
         }
 
         if pls.contact_state.state == .ON_GROUND {
@@ -65,7 +67,7 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
     set_vec3_uniform(shs, "p_color", 1, &p_color)
     set_matrix_uniform(shs, "transform", &player_mat)
     if pls.contact_state.state == .ON_GROUND {
-        gl.LineWidth(1)
+        gl.LineWidth(2)
     } else {
         gl.LineWidth(4)
     }

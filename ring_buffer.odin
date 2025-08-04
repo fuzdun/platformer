@@ -33,3 +33,10 @@ ring_buffer_at :: proc(buffer: RingBuffer($N, $T), idx: int) -> T {
     return buffer.values[adjusted_idx % N]
 }
 
+ring_buffer_copy :: proc(buffer: RingBuffer($N, $T)) -> RingBuffer(N, T) {
+    new_ring_buffer: RingBuffer(N, T) 
+    new_ring_buffer.values = buffer.values
+    new_ring_buffer.insert_at = buffer.insert_at
+    return new_ring_buffer
+}
+
