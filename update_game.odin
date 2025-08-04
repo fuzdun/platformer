@@ -20,9 +20,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     pls.trail_sample = {ring_buffer_at(pls.trail, -4), ring_buffer_at(pls.trail, -8), ring_buffer_at(pls.trail, -12)}
 
     move_spd := P_ACCEL
-    if pls.state == .ON_SLOPE {
+    if pls.contact_state.state == .ON_SLOPE {
         move_spd = SLOPE_SPEED 
-    } else if pls.state == .IN_AIR {
+    } else if pls.contact_state.state == .IN_AIR {
         move_spd = AIR_SPEED
     }
 
@@ -40,9 +40,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     got_dir_input := is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
 
     // adjust velocity along air or ground axes
-    grounded := pls.state == .ON_GROUND || pls.state == .ON_SLOPE
-    right_vec := grounded ? pls.ground_x : [3]f32{1, 0, 0}
-    fwd_vec := grounded ? pls.ground_z : [3]f32{0, 0, -1}
+    grounded := pls.contact_state.state == .ON_GROUND || pls.contact_state.state == .ON_SLOPE
+    right_vec := grounded ? pls.contact_state.ground_x : [3]f32{1, 0, 0}
+    fwd_vec := grounded ? pls.contact_state.ground_z : [3]f32{0, 0, -1}
     if is.left_pressed {
        pls.velocity -= move_spd * delta_time * right_vec
     }
@@ -73,22 +73,22 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     pls.velocity.y = math.clamp(pls.velocity.y, -MAX_FALL_SPEED, MAX_FALL_SPEED)
 
     // apply ground friction
-    if pls.state == .ON_GROUND && !got_dir_input {
+    if pls.contact_state.state == .ON_GROUND && !got_dir_input {
         pls.velocity *= math.pow(GROUND_FRICTION, delta_time)
     }
 
     // apply gravity
-    if pls.state != .ON_GROUND {
+    if pls.contact_state.state != .ON_GROUND {
         down: [3]f32 = {0, -1, 0}
-        norm_contact := la.normalize(pls.contact_ray)
+        norm_contact := la.normalize(pls.contact_state.contact_ray)
         grav_force := GRAV
-        if pls.state == .ON_SLOPE {
+        if pls.contact_state.state == .ON_SLOPE {
             grav_force = SLOPE_GRAV
         }
-        if pls.state == .ON_WALL {
+        if pls.contact_state.state == .ON_WALL {
             grav_force = WALL_GRAV
         }
-        if pls.state == .ON_WALL || pls.state == .ON_SLOPE {
+        if pls.contact_state.state == .ON_WALL || pls.contact_state.state == .ON_SLOPE {
             down -= la.dot(norm_contact, down) * norm_contact
         }
         pls.velocity += down * grav_force * delta_time
@@ -96,11 +96,11 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     // bunny hop
     can_bunny_hop := f32(elapsed_time) - pls.last_dash > BUNNY_DASH_DEBOUNCE
-    got_bunny_hop_input := pls.state != .IN_AIR && math.abs(pls.touch_time - pls.jump_pressed_time) < BUNNY_WINDOW
+    got_bunny_hop_input := pls.contact_state.state != .IN_AIR && math.abs(pls.contact_state.touch_time - pls.jump_pressed_time) < BUNNY_WINDOW
     if got_bunny_hop_input && can_bunny_hop {
         pls.can_press_dash = true
         // pls.bunny_hop_y = pls.position.y
-        pls.state = .IN_AIR
+        pls.contact_state.state = .IN_AIR
         pls.velocity.y = GROUND_BUNNY_V_SPEED
         if la.length(pls.velocity.xz) > MIN_BUNNY_XZ_VEL {
             pls.velocity.xz += la.normalize(pls.velocity.xz) * GROUND_BUNNY_H_SPEED
@@ -119,26 +119,26 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     // check for jump
     pressed_jump := is.z_pressed && pls.can_press_jump
-    ground_jumped := pressed_jump && (pls.state == .ON_GROUND || (f32(elapsed_time) - pls.left_ground < COYOTE_TIME))
-    slope_jumped := pressed_jump && (pls.state == .ON_SLOPE || (f32(elapsed_time) - pls.left_slope < COYOTE_TIME))
-    wall_jumped := pressed_jump && (pls.state == .ON_WALL || (f32(elapsed_time) - pls.left_wall < COYOTE_TIME))
+    ground_jumped := pressed_jump && (pls.contact_state.state == .ON_GROUND || (f32(elapsed_time) - pls.contact_state.left_ground < COYOTE_TIME))
+    slope_jumped := pressed_jump && (pls.contact_state.state == .ON_SLOPE || (f32(elapsed_time) - pls.contact_state.left_slope < COYOTE_TIME))
+    wall_jumped := pressed_jump && (pls.contact_state.state == .ON_WALL || (f32(elapsed_time) - pls.contact_state.left_wall < COYOTE_TIME))
 
     // handle normal jump
     if ground_jumped {
         pls.velocity.y = P_JUMP_SPEED
-        pls.state = .IN_AIR
+        pls.contact_state.state = .IN_AIR
 
     // handle slope jump
     } else if slope_jumped {
-        pls.velocity += -la.normalize(pls.contact_ray) * SLOPE_JUMP_FORCE
+        pls.velocity += -la.normalize(pls.contact_state.contact_ray) * SLOPE_JUMP_FORCE
         pls.velocity.y = SLOPE_V_JUMP_FORCE
-        pls.state = .IN_AIR
+        pls.contact_state.state = .IN_AIR
 
     // handle wall jump
     } else if wall_jumped {
         pls.velocity.y = P_JUMP_SPEED
-        pls.velocity += -pls.contact_ray * WALL_JUMP_FORCE 
-        pls.state = .IN_AIR
+        pls.velocity += -pls.contact_state.contact_ray * WALL_JUMP_FORCE 
+        pls.contact_state.state = .IN_AIR
     }
 
     // set target particle displacement on jump
@@ -149,7 +149,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     // lerp current particle displacement toward target particle displacement
     pls.particle_displacement = la.lerp(pls.particle_displacement, pls.tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
-    if !(pls.state == .ON_GROUND) {
+    if !(pls.contact_state.state == .ON_GROUND) {
         pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, pls.velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
     } else {
         pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, [3]f32{0, 0, 0}, TGT_PARTICLE_DISPLACEMENT_LERP)
@@ -168,7 +168,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     }
 
     //end dash
-    hit_surface := pls.state == .ON_WALL || grounded
+    hit_surface := pls.contact_state.state == .ON_WALL || grounded
     dash_expired := f32(elapsed_time) > pls.dash_time + DASH_LEN
     if pls.dashing && (hit_surface || dash_expired){
         pls.dash_end_time = f32(elapsed_time)
@@ -201,14 +201,14 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     // debounce jump/dash input
     if !pls.can_press_jump {
-        pls.can_press_jump = !is.z_pressed && grounded || pls.state == .ON_WALL
+        pls.can_press_jump = !is.z_pressed && grounded || pls.contact_state.state == .ON_WALL
     }
     if !pls.can_press_dash {
-        pls.can_press_dash = !is.x_pressed && pls.state == .ON_GROUND
+        pls.can_press_dash = !is.x_pressed && pls.contact_state.state == .ON_GROUND
     }
 
     // lerp spike compression
-    if pls.state == .ON_GROUND {
+    if pls.contact_state.state == .ON_GROUND {
         pls.spike_compression = math.lerp(pls.spike_compression, 0.35, 0.15) 
     } else {
         pls.spike_compression = math.lerp(pls.spike_compression, 1.1, 0.15) 
@@ -230,212 +230,40 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // ========================================
     // APPLY PLAYER VELOCITY, HANDLE COLLISIONS
     // ========================================
-    init_velocity_len := la.length(pls.velocity)
-    remaining_vel := init_velocity_len * delta_time
-    velocity_normal := la.normalize(pls.velocity)
-    // collisions := make([dynamic]Collision); defer delete(collisions)
-    // got_contact := false
+    new_contact_state, new_position, new_velocity, collision_ids := apply_velocity(
+        pls.contact_state,
+        pls.position,
+        pls.velocity,
+        lgs.entities[:],
+        phs.level_colliders,
+        phs.static_collider_vertices,
+        elapsed_time,
+        delta_time
+    );
+    defer delete(collision_ids)
 
-    // inline func ========
-    get_collisions :: proc(
-        lgs: Level_Geometry_State,
-        pls: Player_State,
-        phs: Physics_State,
-        et: f32,
-        dt: f32,
-    ) -> (collisions: [dynamic]Collision, got_contact: bool) {
-        collisions = make([dynamic]Collision)
-        got_contact = false
-        player_velocity := pls.velocity * dt
-        player_velocity_len := la.length(player_velocity)
-        player_velocity_normal := la.normalize(player_velocity)
-        ppos_end := pls.position + player_velocity
-
-        transformed_coll_vertices := phs.static_collider_vertices
-        tv_offset := 0
-
-        filter: Level_Geometry_Attributes = { .Collider, .Transform }
-        for lg, id in lgs.entities {
-            coll := phs.level_colliders[lg.collider] 
-            if lg.crack_time == 0 || et < lg.crack_time + BREAK_DELAY {
-                if filter <= lg.attributes {
-                    if sphere_aabb_collision(pls.position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
-                        vertices := transformed_coll_vertices[tv_offset:tv_offset + len(coll.vertices)] 
-                        l := len(coll.indices)
-                        for i := 0; i <= l - 3; i += 3 {
-                            t0 := vertices[coll.indices[i]]
-                            t1 := vertices[coll.indices[i+1]]
-                            t2 := vertices[coll.indices[i+2]]
-                            did_collide, t, normal, contact := player_lg_collision(
-                                pls.position,
-                                PLAYER_SPHERE_RADIUS,
-                                t0, t1, t2,
-                                player_velocity,
-                                player_velocity_len,
-                                player_velocity_normal,
-                                ppos_end,
-                                pls.contact_ray,
-                                GROUNDED_RADIUS2
-                            )
-                            if did_collide {
-                                append(&collisions, Collision{id, normal, t})
-                            }
-                            got_contact = got_contact || contact
-                        }
-                    }
-                }         
-            }
-            tv_offset += len(coll.vertices)
-        }
-        return
-    }
-    
-    pls.anim_angle = math.lerp(pls.anim_angle, math.atan2(pls.velocity.x, -pls.velocity.z), f32(0.1))
-
-    updated_contact_state :: proc(state: Player_States, collisions: []Collision, et: f32, got_contact: bool, best_plane_normal: [3]f32) -> Player_States {
-        if !got_contact && (state == .ON_GROUND || state == .ON_WALL || state == .ON_SLOPE){
-            return .IN_AIR
-        }
-        if best_plane_normal.y >= 0.85 && best_plane_normal.y < 100.0 {
-            return .ON_GROUND
-        } else if .2 <= best_plane_normal.y && best_plane_normal.y < .85 {
-            return .ON_SLOPE
-        } else if best_plane_normal.y < .2 && state != .ON_GROUND {
-            return .ON_WALL
-        }
-        return state
-    }
-
-    updated_left_ground :: proc(state: Player_States, left_ground: f32, elapsed_time: f32) -> f32 {
-        if state == .ON_GROUND {
-            return elapsed_time
-        }
-        return left_ground 
-    }
-
-    updated_left_wall :: proc(state: Player_States, left_wall: f32, elapsed_time: f32) -> f32 {
-        if state == .ON_WALL {
-            return elapsed_time
-        }
-        return left_wall
-    }
-
-    updated_left_slope :: proc(state: Player_States, left_slope: f32, elapsed_time: f32) -> f32 {
-        if state == .ON_SLOPE {
-            return elapsed_time
-        }
-        return left_slope 
-    }
-
-    updated_touch_time :: proc(state: Player_States, old_state: Player_States, touch_time: f32, elapsed_time: f32) -> f32 {
-        if state != old_state {
-            return elapsed_time
-        }
-        return touch_time 
-    }
-
-    updated_contact_ray :: proc(contact_ray: [3]f32, best_plane_normal: [3]f32) -> [3]f32 {
-        if best_plane_normal.y < 100.0 {
-            return -best_plane_normal * GROUND_RAY_LEN
-        }
-        return contact_ray
-    }
-
-    updated_ground_move_dirs :: proc(state: Player_States, ground_x: [3]f32, ground_z: [3]f32, best_plane_normal: [3]f32) -> (x: [3]f32, z: [3]f32) {
-        if best_plane_normal.y < 100 && (state == .ON_GROUND || state == .ON_SLOPE) {
-            x = [3]f32{1, 0, 0}
-            z = [3]f32{0, 0, -1}
-            x = la.normalize(x - la.dot(x, best_plane_normal) * best_plane_normal)
-            z = la.normalize(z - la.dot(z, best_plane_normal) * best_plane_normal)
-            return
-        }
-        return ground_x, ground_z
-    }
-
-    update_player_contact_state :: proc(pls: Player_State, collisions: []Collision, got_contact: bool, elapsed_time: f32) -> Player_State {
-        pls := pls
-        best_plane_normal: [3]f32 = {100, 100, 100}
-        for coll in collisions {
-            if abs(coll.normal.y) < best_plane_normal.y {
-                best_plane_normal = coll.normal
-            }
-        }
-        old_contact_state := pls.state
-        pls.state                  = updated_contact_state(pls.state, collisions[:], elapsed_time, got_contact, best_plane_normal)
-        pls.touch_time             = updated_touch_time(pls.state, old_contact_state, pls.touch_time, elapsed_time)
-        pls.left_ground            = updated_left_ground(pls.state, pls.left_ground, elapsed_time)
-        pls.left_slope             = updated_left_slope(pls.state, pls.left_slope, elapsed_time)
-        pls.left_wall              = updated_left_wall(pls.state, pls.left_wall, elapsed_time)
-        pls.contact_ray            = updated_contact_ray(pls.contact_ray, best_plane_normal)
-        pls.ground_x, pls.ground_z = updated_ground_move_dirs(pls.state, pls.ground_x, pls.ground_z, best_plane_normal)
-        return pls
-    }
-
-    collisions, got_contact := get_collisions(lgs^, pls^, phs, elapsed_time, delta_time)
-    defer delete(collisions)
-    pls^ = update_player_contact_state(pls^, collisions[:], got_contact, elapsed_time)
-
-    for collision in collisions {
-        lg := &lgs.entities[collision.id]
-        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.crack_time
-    }
-
-    if remaining_vel > 0 {
-        loops := 0
-        for len(collisions) > 0 && loops < 10 {
-            loops += 1
-            earliest_coll_t: f32 = 1.1
-            earliest_coll_idx := -1
-            for coll, idx in collisions {
-                if coll.t < earliest_coll_t {
-                    earliest_coll_idx = idx
-                    earliest_coll_t = coll.t
-                }
-            }
-            earliest_coll := collisions[earliest_coll_idx]
-            pls.position += (remaining_vel * (earliest_coll_t) - .01) * velocity_normal
-            remaining_vel *= 1.0 - earliest_coll_t
-            velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
-            pls.velocity = (velocity_normal * remaining_vel) / delta_time
-
-            delete(collisions)
-            collisions, got_contact = get_collisions(lgs^, pls^, phs, elapsed_time, delta_time)
-            pls^ = update_player_contact_state(pls^, collisions[:], got_contact, elapsed_time)
-
-        }
-        pls.position += velocity_normal * remaining_vel
-        pls.velocity = velocity_normal * init_velocity_len
-    }
-
-    // update camera
-    cs.prev_position = cs.position
-    cs.prev_target = cs.target
-    ppos := pls.position
     if pls.dashing {
         dash_t := (f32(elapsed_time) - pls.dash_time) / DASH_LEN
         dash_delta := pls.dash_end_pos - pls.dash_start_pos
-        ppos = pls.dash_start_pos + dash_delta * dash_t
-    }
-    tgt_y := ppos.y + CAMERA_PLAYER_Y_OFFSET
-    tgt_z := ppos.z + CAMERA_PLAYER_Z_OFFSET
-    tgt_x := ppos.x + CAMERA_PLAYER_X_OFFSET
-    tgt : [3]f32 = {tgt_x, tgt_y, tgt_z}
-    cs.position = math.lerp(cs.position, tgt, f32(CAMERA_POS_LERP))
-    // cs.position = {0, 100, 30}
-    cs.target.x = math.lerp(cs.target.x, ppos.x, f32(CAMERA_X_LERP))
-    cs.target.y = math.lerp(cs.target.y, ppos.y, f32(CAMERA_Y_LERP))
-    cs.target.z = math.lerp(cs.target.z, ppos.z, f32(CAMERA_Z_LERP))
-
-    idx := 0
-    for _ in 0..<len(pls.crunch_pts) {
-        cpt := pls.crunch_pts[idx]
-        if elapsed_time - cpt[3] > 3000 {
-            ordered_remove(&pls.crunch_pts, idx) 
-        } else {
-            idx += 1
-        }
+        new_position = pls.dash_start_pos + dash_delta * dash_t
     }
 
+    pls.contact_state = new_contact_state
+    pls.position = new_position
+    pls.velocity = new_velocity
+
+    cs^ = updated_camera_state(cs^, pls.position)
+
+    new_crunch_pts := updated_crunch_pts(pls.crunch_pts[:], elapsed_time)
+    delete(pls.crunch_pts)
+    pls.crunch_pts = new_crunch_pts
+
+    pls.anim_angle = math.lerp(pls.anim_angle, math.atan2(pls.velocity.x, -pls.velocity.z), f32(0.1))
+
+    for id in collision_ids {
+        lg := &lgs.entities[id]
+        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.crack_time
+    }
 
     // ts := updated_time_state(pls^, ts^, elapsed_time)
 }

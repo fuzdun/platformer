@@ -127,12 +127,12 @@ main :: proc () {
     add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices)
 
     // init player state
-    pls.state = .IN_AIR
+    pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
     pls.can_press_dash = true
     pls.can_press_jump = false
-    pls.ground_x = {1, 0, 0}
-    pls.ground_z = {0, 0, -1}
+    pls.contact_state.ground_x = {1, 0, 0}
+    pls.contact_state.ground_z = {0, 0, -1}
     pls.spike_compression = 1.0
     pls.crunch_time = -10000.0;
     pls.crunch_pts = make([dynamic][4]f32); defer delete(pls.crunch_pts)
@@ -197,7 +197,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 

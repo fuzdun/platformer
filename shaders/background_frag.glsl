@@ -110,7 +110,7 @@ void main() {
         vec4 this_col = vec4(tonemap(abs(sin(vec3(1.0, 0.0, -2.8) + diffusion * vec3(20.0, 0.0, 4.8)))), 1.0);
         float mix_fact = clamp(diffusion * diffusion * 0.5 + 0.5 + et / 3000.0, 0, 1);
         col = mix(this_col, col, mix_fact);
-        col = clamp(col, 0, .5);
+        col = clamp(col, 0.0, .5);
     }
     fragColor = col;
     
