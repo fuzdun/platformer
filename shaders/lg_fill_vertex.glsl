@@ -27,6 +27,12 @@ layout (std140, binding = 2) uniform Player_Pos
     vec3 player_pos;
 };
 
+layout (std140, binding = 3) uniform Tessellation
+{
+    float inner_amt;
+    float outer_amt;
+};
+
 out VS_OUT {
     vec2 uv;
     vec3 normal_frag;
@@ -35,7 +41,8 @@ out VS_OUT {
     float plane_dist;
     vec3 pos;
     float crack_time;
-    float tess_amt;
+    float outer_tess_amt;
+    float inner_tess_amt;
 } vs_out;
 
 
@@ -48,10 +55,11 @@ void main() {
     vs_out.obj_pos = vec4(transform[3][0], transform[3][1], transform[3][2], 1.0);
     vs_out.uv = vertexUV;
     vs_out.normal_frag = rot_normal;
-    vs_out.player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 30 - new_pos.z);;
+    vs_out.player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
     vs_out.plane_dist = dot((transform * aPos).xyz, rot_normal);
     vs_out.pos = vec3(transform * aPos);
     vs_out.crack_time = crack_time_data[gl_BaseInstance + gl_InstanceID];
-    vs_out.tess_amt = 12;
+    vs_out.outer_tess_amt = outer_amt;
+    vs_out.inner_tess_amt = inner_amt;
 }
 

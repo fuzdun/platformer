@@ -103,6 +103,10 @@ draw :: proc(
         dash_end_time = pls.dash_end_time,
         constrain_dir = la.normalize0(pls.dash_dir)
     }
+    tess_ubo : Tess_Ubo = {
+        inner_amt = INNER_TESSELLATION_AMT,
+        outer_amt = OUTER_TESSELLATION_AMT
+    }
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.common_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Common_Ubo), &common_ubo)
@@ -110,6 +114,8 @@ draw :: proc(
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Dash_Ubo), &dash_ubo)
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.ppos_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(glm.vec3), &i_ppos[0])
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.tess_ubo)
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Tess_Ubo), &tess_ubo)
 
     // get axes for text and particle quad alignment
     camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
@@ -162,10 +168,12 @@ draw :: proc(
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
 
+        // draw background
         gl.Enable(gl.BLEND)
         gl.Disable(gl.DEPTH_TEST)
         use_shader(shs, rs, .Background)
         if len(pls.crunch_pts) > 0 {
+            // fmt.println(pls.crunch_pts)
             cpts := pls.crunch_pts[:]
             set_vec4_uniform(shs, "crunch_pts", i32(len(pls.crunch_pts)), &cpts[0])
         }

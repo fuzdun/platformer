@@ -269,6 +269,8 @@ main :: proc () {
     gl.GenBuffers(1, &rs.common_ubo)
     gl.GenBuffers(1, &rs.dash_ubo)
     gl.GenBuffers(1, &rs.ppos_ubo)
+    gl.GenBuffers(1, &rs.tess_ubo)
+
     gl.GenBuffers(1, &rs.particle_vbo)
     gl.GenBuffers(1, &rs.particle_pos_vbo)
     gl.GenBuffers(1, &rs.background_vbo)
@@ -357,6 +359,10 @@ main :: proc () {
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.ppos_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec4), nil, gl.STATIC_DRAW)
     gl.BindBufferRange(gl.UNIFORM_BUFFER, 2, rs.ppos_ubo, 0, size_of(glm.vec4))
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.tess_ubo)
+    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Tess_Ubo), nil, gl.STATIC_DRAW)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 3, rs.tess_ubo, 0, size_of(Tess_Ubo))
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 

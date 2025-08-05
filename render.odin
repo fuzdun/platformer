@@ -12,6 +12,9 @@ import rand "core:math/rand"
 
 //UBO_VEC3_SIZE :: size_of(glm.vec4)
 
+OUTER_TESSELLATION_AMT :: 6.0
+INNER_TESSELLATION_AMT :: 4.0
+
 I_MAT :: glm.mat4(1.0)
 
 SHAPE :: enum {
@@ -86,6 +89,7 @@ Render_State :: struct {
     common_ubo: u32,
     dash_ubo: u32,
     ppos_ubo: u32,
+    tess_ubo: u32,
 
     dither_tex: u32,
 
@@ -160,6 +164,11 @@ Dash_Ubo :: struct {
     dash_time: f32,
     dash_end_time: f32,
     constrain_dir: glm.vec3,
+}
+
+Tess_Ubo :: struct {
+    inner_amt: f32,
+    outer_amt: f32
 }
 
 Render_Groups :: [Level_Geometry_Render_Type][dynamic]gl.DrawElementsIndirectCommand 

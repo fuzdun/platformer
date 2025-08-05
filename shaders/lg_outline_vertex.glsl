@@ -45,7 +45,7 @@ void main() {
     vs_out.cracked = (crack_time != 0 && i_time > crack_time) ? 1 : 0;
     vs_out.obj_pos = vec3(transform[3][0], transform[3][1], transform[3][2]);
     vec4 new_pos = transform * aPos;
-    vs_out.player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 30 - new_pos.z);;
+    vs_out.player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
     gl_Position = new_pos;
     vs_out.uv = vertexUV;
     vs_out.tess_amt = 12;

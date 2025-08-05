@@ -10,7 +10,8 @@ in VS_OUT {
     float plane_dist;
     vec3 pos;
     float crack_time;
-    float tess_amt;
+    float outer_tess_amt;
+    float inner_tess_amt;
 } vs_out[];
 
 out TC_OUT {
@@ -35,10 +36,10 @@ void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 
     if (gl_InvocationID == 0) {
-        gl_TessLevelOuter[0] = vs_out[0].tess_amt;
-        gl_TessLevelOuter[1] = vs_out[0].tess_amt;
-        gl_TessLevelOuter[2] = vs_out[0].tess_amt;
-        gl_TessLevelInner[0] = vs_out[0].tess_amt == 1 ? 1 : vs_out[0].tess_amt - 3;
+        gl_TessLevelOuter[0] = vs_out[0].outer_tess_amt;
+        gl_TessLevelOuter[1] = vs_out[0].outer_tess_amt;
+        gl_TessLevelOuter[2] = vs_out[0].outer_tess_amt;
+        gl_TessLevelInner[0] = vs_out[0].inner_tess_amt;
     }
 }
 
