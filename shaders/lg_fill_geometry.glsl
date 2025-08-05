@@ -104,8 +104,9 @@ void main() {
     float dist_fact = max(0, min(1, offset_dist / interval));
     vec4 avg_pos = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
 
-    vec4 disp = ASSEMBLE ? (avg_pos - te_out[0].obj_pos) * easeOutCubic(easeInCubic(dist_fact)) * 2.5 : vec4(0);
-    disp.z *= 0.75;
+    // vec4 disp = ASSEMBLE ? (avg_pos - te_out[0].obj_pos) * easeOutCubic(easeInCubic(dist_fact)) * 2.5 : vec4(0);
+    vec4 disp = ASSEMBLE ? (avg_pos - te_out[0].obj_pos) * easeOutCubic(easeInCubic(dist_fact)) * -0.5 : vec4(0);
+    // disp.z *= 0.75;
     vec4 new_avg = avg_pos + disp;
 
     t0_pos = te_out[0].t0_pos;

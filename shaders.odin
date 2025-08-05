@@ -47,8 +47,8 @@ ProgramName :: enum {
 
 PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Level_Geometry_Outline = {
-        pipeline = {"lg_outline_vertex", "lg_outline_frag"},
-        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        pipeline = {"lg_outline_vertex", "lg_outline_tessctrl", "lg_outline_tesseval", "lg_outline_geometry", "lg_outline_frag"},
+        shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
         uniforms = {}
     },
     .Level_Geometry_Fill = {
