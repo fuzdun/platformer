@@ -59,7 +59,7 @@ draw :: proc(
         count := u32(next_off - g_off)
         if count == 0 do continue
         shape := SHAPE(idx % len(SHAPE))
-        render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(Level_Geometry_Render_Type))))
+        render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(SHAPE))))
         sd := sr[shape] 
         command: gl.DrawElementsIndirectCommand = {
             u32(len(sd.indices)),
@@ -103,6 +103,12 @@ draw :: proc(
         dash_end_time = pls.dash_end_time,
         constrain_dir = la.normalize0(pls.dash_dir)
     }
+    tess_ubo : Tess_Ubo = {
+        inner_tess = INNER_TESSELLATION_AMT,
+        outer_tess = OUTER_TESSELLATION_AMT,
+        vertices_count = TESSELLATED_VERTICES_COUNT
+    }
+    fmt.println(TESSELLATED_VERTICES_COUNT)
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.common_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Common_Ubo), &common_ubo)
@@ -110,6 +116,8 @@ draw :: proc(
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Dash_Ubo), &dash_ubo)
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.ppos_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(glm.vec3), &i_ppos[0])
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.tess_ubo)
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Tess_Ubo), &tess_ubo)
 
     // get axes for text and particle quad alignment
     camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
@@ -160,6 +168,12 @@ draw :: proc(
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+        geometry_count := 0
+        for obj in lg_render_groups[.Standard] {
+            geometry_count += int(obj.instanceCount)
+        }
+
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
 
         gl.Enable(gl.BLEND)

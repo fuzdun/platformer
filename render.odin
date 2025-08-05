@@ -12,6 +12,10 @@ import rand "core:math/rand"
 
 //UBO_VEC3_SIZE :: size_of(glm.vec4)
 
+OUTER_TESSELLATION_AMT :: 12
+INNER_TESSELLATION_AMT :: 9
+TESSELLATED_VERTICES_COUNT := tessellated_vertices_count(INNER_TESSELLATION_AMT, OUTER_TESSELLATION_AMT, OUTER_TESSELLATION_AMT, OUTER_TESSELLATION_AMT)
+
 I_MAT :: glm.mat4(1.0)
 
 SHAPE :: enum {
@@ -86,6 +90,7 @@ Render_State :: struct {
     common_ubo: u32,
     dash_ubo: u32,
     ppos_ubo: u32,
+    tess_ubo: u32,
 
     dither_tex: u32,
 
@@ -160,6 +165,12 @@ Dash_Ubo :: struct {
     dash_time: f32,
     dash_end_time: f32,
     constrain_dir: glm.vec3,
+}
+
+Tess_Ubo :: struct {
+    outer_tess: i32,
+    inner_tess: int,
+    vertices_count: int 
 }
 
 Render_Groups :: [Level_Geometry_Render_Type][dynamic]gl.DrawElementsIndirectCommand 
@@ -256,6 +267,16 @@ counts_to_offsets :: proc(arr: []int) {
     #reverse for &val, idx in arr {
         val = idx == 0 ? 0 : arr[idx - 1]
     }
+}
+
+tessellated_vertices_count :: proc(il: int, ol0: int, ol1: int, ol2: int) -> int {
+    inner_vertices := 0
+    if il % 2 != 0 {
+        inner_vertices = (il - 1) * (il - 1) * 3 / 4
+    } else {
+        inner_vertices = 3 * ((il / 2) * (il / 2) - il / 2) + 1
+    }
+    return inner_vertices + ol0 + ol1 + ol2
 }
 
 

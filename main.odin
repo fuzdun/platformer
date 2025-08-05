@@ -262,18 +262,22 @@ main :: proc () {
     gl.GenBuffers(1, &rs.player_fill_ebo)
     gl.GenBuffers(1, &rs.player_outline_ebo)
     gl.GenBuffers(1, &rs.indirect_buffer)
-    gl.GenBuffers(1, &rs.transforms_ssbo)
 
+    gl.GenBuffers(1, &rs.transforms_ssbo)
     gl.GenBuffers(1, &rs.z_widths_ssbo)
     gl.GenBuffers(1, &rs.crack_time_ssbo)
+
     gl.GenBuffers(1, &rs.common_ubo)
     gl.GenBuffers(1, &rs.dash_ubo)
     gl.GenBuffers(1, &rs.ppos_ubo)
+    gl.GenBuffers(1, &rs.tess_ubo)
+
     gl.GenBuffers(1, &rs.particle_vbo)
     gl.GenBuffers(1, &rs.particle_pos_vbo)
     gl.GenBuffers(1, &rs.background_vbo)
     gl.GenBuffers(1, &rs.text_vbo)
     gl.GenBuffers(1, &rs.editor_lines_vbo)
+
     gl.GenVertexArrays(1, &rs.standard_vao)
     gl.GenVertexArrays(1, &rs.particle_vao)
     gl.GenVertexArrays(1, &rs.background_vao)
@@ -357,6 +361,10 @@ main :: proc () {
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.ppos_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec4), nil, gl.STATIC_DRAW)
     gl.BindBufferRange(gl.UNIFORM_BUFFER, 2, rs.ppos_ubo, 0, size_of(glm.vec4))
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.tess_ubo)
+    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Tess_Ubo), nil, gl.STATIC_DRAW)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 3, rs.tess_ubo, 0, size_of(Tess_Ubo))
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 

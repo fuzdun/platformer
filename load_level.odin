@@ -44,8 +44,8 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
 
     if PERF_TEST {
         // perf test load======================
-        loaded_level_geometry = make([]Level_Geometry, 1000)
-        for i in 0..< 1000 {
+        loaded_level_geometry = make([]Level_Geometry, 10)
+        for i in 0..< 10 {
             rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
             lg: Level_Geometry
             lg.shape = .CUBE
@@ -53,7 +53,7 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
 
             x := f32(i % 10)
             y := math.floor(f32(i) / 4)
-            lg.transform = {{x * 120, y * 1 - 80, y * -45 + 200},{40, 40, 40}, rot}
+            lg.transform = {{x * 120, y * 1 - 80, y * -45},{40, 40, 40}, rot}
             lg.render_type = .Standard
             lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
 

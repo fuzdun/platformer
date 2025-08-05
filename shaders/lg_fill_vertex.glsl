@@ -27,6 +27,12 @@ layout (std140, binding = 2) uniform Player_Pos
     vec3 player_pos;
 };
 
+layout (std140, binding = 3) uniform Tessellation
+{
+    int outer_tess;
+    int inner_tess;
+};
+
 out VS_OUT {
     vec2 uv;
     vec3 normal_frag;
