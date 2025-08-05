@@ -71,7 +71,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         pls.last_dash = f32(elapsed_time)
 
         bg_crunch_pt := cs.position + la.normalize0(pls.position - cs.position) * 10000.0;
-        append(&pls.crunch_pts, [4]f32{bg_crunch_pt.x, bg_crunch_pt.y, bg_crunch_pt.z, pls.crunch_time})
+        append(&pls.crunch_pts, [4]f32{bg_crunch_pt.x, bg_crunch_pt.y, bg_crunch_pt.z, new_crunch_time})
         proj_mat :=  construct_camera_matrix(cs)
         proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{new_crunch_pt.x, new_crunch_pt.y, new_crunch_pt.z, 1})
         pls.screen_crunch_pt = ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
@@ -201,8 +201,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     cs^ = updated_camera_state(cs^, new_position)
 
     new_crunch_pts := updated_crunch_pts(pls.crunch_pts[:], elapsed_time)
-    delete(pls.crunch_pts)
-    pls.crunch_pts = new_crunch_pts
 
     pls.anim_angle = math.lerp(pls.anim_angle, math.atan2(new_velocity.x, -new_velocity.z), f32(0.1))
 
@@ -225,6 +223,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     pls.can_press_dash = can_press_dash
     pls.crunch_pt = new_crunch_pt
     pls.crunch_time = new_crunch_time
+    dynamic_array_swap(&pls.crunch_pts, &new_crunch_pts)
 
     // ts := updated_time_state(pls^, ts^, elapsed_time)
 }
