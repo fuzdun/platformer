@@ -30,8 +30,8 @@ updated_crunch_pt :: proc(player_position: [3]f32, crunch_pt: [3]f32, did_bunny_
     return did_bunny_hop ? player_position : crunch_pt
 }
 
-updated_can_press_dash :: proc(last_dash: f32, did_dash: bool, can_press_dash: bool, contact_state: Contact_State, is: Input_State, jump_pressed_time: f32, elapsed_time: f32) -> bool {
-    can_bunny_hop := f32(elapsed_time) - last_dash > BUNNY_DASH_DEBOUNCE
+updated_can_press_dash :: proc(dash_hop_debouce_t: f32, did_dash: bool, can_press_dash: bool, contact_state: Contact_State, is: Input_State, jump_pressed_time: f32, elapsed_time: f32) -> bool {
+    can_bunny_hop := f32(elapsed_time) - dash_hop_debouce_t > BUNNY_DASH_DEBOUNCE
     got_bunny_hop_input := contact_state.state != .IN_AIR && math.abs(contact_state.touch_time - jump_pressed_time) < BUNNY_WINDOW
     pressed_dash := is.x_pressed && can_press_dash
     if got_bunny_hop_input && can_bunny_hop {
@@ -44,6 +44,75 @@ updated_can_press_dash :: proc(last_dash: f32, did_dash: bool, can_press_dash: b
         return !is.x_pressed && contact_state.state == .ON_GROUND
     } 
     return true
+}
+
+updated_dashing :: proc(dashing: bool, did_dash: bool, state: Player_States, dash_time: f32, elapsed_time: f32) -> bool {
+  if did_dash {
+    return true
+  }
+
+  if state == .ON_WALL || state == .ON_SLOPE || state == .ON_GROUND || f32(elapsed_time) > dash_time + DASH_LEN {
+    return false 
+  }
+  return dashing
+}
+
+
+apply_dash_to_position :: proc(position: [3]f32, dash_start_pos: [3]f32, dash_end_pos: [3]f32, dashing: bool, dash_time: f32, elapsed_time: f32) -> [3]f32 {
+  if dashing {
+    dash_t := (f32(elapsed_time) - dash_time) / DASH_LEN
+    dash_delta := dash_end_pos - dash_start_pos
+    return dash_start_pos + dash_delta * dash_t
+  }
+  return position
+}
+
+apply_restart_to_position :: proc(is: Input_State, position: [3]f32) -> [3]f32 {
+  return is.r_pressed ? INIT_PLAYER_POS : position
+}
+
+
+apply_restart_to_lgs :: proc(is: Input_State, lgs: Level_Geometry_Soa) -> Level_Geometry_Soa {
+  lgs := dynamic_soa_copy(lgs)
+  if is.r_pressed {
+    for &lg in lgs {
+      lg.crack_time = 0
+    }
+  }
+  return lgs
+}
+
+apply_dash_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_time: f32) -> [3]f32 {
+  velocity := velocity
+  state := pls.contact_state.state
+  dash_expired := f32(elapsed_time) > pls.dash_state.dash_time + DASH_LEN
+  hit_surface := state == .ON_WALL || state == .ON_GROUND || state == .ON_WALL
+  if pls.dashing {
+    if hit_surface || dash_expired {
+      velocity = la.normalize(pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos) * DASH_SPD
+    } else {
+      velocity = 0
+    }
+
+  } 
+  return velocity
+}
+
+apply_restart_to_velocity :: proc(is: Input_State, velocity: [3]f32) -> [3]f32 {
+  return is.r_pressed ? {0, 0, 0} : velocity
+}
+
+
+updated_dash_state :: proc(pls: Player_State, did_dash: bool, input_dir: [2]f32, elapsed_time: f32) -> Dash_State {
+  ds := pls.dash_state
+  if did_dash {
+    ds.dash_start_pos = pls.position
+    dash_input := input_dir == 0 ? la.normalize0(pls.velocity.xz) : input_dir
+    ds.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
+    ds.dash_end_pos = pls.position + DASH_DIST * ds.dash_dir
+    ds.dash_time = f32(elapsed_time)
+  }
+  return ds
 }
 
 updated_crunch_time :: proc(did_bunny_hop: bool, crunch_time: f32, elapsed_time: f32) -> f32 {
@@ -126,8 +195,8 @@ apply_jumps_to_velocity :: proc(velocity: [3]f32, did_bunny_hop: bool, ground_ju
     return velocity
 }
 
-updated_last_dash :: proc(last_dash: f32, did_bunny_hop: bool, elapsed_time: f32) -> f32 {
-    return did_bunny_hop ? elapsed_time : last_dash 
+updated_dash_hop_debounce_t :: proc(dash_hop_debouce_t: f32, did_bunny_hop: bool, elapsed_time: f32) -> f32 {
+    return did_bunny_hop ? elapsed_time : dash_hop_debouce_t 
 }
 
 updated_screen_crunch_pt :: proc(screen_crunch_pt: [2]f32, did_bunny_hop: bool, cs: Camera_State, new_crunch_pt: [3]f32) -> [2]f32 {

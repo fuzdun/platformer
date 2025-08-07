@@ -82,10 +82,10 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
     green := [3]f32{1.0, 0.0, 1.0}
     set_vec3_uniform(shs, "color", 1, &green)
     set_float_uniform(shs, "resolution", f32(20))
-    dash_line_start := pls.dash_start_pos + pls.dash_dir * 4.5;
+    dash_line_start := pls.dash_state.dash_start_pos + pls.dash_state.dash_dir * 4.5;
     dash_line: [2]Line_Vertex = {
         {dash_line_start, 0, {1.0, 0.0, 1.0}},
-        {pls.dash_end_pos, 1, {1.0, 0.0, 1.0}}
+        {pls.dash_state.dash_end_pos, 1, {1.0, 0.0, 1.0}}
     }
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.DYNAMIC_DRAW)

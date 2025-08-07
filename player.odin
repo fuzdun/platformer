@@ -82,23 +82,21 @@ Contact_State :: struct {
     ground_z: [3]f32,
 }
 
-Player_State :: struct {
-    contact_state: Contact_State,
-    //state: Player_States,
-    //touch_time: f32,
-    //left_ground: f32,
-    //left_slope: f32,
-    //left_wall: f32,
-    //contact_ray: [3]f32,
-    //ground_x: [3]f32,
-    //ground_z: [3]f32,
-
+Dash_State :: struct {
     dash_start_pos: [3]f32,
     dash_end_pos: [3]f32,
     dash_dir: [3]f32,
+    dash_time: f32,
+    dash_end_time: f32,
+}
+
+Player_State :: struct {
+    contact_state: Contact_State,
+    dash_state: Dash_State,
+
     touch_pt: [3]f32,
     bunny_hop_y: f32,
-    last_dash: f32,
+    dash_hop_debounce_t: f32,
 
     crunch_pt: [3]f32,
     crunch_pts: [dynamic][4]f32,
@@ -112,8 +110,6 @@ Player_State :: struct {
     can_press_dash: bool,
     jump_pressed_time: f32,
     jump_held: bool,
-    dash_time: f32,
-    dash_end_time: f32,
     dashing: bool,
 
     prev_position: [3]f32,
