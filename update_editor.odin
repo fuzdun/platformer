@@ -33,7 +33,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
     rotating := is.r_pressed
     scaling := is.e_pressed
 
-    proj_mat := construct_camera_matrix(cs)
+    proj_mat := construct_camera_matrix(cs^)
     camera_right_vec: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
     camera_right_vec = la.normalize(camera_right_vec)
     camera_up_vec: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}

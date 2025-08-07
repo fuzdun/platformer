@@ -37,7 +37,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     got_dir_input := is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
 
     grounded := pls.contact_state.state == .ON_GROUND || pls.contact_state.state == .ON_SLOPE
-
+    on_surface := grounded || pls.contact_state.state == .ON_WALL
 
     new_jump_pressed_time := updated_jump_pressed_time(pls.jump_pressed_time, is, pls.jump_held, elapsed_time)
 
@@ -66,46 +66,22 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_velocity = apply_gravity_to_velocity(new_velocity, pls.contact_state, delta_time)
     new_velocity = apply_jumps_to_velocity(new_velocity, did_bunny_hop, ground_jumped, slope_jumped, wall_jumped, new_contact_state.contact_ray)
 
-    if did_bunny_hop {
-        new_contact_state.state = .IN_AIR
-        pls.last_dash = f32(elapsed_time)
-
-        bg_crunch_pt := cs.position + la.normalize0(pls.position - cs.position) * 10000.0;
-        append(&pls.crunch_pts, [4]f32{bg_crunch_pt.x, bg_crunch_pt.y, bg_crunch_pt.z, new_crunch_time})
-        proj_mat :=  construct_camera_matrix(cs)
-        proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{new_crunch_pt.x, new_crunch_pt.y, new_crunch_pt.z, 1})
-        pls.screen_crunch_pt = ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
-    }
+    new_last_dash := updated_last_dash(pls.last_dash, did_bunny_hop, elapsed_time)
+    new_screen_crunch_pt := updated_screen_crunch_pt(pls.screen_crunch_pt, did_bunny_hop, cs^, new_crunch_pt)
 
     // handle normal jump
-    if ground_jumped {
-        new_contact_state.state = .IN_AIR
+    jumped := ground_jumped || slope_jumped || wall_jumped || did_bunny_hop
 
-    // handle slope jump
-    } else if slope_jumped {
-        new_contact_state.state = .IN_AIR
+    new_contact_state.state = jumped ? .IN_AIR : new_contact_state.state
 
-    // handle wall jump
-    } else if wall_jumped {
-        new_contact_state.state = .IN_AIR
-    }
+    new_can_press_jump := updated_can_press_jump(pls.can_press_jump, jumped, is, on_surface)
 
     // set target particle displacement on jump
-    if ground_jumped || slope_jumped || wall_jumped {
-        pls.can_press_jump = false
-        pls.tgt_particle_displacement = new_velocity
-    }
-
-    // lerp current particle displacement toward target particle displacement
-    pls.particle_displacement = la.lerp(pls.particle_displacement, pls.tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
-    if !(new_contact_state.state == .ON_GROUND) {
-        pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, new_velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
-    } else {
-        pls.tgt_particle_displacement = la.lerp(pls.tgt_particle_displacement, [3]f32{0, 0, 0}, TGT_PARTICLE_DISPLACEMENT_LERP)
-    }
+    new_tgt_particle_displacement := updated_tgt_particle_displacement(jumped, pls.tgt_particle_displacement, new_velocity, pls.contact_state.state) 
 
     // start dash 
     // pressed_dash := is.x_pressed && pls.can_press_dash
+
     if did_dash {
         pls.can_press_dash = false
         pls.dashing = true
@@ -135,33 +111,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     }
 
 
-    // bunny hop time dilation
-    // if pls.state != .ON_GROUND && f32(elapsed_time) - pls.crunch_time < 1000 {
-    //     if pls.position.y > pls.bunny_hop_y {
-    //         fact := abs(new_velocity.y) / GROUND_BUNNY_V_SPEED
-    //         ts.time_mult = clamp(fact * fact * 4.5, 1.15, 1.5)
-    //     } else {
-    //         ts.time_mult = f32(math.lerp(ts.time_mult, 1, f32(0.05)))
-    //     }
-    //
-    // } else {
-    //     ts.time_mult = f32(math.lerp(ts.time_mult, 1, f32(0.05)))
-    // }
-
-    // debounce jump/dash input
-    if !pls.can_press_jump {
-        pls.can_press_jump = !is.z_pressed && grounded || new_contact_state.state == .ON_WALL
-    }
-
-    // if pressed_dash && new_velocity != 0 {
-    //     pls.can_press_dash = false
-    // }
-    //
-    // if !pls.can_press_dash {
-    //     pls.can_press_dash = !is.x_pressed && pls.contact_state.state == .ON_GROUND
-    // }
-    //
-    // handle reset level
     if is.r_pressed {
         pls.position = INIT_PLAYER_POS
         new_velocity = [3]f32 {0, 0, 0}
@@ -169,10 +118,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
             lg.crack_time = 0;
         } 
     }
-
-    pls.prev_position = pls.position
-    pls.jump_held = is.z_pressed
-
 
     // ========================================
     // APPLY PLAYER VELOCITY, HANDLE COLLISIONS
@@ -200,7 +145,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     cs^ = updated_camera_state(cs^, new_position)
 
-    new_crunch_pts := updated_crunch_pts(pls.crunch_pts[:], elapsed_time)
+    new_crunch_pts := updated_crunch_pts(pls.crunch_pts[:], elapsed_time, new_position, cs^, did_bunny_hop, new_crunch_time)
 
     pls.anim_angle = math.lerp(pls.anim_angle, math.atan2(new_velocity.x, -new_velocity.z), f32(0.1))
 
@@ -223,6 +168,16 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     pls.can_press_dash = can_press_dash
     pls.crunch_pt = new_crunch_pt
     pls.crunch_time = new_crunch_time
+    pls.last_dash = new_last_dash
+    pls.screen_crunch_pt = new_screen_crunch_pt
+    pls.can_press_jump = new_can_press_jump
+    pls.tgt_particle_displacement = new_tgt_particle_displacement
+    pls.particle_displacement = la.lerp(pls.particle_displacement, new_tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
+    pls.prev_position = pls.position
+    pls.jump_held = is.z_pressed
+
+
+
     dynamic_array_swap(&pls.crunch_pts, &new_crunch_pts)
 
     // ts := updated_time_state(pls^, ts^, elapsed_time)
