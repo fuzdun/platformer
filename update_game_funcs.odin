@@ -30,41 +30,46 @@ updated_crunch_pt :: proc(player_position: [3]f32, crunch_pt: [3]f32, did_bunny_
     return did_bunny_hop ? player_position : crunch_pt
 }
 
-updated_can_press_dash :: proc(dash_hop_debouce_t: f32, did_dash: bool, can_press_dash: bool, contact_state: Contact_State, is: Input_State, jump_pressed_time: f32, elapsed_time: f32) -> bool {
-    can_bunny_hop := f32(elapsed_time) - dash_hop_debouce_t > BUNNY_DASH_DEBOUNCE
-    got_bunny_hop_input := contact_state.state != .IN_AIR && math.abs(contact_state.touch_time - jump_pressed_time) < BUNNY_WINDOW
-    pressed_dash := is.x_pressed && can_press_dash
+updated_can_press_dash :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
+    contact_state := pls.contact_state
+    can_bunny_hop := f32(elapsed_time) - pls.dash_hop_debounce_t > BUNNY_DASH_DEBOUNCE
+    got_bunny_hop_input := contact_state.state != .IN_AIR && math.abs(contact_state.touch_time - pls.jump_pressed_time) < BUNNY_WINDOW
+    pressed_dash := is.x_pressed && pls.can_press_dash
     if got_bunny_hop_input && can_bunny_hop {
         return true
     } 
-    if did_dash {
+    if did_dash(is, pls) {
         return false
     }
-    if !can_press_dash {
+    if !pls.can_press_dash {
         return !is.x_pressed && contact_state.state == .ON_GROUND
     } 
     return true
 }
 
-updated_dashing :: proc(dashing: bool, did_dash: bool, state: Player_States, dash_time: f32, elapsed_time: f32) -> bool {
-  if did_dash {
-    return true
-  }
+did_dash :: proc(is: Input_State, pls: Player_State) -> bool {
+    return is.x_pressed && pls.can_press_dash && pls.velocity != 0 
+}
 
-  if state == .ON_WALL || state == .ON_SLOPE || state == .ON_GROUND || f32(elapsed_time) > dash_time + DASH_LEN {
-    return false 
-  }
-  return dashing
+updated_dashing :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
+    if did_dash(is, pls) {
+        return true
+    }
+    state := pls.contact_state.state
+    if state == .ON_WALL || state == .ON_SLOPE || state == .ON_GROUND || f32(elapsed_time) > pls.dash_state.dash_time + DASH_LEN {
+        return false 
+    }
+    return pls.dashing
 }
 
 
 apply_dash_to_position :: proc(position: [3]f32, dash_start_pos: [3]f32, dash_end_pos: [3]f32, dashing: bool, dash_time: f32, elapsed_time: f32) -> [3]f32 {
-  if dashing {
-    dash_t := (f32(elapsed_time) - dash_time) / DASH_LEN
-    dash_delta := dash_end_pos - dash_start_pos
-    return dash_start_pos + dash_delta * dash_t
-  }
-  return position
+    if dashing {
+        dash_t := (f32(elapsed_time) - dash_time) / DASH_LEN
+        dash_delta := dash_end_pos - dash_start_pos
+        return dash_start_pos + dash_delta * dash_t
+    }
+    return position
 }
 
 apply_restart_to_position :: proc(is: Input_State, position: [3]f32) -> [3]f32 {
@@ -103,27 +108,54 @@ apply_restart_to_velocity :: proc(is: Input_State, velocity: [3]f32) -> [3]f32 {
 }
 
 
-updated_dash_state :: proc(pls: Player_State, did_dash: bool, input_dir: [2]f32, elapsed_time: f32) -> Dash_State {
-  ds := pls.dash_state
-  if did_dash {
-    ds.dash_start_pos = pls.position
-    dash_input := input_dir == 0 ? la.normalize0(pls.velocity.xz) : input_dir
-    ds.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
-    ds.dash_end_pos = pls.position + DASH_DIST * ds.dash_dir
-    ds.dash_time = f32(elapsed_time)
-  }
-  return ds
+input_dir :: proc(is: Input_State) -> [2]f32 {
+    input_x: f32 = 0.0
+    input_z: f32 = 0.0
+    if is.left_pressed do input_x -= 1
+    if is.right_pressed do input_x += 1
+    if is.up_pressed do input_z -= 1
+    if is.down_pressed do input_z += 1
+    input_dir := la.normalize0([2]f32{input_x, input_z})
+    if is.hor_axis !=0 || is.vert_axis != 0 {
+        input_dir = la.normalize0([2]f32{is.hor_axis, -is.vert_axis})
+    }
+    return input_dir
+}
+
+updated_dash_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> Dash_State {
+    ds := pls.dash_state
+    input_dir := input_dir(is)  
+    if did_dash(is, pls) {
+        ds.dash_start_pos = pls.position
+        dash_input := input_dir == 0 ? la.normalize0(pls.velocity.xz) : input_dir
+        ds.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
+        ds.dash_end_pos = pls.position + DASH_DIST * ds.dash_dir
+        ds.dash_time = f32(elapsed_time)
+    }
+    return ds
 }
 
 updated_crunch_time :: proc(did_bunny_hop: bool, crunch_time: f32, elapsed_time: f32) -> f32 {
     return did_bunny_hop ? elapsed_time : crunch_time 
 }
 
-apply_directional_input_to_velocity :: proc(contact_state: Contact_State, is: Input_State, velocity: [3]f32, move_spd: f32, delta_time: f32) -> [3]f32 {
+move_spd :: proc(pls: Player_State) -> f32 {
+    state := pls.contact_state.state
+    if state == .ON_SLOPE {
+        return SLOPE_SPEED
+    } else if state == .IN_AIR {
+        return AIR_SPEED
+    }
+    return P_ACCEL
+}
+
+apply_directional_input_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, delta_time: f32) -> [3]f32 {
     velocity := velocity
-    grounded := contact_state.state == .ON_GROUND || contact_state.state == .ON_SLOPE
-    right_vec := grounded ? contact_state.ground_x : [3]f32{1, 0, 0}
-    fwd_vec := grounded ? contact_state.ground_z : [3]f32{0, 0, -1}
+    cs := pls.contact_state
+    move_spd := move_spd(pls)
+    grounded := cs.state == .ON_GROUND || cs.state == .ON_SLOPE
+    right_vec := grounded ? cs.ground_x : [3]f32{1, 0, 0}
+    fwd_vec := grounded ? cs.ground_z : [3]f32{0, 0, -1}
     if is.left_pressed {
         velocity -= move_spd * delta_time * right_vec
     }
@@ -153,7 +185,12 @@ clamp_horizontal_velocity_to_max_speed :: proc(velocity: [3]f32) -> [3]f32 {
     return velocity
 }
 
-apply_friction_to_velocity :: proc(state: Player_States, velocity: [3]f32, got_dir_input: bool, delta_time: f32) -> [3]f32 {
+got_dir_input :: proc(is: Input_State) -> bool {
+    return is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
+}
+
+apply_friction_to_velocity :: proc(state: Player_States, velocity: [3]f32, is: Input_State, delta_time: f32) -> [3]f32 {
+    got_dir_input := got_dir_input(is)
     return (state == .ON_GROUND && !got_dir_input) ? velocity * math.pow(GROUND_FRICTION, delta_time) : velocity
 }
 

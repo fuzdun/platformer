@@ -9,30 +9,11 @@ BREAK_DELAY :: 1500
 
 
 game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, elapsed_time: f32, delta_time: f32) {
-
     // ====================================
     // HANDLE INPUT, UPDATE PLAYER VELOCITY
     // ====================================
-    // update trail
-    move_spd := P_ACCEL
-    if pls.contact_state.state == .ON_SLOPE {
-        move_spd = SLOPE_SPEED 
-    } else if pls.contact_state.state == .IN_AIR {
-        move_spd = AIR_SPEED
-    }
-
     // process directional input
-    input_x: f32 = 0.0
-    input_z: f32 = 0.0
-    if is.left_pressed do input_x -= 1
-    if is.right_pressed do input_x += 1
-    if is.up_pressed do input_z -= 1
-    if is.down_pressed do input_z += 1
-    input_dir := la.normalize0([2]f32{input_x, input_z})
-    if is.hor_axis !=0 || is.vert_axis != 0 {
-        input_dir = la.normalize0([2]f32{is.hor_axis, -is.vert_axis})
-    }
-    got_dir_input := is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
+    new_pls := pls^
 
     grounded := pls.contact_state.state == .ON_GROUND || pls.contact_state.state == .ON_SLOPE
     on_surface := grounded || pls.contact_state.state == .ON_WALL
@@ -40,9 +21,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_contact_state := pls.contact_state
 
     new_velocity := pls.velocity
-
-    did_dash := is.x_pressed && pls.can_press_dash && new_velocity != 0
-    can_press_dash := updated_can_press_dash(pls.dash_hop_debounce_t, did_dash, pls.can_press_dash, new_contact_state, is, pls.jump_pressed_time, elapsed_time)
 
     can_bunny_hop := f32(elapsed_time) - pls.dash_hop_debounce_t > BUNNY_DASH_DEBOUNCE
     got_bunny_hop_input := new_contact_state.state != .IN_AIR && math.abs(pls.contact_state.touch_time - pls.jump_pressed_time) < BUNNY_WINDOW
@@ -56,9 +34,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_crunch_pt := updated_crunch_pt(pls.position, pls.crunch_pt, did_bunny_hop)
     new_crunch_time := updated_crunch_time(did_bunny_hop, pls.crunch_time, elapsed_time)
 
-    new_velocity = apply_directional_input_to_velocity(pls.contact_state, is, new_velocity, move_spd, delta_time)
+    new_velocity = apply_directional_input_to_velocity(pls^, is, new_velocity, delta_time)
     new_velocity = clamp_horizontal_velocity_to_max_speed(new_velocity)
-    new_velocity = apply_friction_to_velocity(pls.contact_state.state, new_velocity, got_dir_input, delta_time)
+    new_velocity = apply_friction_to_velocity(pls.contact_state.state, new_velocity, is, delta_time)
     new_velocity = apply_gravity_to_velocity(new_velocity, pls.contact_state, delta_time)
     new_velocity = apply_jumps_to_velocity(new_velocity, did_bunny_hop, ground_jumped, slope_jumped, wall_jumped, new_contact_state.contact_ray)
     new_velocity = apply_dash_to_velocity(pls^, new_velocity, elapsed_time)
@@ -73,16 +51,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     new_contact_state.state = jumped ? .IN_AIR : new_contact_state.state
 
-    new_can_press_jump := updated_can_press_jump(pls.can_press_jump, jumped, is, on_surface)
 
     // set target particle displacement on jump
-    new_tgt_particle_displacement := updated_tgt_particle_displacement(jumped, pls.tgt_particle_displacement, new_velocity, pls.contact_state.state) 
-
-    new_dash_state := updated_dash_state(pls^, did_dash, input_dir, elapsed_time)
-    pls.dash_state = new_dash_state
-
-    pls.dashing = updated_dashing(pls.dashing, did_dash, pls.contact_state.state, pls.dash_state.dash_time, elapsed_time)
-
+    
     // ========================================
     // APPLY PLAYER VELOCITY, HANDLE COLLISIONS
     // ========================================
@@ -115,30 +86,38 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     new_trail := updated_trail_buffer(new_position, pls.trail)
 
-    pls.prev_trail_sample = pls.trail_sample
-    pls.trail = new_trail
-    pls.trail_sample = updated_trail_sample(new_trail)
+    new_pls.prev_trail_sample = pls.trail_sample
+    new_pls.trail = new_trail
+    new_pls.trail_sample = updated_trail_sample(new_trail)
 
-    pls.jump_pressed_time = updated_jump_pressed_time(pls.jump_pressed_time, is, pls.jump_held, elapsed_time) 
-    pls.spike_compression = updated_spike_compression(pls.spike_compression, new_contact_state.state)
-    pls.contact_state = new_contact_state
-    pls.position = new_position
-    pls.velocity = new_velocity
-    pls.can_press_dash = can_press_dash
-    pls.crunch_pt = new_crunch_pt
-    pls.crunch_time = new_crunch_time
-    pls.dash_hop_debounce_t = new_dash_hop_debounce_t
-    pls.screen_crunch_pt = new_screen_crunch_pt
-    pls.can_press_jump = new_can_press_jump
-    pls.tgt_particle_displacement = new_tgt_particle_displacement
-    pls.particle_displacement = la.lerp(pls.particle_displacement, new_tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
-    pls.prev_position = pls.position
-    pls.jump_held = is.z_pressed
+    new_pls.jump_pressed_time = updated_jump_pressed_time(pls.jump_pressed_time, is, pls.jump_held, elapsed_time) 
+    new_pls.spike_compression = updated_spike_compression(pls.spike_compression, new_contact_state.state)
+    new_pls.contact_state = new_contact_state
+    new_pls.position = new_position
+    new_pls.velocity = new_velocity
+    new_pls.crunch_pt = new_crunch_pt
+    new_pls.crunch_time = new_crunch_time
+    new_pls.dash_hop_debounce_t = new_dash_hop_debounce_t
+    new_pls.screen_crunch_pt = new_screen_crunch_pt
+    new_pls.can_press_jump = updated_can_press_jump(pls.can_press_jump, jumped, is, on_surface)
+
+    new_tgt_particle_displacement := updated_tgt_particle_displacement(jumped, pls.tgt_particle_displacement, new_velocity, pls.contact_state.state) 
+    new_pls.tgt_particle_displacement = new_tgt_particle_displacement
+    new_pls.particle_displacement = la.lerp(pls.particle_displacement, new_tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
+
+    new_pls.prev_position = pls.position
+    new_pls.jump_held = is.z_pressed
+
+    new_pls.dash_state = updated_dash_state(pls^, is, elapsed_time)
+    new_pls.dashing = updated_dashing(pls^, is, elapsed_time)
+    new_pls.can_press_dash = updated_can_press_dash(pls^, is, elapsed_time)
 
     new_crunch_pts := updated_crunch_pts(pls.crunch_pts[:], elapsed_time, new_position, cs^, did_bunny_hop, new_crunch_time)
+    dynamic_array_swap(&new_pls.crunch_pts, &new_crunch_pts)
     new_lgs := apply_restart_to_lgs(is, lgs.entities)
-    dynamic_array_swap(&pls.crunch_pts, &new_crunch_pts)
     dynamic_soa_swap(&lgs.entities, &new_lgs)
+
+    pls^ = new_pls
 
     // ts := updated_time_state(pls^, ts^, elapsed_time)
 }
