@@ -91,7 +91,7 @@ draw :: proc(
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 2, rs.crack_time_ssbo)
 
     // get projection matrix
-    proj_mat := EDIT ? construct_camera_matrix(cs) : interpolated_camera_matrix(cs, f32(interp_t))
+    proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))
 
     // load shared uniform data into UBOs
     common_ubo: Common_Ubo = {

@@ -43,7 +43,7 @@ interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {
     return proj * view
 }
 
-construct_camera_matrix :: proc(cs: ^Camera_State) -> glm.mat4 {
+construct_camera_matrix :: proc(cs: Camera_State) -> glm.mat4 {
     tgt := cs.target
     c_pos := cs.position
     c_dir := glm.normalize(c_pos - tgt)

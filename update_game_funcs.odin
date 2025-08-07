@@ -126,6 +126,18 @@ apply_jumps_to_velocity :: proc(velocity: [3]f32, did_bunny_hop: bool, ground_ju
     return velocity
 }
 
+updated_last_dash :: proc(last_dash: f32, did_bunny_hop: bool, elapsed_time: f32) -> f32 {
+    return did_bunny_hop ? elapsed_time : last_dash 
+}
+
+updated_screen_crunch_pt :: proc(screen_crunch_pt: [2]f32, did_bunny_hop: bool, cs: Camera_State, new_crunch_pt: [3]f32) -> [2]f32 {
+    if did_bunny_hop {
+        proj_mat :=  construct_camera_matrix(cs)
+        proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{new_crunch_pt.x, new_crunch_pt.y, new_crunch_pt.z, 1})
+        return ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
+    } 
+    return screen_crunch_pt
+}
 
 apply_velocity :: proc(
     contact_state: Contact_State,
@@ -296,6 +308,25 @@ updated_contact_ray :: proc(contact_ray: [3]f32, best_plane_normal: [3]f32) -> [
     return contact_ray
 }
 
+
+updated_can_press_jump :: proc(can_press_jump: bool, jumped: bool, is: Input_State, on_surface: bool) -> bool {
+    if jumped {
+        return false
+    }
+    return can_press_jump || !is.z_pressed && on_surface
+}
+
+updated_tgt_particle_displacement :: proc(jumped: bool, tgt_particle_displacement: [3]f32, velocity: [3]f32, state: Player_States) -> [3]f32 {
+    new_tgt_particle_displacement := jumped ? velocity : tgt_particle_displacement
+    if state != .ON_GROUND {
+        new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
+    } else {
+        new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, [3]f32{0, 0, 0}, TGT_PARTICLE_DISPLACEMENT_LERP)
+    }
+    return new_tgt_particle_displacement
+}
+
+
 updated_ground_move_dirs :: proc(state: Player_States, ground_x: [3]f32, ground_z: [3]f32, best_plane_normal: [3]f32) -> (x: [3]f32, z: [3]f32) {
     if best_plane_normal.y < 100 && (state == .ON_GROUND || state == .ON_SLOPE) {
         x = [3]f32{1, 0, 0}
@@ -341,7 +372,7 @@ updated_camera_state :: proc(cs: Camera_State, player_pos: [3]f32) -> Camera_Sta
     return cs
 }
 
-updated_crunch_pts :: proc(crunch_pts: [][4]f32, elapsed_time: f32) -> (new_crunch_pts: [dynamic][4]f32) {
+updated_crunch_pts :: proc(crunch_pts: [][4]f32, elapsed_time: f32, player_pos: [3]f32, cs: Camera_State, did_bunny_hop: bool, new_crunch_time: f32) -> (new_crunch_pts: [dynamic][4]f32) {
     new_crunch_pts = make([dynamic][4]f32)
     for cpt in crunch_pts {
         append(&new_crunch_pts, cpt)
@@ -354,6 +385,10 @@ updated_crunch_pts :: proc(crunch_pts: [][4]f32, elapsed_time: f32) -> (new_crun
         } else {
             idx += 1
         }
+    }
+    if did_bunny_hop {
+        bg_crunch_pt := cs.position + la.normalize0(player_pos - cs.position) * 10000.0;
+        append(&new_crunch_pts, [4]f32{bg_crunch_pt.x, bg_crunch_pt.y, bg_crunch_pt.z, new_crunch_time})
     }
     return
 }
