@@ -99,9 +99,9 @@ draw :: proc(
         time = f32(time)
     }
     dash_ubo : Dash_Ubo = {
-        dash_time = pls.dash_time,
-        dash_end_time = pls.dash_end_time,
-        constrain_dir = la.normalize0(pls.dash_dir)
+        dash_time = pls.dash_state.dash_time,
+        dash_end_time = pls.dash_state.dash_end_time,
+        constrain_dir = la.normalize0(pls.dash_state.dash_dir)
     }
     tess_ubo : Tess_Ubo = {
         inner_amt = INNER_TESSELLATION_AMT,
