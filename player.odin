@@ -71,6 +71,12 @@ MIN_SPIKE_COMPRESSION :: 0.35
 MAX_SPIKE_COMPRESSION :: 1.0
 SPIKE_COMPRESSION_LERP :: 0.15
 
+// geometry crack timing
+CRACK_DELAY :: 1500
+BREAK_DELAY :: 1500
+
+
+
 Contact_State :: struct {
     state: Player_States,
     touch_time: f32,
