@@ -121,8 +121,6 @@ Player_State :: struct {
     particle_displacement: [3]f32,
     tgt_particle_displacement: [3]f32,
 
-    anim_angle: f32,
-
     spike_compression: f64
 }
 

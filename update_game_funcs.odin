@@ -5,6 +5,61 @@ import "core:math"
 import "core:fmt"
 
 
+can_bunny_hop :: proc(pls: Player_State, elapsed_time: f32) -> bool {
+    return  elapsed_time - pls.dash_hop_debounce_t > BUNNY_DASH_DEBOUNCE
+}
+
+
+got_bunny_hop_input :: proc(pls: Player_State, elapsed_time: f32) -> bool {
+    cs := pls.contact_state
+    return cs.state != .IN_AIR && math.abs(cs.touch_time - pls.jump_pressed_time) < BUNNY_WINDOW
+}
+
+
+did_bunny_hop :: proc(pls: Player_State, elapsed_time: f32) -> bool {
+    return can_bunny_hop(pls, elapsed_time) && got_bunny_hop_input(pls, elapsed_time)
+}
+
+
+on_surface :: proc(pls: Player_State) -> bool {
+    state := pls.contact_state.state
+    return state == .ON_GROUND || state == .ON_SLOPE || state == .ON_WALL
+}
+
+
+pressed_jump :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
+    return is.z_pressed && pls.can_press_jump || did_bunny_hop(pls, elapsed_time)
+}
+
+
+ground_jumped :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
+    cs := pls.contact_state
+    return pressed_jump(pls, is, elapsed_time) && (cs.state == .ON_GROUND || (f32(elapsed_time) - cs.left_ground < COYOTE_TIME))
+}
+
+
+slope_jumped :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
+    cs := pls.contact_state
+    return pressed_jump(pls, is, elapsed_time) && (cs.state == .ON_SLOPE || (f32(elapsed_time) - cs.left_slope < COYOTE_TIME))
+}
+
+
+wall_jumped :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
+    cs := pls.contact_state
+    return pressed_jump(pls, is, elapsed_time) && (cs.state == .ON_WALL || (f32(elapsed_time) - cs.left_wall < COYOTE_TIME))
+}
+
+
+jumped :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
+    return ground_jumped(pls, is, elapsed_time) || slope_jumped(pls, is, elapsed_time) || wall_jumped(pls, is, elapsed_time) || did_bunny_hop(pls, elapsed_time)
+}
+
+
+apply_jump_to_player_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> Player_States {
+    return jumped(pls, is, elapsed_time) ? .IN_AIR : pls.contact_state.state
+}
+
+
 updated_spike_compression :: proc(spike_compression: f64, state: Player_States) -> f64 {
     if state == .ON_GROUND {
         return math.lerp(spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
@@ -12,23 +67,40 @@ updated_spike_compression :: proc(spike_compression: f64, state: Player_States) 
     return math.lerp(spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
 }
 
-updated_trail_buffer :: proc(player_position: [3]f32, trail: RingBuffer(TRAIL_SIZE, [3]f32)) -> RingBuffer(TRAIL_SIZE, [3]f32) {
-    new_trail := ring_buffer_copy(trail)
-    ring_buffer_push(&new_trail, [3]f32 {f32(player_position.x), f32(player_position.y), f32(player_position.z)})
+
+updated_trail_buffer :: proc(pls: Player_State) -> RingBuffer(TRAIL_SIZE, [3]f32) {
+    new_trail := ring_buffer_copy(pls.trail)
+    ring_buffer_push(&new_trail, [3]f32 {f32(pls.position.x), f32(pls.position.y), f32(pls.position.z)})
     return new_trail
 }
 
-updated_trail_sample :: proc(trail: RingBuffer(TRAIL_SIZE, [3]f32)) -> [3][3]f32 {
-    return {ring_buffer_at(trail, -4), ring_buffer_at(trail, -8), ring_buffer_at(trail, -12)}
+
+updated_trail_sample :: proc(pls: Player_State) -> [3][3]f32 {
+    return {ring_buffer_at(pls.trail, -4), ring_buffer_at(pls.trail, -8), ring_buffer_at(pls.trail, -12)}
 }
+
 
 updated_jump_pressed_time :: proc(jump_pressed_time: f32, is: Input_State, jump_held: bool, elapsed_time: f32) -> f32 {
     return (is.z_pressed && !jump_held) ? elapsed_time : jump_pressed_time
 }
 
-updated_crunch_pt :: proc(player_position: [3]f32, crunch_pt: [3]f32, did_bunny_hop: bool) -> [3]f32 {
-    return did_bunny_hop ? player_position : crunch_pt
+
+updated_crunch_pt :: proc(pls: Player_State, elapsed_time: f32) -> [3]f32 {
+    did_bunny_hop := did_bunny_hop(pls, elapsed_time)
+    return did_bunny_hop ? pls.position : pls.crunch_pt
 }
+
+
+updated_screen_crunch_pt :: proc(pls: Player_State, cs: Camera_State, elapsed_time: f32) -> [2]f32 {
+    new_crunch_pt := updated_crunch_pt(pls, elapsed_time)
+    if did_bunny_hop(pls, elapsed_time) {
+        proj_mat :=  construct_camera_matrix(cs)
+        proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{new_crunch_pt.x, new_crunch_pt.y, new_crunch_pt.z, 1})
+        return ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
+    } 
+    return pls.screen_crunch_pt
+}
+
 
 updated_can_press_dash :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
     contact_state := pls.contact_state
@@ -47,9 +119,11 @@ updated_can_press_dash :: proc(pls: Player_State, is: Input_State, elapsed_time:
     return true
 }
 
+
 did_dash :: proc(is: Input_State, pls: Player_State) -> bool {
     return is.x_pressed && pls.can_press_dash && pls.velocity != 0 
 }
+
 
 updated_dashing :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
     if did_dash(is, pls) {
@@ -72,8 +146,19 @@ apply_dash_to_position :: proc(position: [3]f32, dash_start_pos: [3]f32, dash_en
     return position
 }
 
+
 apply_restart_to_position :: proc(is: Input_State, position: [3]f32) -> [3]f32 {
   return is.r_pressed ? INIT_PLAYER_POS : position
+}
+
+
+apply_collisions_to_lgs :: proc(lgs: Level_Geometry_Soa, collision_ids: map[int]struct{}, elapsed_time: f32) -> Level_Geometry_Soa {
+    lgs := dynamic_soa_copy(lgs)
+    for id in collision_ids {
+        lg := &lgs[id]
+        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.crack_time
+    }
+    return lgs 
 }
 
 
@@ -86,6 +171,7 @@ apply_restart_to_lgs :: proc(is: Input_State, lgs: Level_Geometry_Soa) -> Level_
   }
   return lgs
 }
+
 
 apply_dash_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_time: f32) -> [3]f32 {
   velocity := velocity
@@ -102,6 +188,7 @@ apply_dash_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_time
   } 
   return velocity
 }
+
 
 apply_restart_to_velocity :: proc(is: Input_State, velocity: [3]f32) -> [3]f32 {
   return is.r_pressed ? {0, 0, 0} : velocity
@@ -122,6 +209,7 @@ input_dir :: proc(is: Input_State) -> [2]f32 {
     return input_dir
 }
 
+
 updated_dash_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> Dash_State {
     ds := pls.dash_state
     input_dir := input_dir(is)  
@@ -135,9 +223,12 @@ updated_dash_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32
     return ds
 }
 
-updated_crunch_time :: proc(did_bunny_hop: bool, crunch_time: f32, elapsed_time: f32) -> f32 {
-    return did_bunny_hop ? elapsed_time : crunch_time 
+
+updated_crunch_time :: proc(pls: Player_State, elapsed_time: f32) -> f32 {
+    did_bunny_hop := did_bunny_hop(pls, elapsed_time)
+    return did_bunny_hop ? elapsed_time : pls.crunch_time 
 }
+
 
 move_spd :: proc(pls: Player_State) -> f32 {
     state := pls.contact_state.state
@@ -148,6 +239,7 @@ move_spd :: proc(pls: Player_State) -> f32 {
     }
     return P_ACCEL
 }
+
 
 apply_directional_input_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, delta_time: f32) -> [3]f32 {
     velocity := velocity
@@ -177,6 +269,7 @@ apply_directional_input_to_velocity :: proc(pls: Player_State, is: Input_State, 
     return velocity
 }
 
+
 clamp_horizontal_velocity_to_max_speed :: proc(velocity: [3]f32) -> [3]f32 {
     velocity := velocity
     clamped_xz := la.clamp_length(velocity.xz, MAX_PLAYER_SPEED)
@@ -185,14 +278,17 @@ clamp_horizontal_velocity_to_max_speed :: proc(velocity: [3]f32) -> [3]f32 {
     return velocity
 }
 
+
 got_dir_input :: proc(is: Input_State) -> bool {
     return is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
 }
+
 
 apply_friction_to_velocity :: proc(state: Player_States, velocity: [3]f32, is: Input_State, delta_time: f32) -> [3]f32 {
     got_dir_input := got_dir_input(is)
     return (state == .ON_GROUND && !got_dir_input) ? velocity * math.pow(GROUND_FRICTION, delta_time) : velocity
 }
+
 
 apply_gravity_to_velocity :: proc(velocity: [3]f32, contact_state: Contact_State, delta_time: f32) -> [3]f32 {
     if contact_state.state != .ON_GROUND {
@@ -213,37 +309,32 @@ apply_gravity_to_velocity :: proc(velocity: [3]f32, contact_state: Contact_State
     return velocity
 }
 
-apply_jumps_to_velocity :: proc(velocity: [3]f32, did_bunny_hop: bool, ground_jumped: bool, slope_jumped: bool, wall_jumped: bool, contact_ray: [3]f32) -> [3]f32 {
+
+apply_jumps_to_velocity :: proc(velocity: [3]f32, pls: Player_State, is: Input_State, elapsed_time: f32) -> [3]f32 {
     velocity := velocity
-    if did_bunny_hop {
+    if did_bunny_hop(pls, elapsed_time) {
         velocity.y = GROUND_BUNNY_V_SPEED
         if la.length(velocity.xz) > MIN_BUNNY_XZ_VEL {
             velocity.xz += la.normalize(velocity.xz) * GROUND_BUNNY_H_SPEED
         }
-    } else if ground_jumped {
+    } 
+    if ground_jumped(pls, is, elapsed_time) {
         velocity.y = P_JUMP_SPEED
-    } else if slope_jumped {
-        velocity += -la.normalize(contact_ray) * SLOPE_JUMP_FORCE
+    } else if slope_jumped(pls, is, elapsed_time) {
+        velocity += -la.normalize(pls.contact_state.contact_ray) * SLOPE_JUMP_FORCE
         velocity.y = SLOPE_V_JUMP_FORCE
-    } else if wall_jumped {
+    } else if wall_jumped(pls, is, elapsed_time) {
         velocity.y = P_JUMP_SPEED
-        velocity += -contact_ray * WALL_JUMP_FORCE 
+        velocity += -pls.contact_state.contact_ray * WALL_JUMP_FORCE 
     }
     return velocity
 }
 
-updated_dash_hop_debounce_t :: proc(dash_hop_debouce_t: f32, did_bunny_hop: bool, elapsed_time: f32) -> f32 {
-    return did_bunny_hop ? elapsed_time : dash_hop_debouce_t 
+
+updated_dash_hop_debounce_t :: proc(pls: Player_State, elapsed_time: f32) -> f32 {
+    return did_bunny_hop(pls, elapsed_time) ? elapsed_time : pls.dash_hop_debounce_t 
 }
 
-updated_screen_crunch_pt :: proc(screen_crunch_pt: [2]f32, did_bunny_hop: bool, cs: Camera_State, new_crunch_pt: [3]f32) -> [2]f32 {
-    if did_bunny_hop {
-        proj_mat :=  construct_camera_matrix(cs)
-        proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{new_crunch_pt.x, new_crunch_pt.y, new_crunch_pt.z, 1})
-        return ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
-    } 
-    return screen_crunch_pt
-}
 
 apply_velocity :: proc(
     contact_state: Contact_State,
@@ -306,6 +397,7 @@ apply_velocity :: proc(
     return
 }
 
+
 get_collisions :: proc(
     entities: #soa[]Level_Geometry,
     position: [3]f32,
@@ -365,6 +457,7 @@ get_collisions :: proc(
     return
 }
 
+
 updated_contact_state :: proc(state: Player_States, collisions: []Collision, et: f32, got_contact: bool, best_plane_normal: [3]f32) -> Player_States {
     if !got_contact && (state == .ON_GROUND || state == .ON_WALL || state == .ON_SLOPE){
         return .IN_AIR
@@ -379,12 +472,14 @@ updated_contact_state :: proc(state: Player_States, collisions: []Collision, et:
     return state
 }
 
+
 updated_left_ground :: proc(state: Player_States, left_ground: f32, elapsed_time: f32) -> f32 {
     if state == .ON_GROUND {
         return elapsed_time
     }
     return left_ground 
 }
+
 
 updated_left_wall :: proc(state: Player_States, left_wall: f32, elapsed_time: f32) -> f32 {
     if state == .ON_WALL {
@@ -393,6 +488,7 @@ updated_left_wall :: proc(state: Player_States, left_wall: f32, elapsed_time: f3
     return left_wall
 }
 
+
 updated_left_slope :: proc(state: Player_States, left_slope: f32, elapsed_time: f32) -> f32 {
     if state == .ON_SLOPE {
         return elapsed_time
@@ -400,12 +496,14 @@ updated_left_slope :: proc(state: Player_States, left_slope: f32, elapsed_time: 
     return left_slope 
 }
 
+
 updated_touch_time :: proc(state: Player_States, old_state: Player_States, touch_time: f32, elapsed_time: f32) -> f32 {
     if state != old_state {
         return elapsed_time
     }
     return touch_time 
 }
+
 
 updated_contact_ray :: proc(contact_ray: [3]f32, best_plane_normal: [3]f32) -> [3]f32 {
     if best_plane_normal.y < 100.0 {
@@ -415,21 +513,27 @@ updated_contact_ray :: proc(contact_ray: [3]f32, best_plane_normal: [3]f32) -> [
 }
 
 
-updated_can_press_jump :: proc(can_press_jump: bool, jumped: bool, is: Input_State, on_surface: bool) -> bool {
-    if jumped {
+updated_can_press_jump :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
+    if jumped(pls, is, elapsed_time) {
         return false
     }
-    return can_press_jump || !is.z_pressed && on_surface
+    return pls.can_press_jump || !is.z_pressed && on_surface(pls)
 }
 
-updated_tgt_particle_displacement :: proc(jumped: bool, tgt_particle_displacement: [3]f32, velocity: [3]f32, state: Player_States) -> [3]f32 {
-    new_tgt_particle_displacement := jumped ? velocity : tgt_particle_displacement
-    if state != .ON_GROUND {
-        new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
+
+updated_tgt_particle_displacement :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> [3]f32 {
+    new_tgt_particle_displacement := jumped(pls, is, elapsed_time) ? pls.velocity : pls.tgt_particle_displacement
+    if pls.contact_state.state != .ON_GROUND {
+        new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, pls.velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
     } else {
         new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, [3]f32{0, 0, 0}, TGT_PARTICLE_DISPLACEMENT_LERP)
     }
     return new_tgt_particle_displacement
+}
+
+
+updated_particle_displacement :: proc(pls: Player_State) -> [3]f32 {
+    return la.lerp(pls.particle_displacement, pls.tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
 }
 
 
@@ -443,6 +547,7 @@ updated_ground_move_dirs :: proc(state: Player_States, ground_x: [3]f32, ground_
     }
     return ground_x, ground_z
 }
+
 
 update_player_contact_state :: proc(cs: Contact_State, collisions: []Collision, got_contact: bool, elapsed_time: f32) -> Contact_State {
     cs := cs
@@ -463,6 +568,7 @@ update_player_contact_state :: proc(cs: Contact_State, collisions: []Collision, 
     return cs
 }
 
+
 updated_camera_state :: proc(cs: Camera_State, player_pos: [3]f32) -> Camera_State {
     cs := cs 
     cs.prev_position = cs.position
@@ -478,9 +584,10 @@ updated_camera_state :: proc(cs: Camera_State, player_pos: [3]f32) -> Camera_Sta
     return cs
 }
 
-updated_crunch_pts :: proc(crunch_pts: [][4]f32, elapsed_time: f32, player_pos: [3]f32, cs: Camera_State, did_bunny_hop: bool, new_crunch_time: f32) -> (new_crunch_pts: [dynamic][4]f32) {
+
+updated_crunch_pts :: proc(pls: Player_State, cs: Camera_State, elapsed_time: f32) -> (new_crunch_pts: [dynamic][4]f32) {
     new_crunch_pts = make([dynamic][4]f32)
-    for cpt in crunch_pts {
+    for cpt in pls.crunch_pts {
         append(&new_crunch_pts, cpt)
     }
     idx := 0
@@ -492,9 +599,9 @@ updated_crunch_pts :: proc(crunch_pts: [][4]f32, elapsed_time: f32, player_pos: 
             idx += 1
         }
     }
-    if did_bunny_hop {
-        bg_crunch_pt := cs.position + la.normalize0(player_pos - cs.position) * 10000.0;
-        append(&new_crunch_pts, [4]f32{bg_crunch_pt.x, bg_crunch_pt.y, bg_crunch_pt.z, new_crunch_time})
+    if did_bunny_hop(pls, elapsed_time) {
+        bg_crunch_pt := cs.position + la.normalize0(pls.position - cs.position) * 10000.0;
+        append(&new_crunch_pts, [4]f32{bg_crunch_pt.x, bg_crunch_pt.y, bg_crunch_pt.z, updated_crunch_time(pls, elapsed_time)})
     }
     return
 }
