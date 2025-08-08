@@ -60,11 +60,11 @@ apply_jump_to_player_state :: proc(pls: Player_State, is: Input_State, elapsed_t
 }
 
 
-updated_spike_compression :: proc(spike_compression: f64, state: Player_States) -> f64 {
-    if state == .ON_GROUND {
-        return math.lerp(spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
+updated_spike_compression :: proc(pls: Player_State) -> f64 {
+    if pls.contact_state.state == .ON_GROUND {
+        return math.lerp(pls.spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
     } 
-    return math.lerp(spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
+    return math.lerp(pls.spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
 }
 
 
@@ -80,8 +80,8 @@ updated_trail_sample :: proc(pls: Player_State) -> [3][3]f32 {
 }
 
 
-updated_jump_pressed_time :: proc(jump_pressed_time: f32, is: Input_State, jump_held: bool, elapsed_time: f32) -> f32 {
-    return (is.z_pressed && !jump_held) ? elapsed_time : jump_pressed_time
+updated_jump_pressed_time :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> f32 {
+    return (is.z_pressed && !pls.jump_held) ? elapsed_time : pls.jump_pressed_time
 }
 
 
@@ -137,11 +137,11 @@ updated_dashing :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -
 }
 
 
-apply_dash_to_position :: proc(position: [3]f32, dash_start_pos: [3]f32, dash_end_pos: [3]f32, dashing: bool, dash_time: f32, elapsed_time: f32) -> [3]f32 {
-    if dashing {
-        dash_t := (f32(elapsed_time) - dash_time) / DASH_LEN
-        dash_delta := dash_end_pos - dash_start_pos
-        return dash_start_pos + dash_delta * dash_t
+apply_dash_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time: f32) -> [3]f32 {
+    if pls.dashing {
+        dash_t := (f32(elapsed_time) - pls.dash_state.dash_time) / DASH_LEN
+        dash_delta := pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos
+        return pls.dash_state.dash_start_pos + dash_delta * dash_t
     }
     return position
 }
@@ -284,24 +284,25 @@ got_dir_input :: proc(is: Input_State) -> bool {
 }
 
 
-apply_friction_to_velocity :: proc(state: Player_States, velocity: [3]f32, is: Input_State, delta_time: f32) -> [3]f32 {
+apply_friction_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, delta_time: f32) -> [3]f32 {
     got_dir_input := got_dir_input(is)
-    return (state == .ON_GROUND && !got_dir_input) ? velocity * math.pow(GROUND_FRICTION, delta_time) : velocity
+    return (pls.contact_state.state == .ON_GROUND && !got_dir_input) ? velocity * math.pow(GROUND_FRICTION, delta_time) : velocity
 }
 
 
-apply_gravity_to_velocity :: proc(velocity: [3]f32, contact_state: Contact_State, delta_time: f32) -> [3]f32 {
-    if contact_state.state != .ON_GROUND {
+apply_gravity_to_velocity :: proc(pls: Player_State, velocity: [3]f32, delta_time: f32) -> [3]f32 {
+    cs := pls.contact_state
+    if cs.state != .ON_GROUND {
         down: [3]f32 = {0, -1, 0}
-        norm_contact := la.normalize(contact_state.contact_ray)
+        norm_contact := la.normalize(cs.contact_ray)
         grav_force := GRAV
-        if contact_state.state == .ON_SLOPE {
+        if cs.state == .ON_SLOPE {
             grav_force = SLOPE_GRAV
         }
-        if contact_state.state == .ON_WALL {
+        if cs.state == .ON_WALL {
             grav_force = WALL_GRAV
         }
-        if contact_state.state == .ON_WALL || contact_state.state == .ON_SLOPE {
+        if cs.state == .ON_WALL || cs.state == .ON_SLOPE {
             down -= la.dot(norm_contact, down) * norm_contact
         }
         return velocity + down * grav_force * delta_time
@@ -310,7 +311,7 @@ apply_gravity_to_velocity :: proc(velocity: [3]f32, contact_state: Contact_State
 }
 
 
-apply_jumps_to_velocity :: proc(velocity: [3]f32, pls: Player_State, is: Input_State, elapsed_time: f32) -> [3]f32 {
+apply_jumps_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, elapsed_time: f32) -> [3]f32 {
     velocity := velocity
     if did_bunny_hop(pls, elapsed_time) {
         velocity.y = GROUND_BUNNY_V_SPEED

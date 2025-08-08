@@ -14,9 +14,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_velocity := pls.velocity
     new_velocity = apply_directional_input_to_velocity(pls^, is, new_velocity, delta_time)
     new_velocity = clamp_horizontal_velocity_to_max_speed(new_velocity)
-    new_velocity = apply_friction_to_velocity(pls.contact_state.state, new_velocity, is, delta_time)
-    new_velocity = apply_gravity_to_velocity(new_velocity, pls.contact_state, delta_time)
-    new_velocity = apply_jumps_to_velocity(new_velocity, pls^, is, elapsed_time)
+    new_velocity = apply_friction_to_velocity(pls^, is, new_velocity, delta_time)
+    new_velocity = apply_gravity_to_velocity(pls^, new_velocity, delta_time)
+    new_velocity = apply_jumps_to_velocity(pls^, is, new_velocity, elapsed_time)
     new_velocity = apply_dash_to_velocity(pls^, new_velocity, elapsed_time)
     new_velocity = apply_restart_to_velocity(is, new_velocity)
 
@@ -35,27 +35,26 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         phs.static_collider_vertices,
         elapsed_time,
         delta_time
-    );
-    defer delete(collision_ids)
+    ); defer delete(collision_ids)
 
-    new_position = apply_dash_to_position(new_position, pls.dash_state.dash_start_pos, pls.dash_state.dash_end_pos, pls.dashing, pls.dash_state.dash_time, elapsed_time) 
+    new_position = apply_dash_to_position(pls^, new_position, elapsed_time) 
     new_position = apply_restart_to_position(is, new_position)
 
     // ========================================
     // APPLY UPDATED VALUES TO NEW PLAYER STATE
     // ========================================
     new_pls.velocity = collision_adjusted_velocity
+    new_pls.prev_position = pls.position
     new_pls.position = new_position
     new_pls.contact_state = collision_adjusted_contact_state
 
     new_pls.prev_trail_sample = pls.trail_sample
-    new_pls.prev_position = pls.position
     new_pls.jump_held = is.z_pressed
 
     new_pls.trail_sample              = updated_trail_sample(pls^)
     new_pls.trail                     = updated_trail_buffer(pls^)
-    new_pls.jump_pressed_time         = updated_jump_pressed_time(pls.jump_pressed_time, is, pls.jump_held, elapsed_time) 
-    new_pls.spike_compression         = updated_spike_compression(pls.spike_compression, pls.contact_state.state)
+    new_pls.jump_pressed_time         = updated_jump_pressed_time(pls^, is, elapsed_time) 
+    new_pls.spike_compression         = updated_spike_compression(pls^)
     new_pls.crunch_time               = updated_crunch_time(pls^, elapsed_time)
     new_pls.dash_hop_debounce_t       = updated_dash_hop_debounce_t(pls^, elapsed_time)
     new_pls.crunch_pt                 = updated_crunch_pt(pls^, elapsed_time)
