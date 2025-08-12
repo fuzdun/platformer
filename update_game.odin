@@ -18,6 +18,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_velocity = apply_gravity_to_velocity(pls^, new_velocity, delta_time)
     new_velocity = apply_jumps_to_velocity(pls^, is, new_velocity, elapsed_time)
     new_velocity = apply_dash_to_velocity(pls^, new_velocity, elapsed_time)
+    new_velocity = apply_slide_to_velocity(pls^, new_velocity, elapsed_time)
     new_velocity = apply_restart_to_velocity(is, new_velocity)
 
     new_contact_state := pls.contact_state
@@ -38,6 +39,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     ); defer delete(collision_ids)
 
     new_position = apply_dash_to_position(pls^, new_position, elapsed_time) 
+    new_position = apply_slide_to_position(pls^, new_position, elapsed_time) 
     new_position = apply_restart_to_position(is, new_position)
 
     // ========================================
@@ -63,14 +65,14 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_pls.tgt_particle_displacement = updated_tgt_particle_displacement(pls^, is, elapsed_time)
     new_pls.particle_displacement     = updated_particle_displacement(pls^) 
     new_pls.dash_state                = updated_dash_state(pls^, is, elapsed_time)
-    new_pls.dashing                   = updated_dashing(pls^, is, elapsed_time)
-    new_pls.can_press_dash            = updated_can_press_dash(pls^, is, elapsed_time)
+    new_pls.slide_state               = updated_slide_state(pls^, is, elapsed_time) 
 
     new_crunch_pts := updated_crunch_pts(pls^, cs^, elapsed_time)
     dynamic_array_swap(&new_pls.crunch_pts, &new_crunch_pts)
 
     new_lgs := apply_restart_to_lgs(is, lgs.entities)
     new_lgs = apply_collisions_to_lgs(new_lgs, collision_ids, elapsed_time) 
+    new_lgs = apply_bunny_hop_to_lgs(new_lgs, pls^, elapsed_time)
     dynamic_soa_swap(&lgs.entities, &new_lgs)
 
     cs^ = updated_camera_state(cs^, new_position)

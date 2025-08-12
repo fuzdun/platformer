@@ -32,12 +32,13 @@ uniform vec3 crunch_pt;
 uniform float crunch_time;
 uniform mat4 inverse_projection;
 uniform mat4 inverse_view;
+uniform float slide_t;
 
 uniform sampler2D ditherTexture;
 
 #define TWOPI 6.2831853
 #define SHADES 3.0
-
+#define SLIDE_RADIUS 15.0
 
 vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
 {
@@ -161,26 +162,29 @@ void main()
     vec2 uv = t0_uv * bary_0 + t1_uv * bary_1 + t2_uv * bary_2;
 
     float plane_off = dot(normal_frag, global_pos);
-    float dist = (dot(normal_frag, player_pos) - plane_off) - 2;
+    float dist = (dot(normal_frag, player_pos) - plane_off) - 1.5;
     vec3 proj_pt = player_pos - dist * normal_frag;
 
     vec3 diff = global_pos - player_pos;
     vec3 t_diff = intersection - player_pos;
-    float a = atan(diff.x / diff.z) * 5;
     vec3 planar_diff = proj_pt - global_pos;
+    vec3 up = normal_frag.y == 1.0 ? vec3(1, 0, 0) : vec3(1.0, 0, 0);
+    vec3 plane_x = normalize(cross(up, normal_frag));
+    vec3 plane_y = normalize(cross(normal_frag, plane_x));
+    float uvx = dot(plane_x, planar_diff);
+    float uvy = dot(plane_y, planar_diff);
+    float a = atan(uvx / uvy) * 25;
     float uvd = length(planar_diff);
-    float d1 = dist + noise(a + time * 50) * 1.0;
+    float slide_ring_size = (1.0 - (abs(slide_t - 0.5) / 0.5)) * SLIDE_RADIUS;
+    float d1 = dist + slide_ring_size + noise(vec2(a + time * 20, time * 10)) * 1.5;
     float absd = abs(uvd - d1);
     float noise_border = smoothstep(-0.05, 0.0, absd) - smoothstep(0.15, 0.20, absd);
-
-    if (dist < .25) {
-        noise_border = 0;
-    }
-
+    // if (dist < .25) {
+    //     noise_border = 0;
+    // }
     vec3 proximity_outline_col = vec3(1.0, 1.0, 1.0) * noise_border;
 
     vec3 pattern_col = pattern(uv);
-    // vec3 pattern_col = vec3(colormap(shade).rgb);
 
     vec3 trail_col = vec3(0.0, 0, 0);
     vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);

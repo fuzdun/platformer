@@ -32,12 +32,18 @@ SLOPE_GRAV: f32: 150
 // input
 COYOTE_TIME ::  150
 BUNNY_DASH_DEBOUNCE: f32: 400
-BUNNY_WINDOW: f32: 100
+BUNNY_WINDOW: f32: 120
 
 // dash
 DASH_SPD: f32: 75.0
 DASH_LEN: f32: 175 
 DASH_DIST: f32: 15.0
+
+// slide
+SLIDE_LEN: f32: 350.0 
+SLIDE_DIST: f32: 40.0
+SLIDE_SPD: f32: 100
+SLIDE_COOLDOWN: f32: 100
 
 // physics
 GROUND_RAY_LEN ::  2.0
@@ -86,19 +92,32 @@ Contact_State :: struct {
     contact_ray: [3]f32,
     ground_x: [3]f32,
     ground_z: [3]f32,
+    last_touched: int
 }
 
 Dash_State :: struct {
+    dashing: bool,
     dash_start_pos: [3]f32,
     dash_end_pos: [3]f32,
     dash_dir: [3]f32,
     dash_time: f32,
     dash_end_time: f32,
+    can_dash: bool,
+}
+
+Slide_State :: struct {
+    sliding: bool,
+    slide_time: f32,
+    slide_dir: [3]f32,
+    slide_start_pos: [3]f32,
+    slide_end_time: f32,
+    can_slide: bool
 }
 
 Player_State :: struct {
     contact_state: Contact_State,
     dash_state: Dash_State,
+    slide_state: Slide_State,
 
     touch_pt: [3]f32,
     bunny_hop_y: f32,
@@ -113,10 +132,8 @@ Player_State :: struct {
     velocity: [3]f32,
 
     can_press_jump: bool,
-    can_press_dash: bool,
     jump_pressed_time: f32,
     jump_held: bool,
-    dashing: bool,
 
     prev_position: [3]f32,
 
@@ -137,7 +154,7 @@ Player_States :: enum {
     ON_WALL,
     ON_SLOPE,
     IN_AIR,
-    DASHING 
+    DASHING,
 }
 
 interpolated_player_pos :: proc(ps: Player_State, t: f32) -> [3]f32 {

@@ -5,28 +5,9 @@ import "core:math"
 import "core:fmt"
 
 
-can_bunny_hop :: proc(pls: Player_State, elapsed_time: f32) -> bool {
-    return  elapsed_time - pls.dash_hop_debounce_t > BUNNY_DASH_DEBOUNCE
-}
-
-
-got_bunny_hop_input :: proc(pls: Player_State, elapsed_time: f32) -> bool {
-    cs := pls.contact_state
-    return cs.state != .IN_AIR && math.abs(cs.touch_time - pls.jump_pressed_time) < BUNNY_WINDOW
-}
-
-
-did_bunny_hop :: proc(pls: Player_State, elapsed_time: f32) -> bool {
-    return can_bunny_hop(pls, elapsed_time) && got_bunny_hop_input(pls, elapsed_time)
-}
-
-
-on_surface :: proc(pls: Player_State) -> bool {
-    state := pls.contact_state.state
-    return state == .ON_GROUND || state == .ON_SLOPE || state == .ON_WALL
-}
-
-
+// ===========
+// STATE UTILS
+// ===========
 pressed_jump :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
     return is.z_pressed && pls.can_press_jump || did_bunny_hop(pls, elapsed_time)
 }
@@ -50,148 +31,35 @@ wall_jumped :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bo
 }
 
 
+can_bunny_hop :: proc(pls: Player_State, elapsed_time: f32) -> bool {
+    return  elapsed_time - pls.dash_hop_debounce_t > BUNNY_DASH_DEBOUNCE
+}
+
+
+got_bunny_hop_input :: proc(pls: Player_State, elapsed_time: f32) -> bool {
+    cs := pls.contact_state
+    surface_touch_diff := math.abs(cs.touch_time - pls.jump_pressed_time)
+    slide_end_diff := math.abs(pls.slide_state.slide_end_time - pls.jump_pressed_time)
+    return (
+        (cs.state != .IN_AIR && surface_touch_diff < BUNNY_WINDOW) ||
+        (slide_end_diff < BUNNY_WINDOW && elapsed_time - pls.jump_pressed_time < BUNNY_WINDOW)
+    )
+}
+
+
+did_bunny_hop :: proc(pls: Player_State, elapsed_time: f32) -> bool {
+    return can_bunny_hop(pls, elapsed_time) && got_bunny_hop_input(pls, elapsed_time)
+}
+
+
 jumped :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
     return ground_jumped(pls, is, elapsed_time) || slope_jumped(pls, is, elapsed_time) || wall_jumped(pls, is, elapsed_time) || did_bunny_hop(pls, elapsed_time)
 }
 
 
-apply_jump_to_player_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> Player_States {
-    return jumped(pls, is, elapsed_time) ? .IN_AIR : pls.contact_state.state
-}
-
-
-updated_spike_compression :: proc(pls: Player_State) -> f64 {
-    if pls.contact_state.state == .ON_GROUND {
-        return math.lerp(pls.spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
-    } 
-    return math.lerp(pls.spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
-}
-
-
-updated_trail_buffer :: proc(pls: Player_State) -> RingBuffer(TRAIL_SIZE, [3]f32) {
-    new_trail := ring_buffer_copy(pls.trail)
-    ring_buffer_push(&new_trail, [3]f32 {f32(pls.position.x), f32(pls.position.y), f32(pls.position.z)})
-    return new_trail
-}
-
-
-updated_trail_sample :: proc(pls: Player_State) -> [3][3]f32 {
-    return {ring_buffer_at(pls.trail, -4), ring_buffer_at(pls.trail, -8), ring_buffer_at(pls.trail, -12)}
-}
-
-
-updated_jump_pressed_time :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> f32 {
-    return (is.z_pressed && !pls.jump_held) ? elapsed_time : pls.jump_pressed_time
-}
-
-
-updated_crunch_pt :: proc(pls: Player_State, elapsed_time: f32) -> [3]f32 {
-    did_bunny_hop := did_bunny_hop(pls, elapsed_time)
-    return did_bunny_hop ? pls.position : pls.crunch_pt
-}
-
-
-updated_screen_crunch_pt :: proc(pls: Player_State, cs: Camera_State, elapsed_time: f32) -> [2]f32 {
-    new_crunch_pt := updated_crunch_pt(pls, elapsed_time)
-    if did_bunny_hop(pls, elapsed_time) {
-        proj_mat :=  construct_camera_matrix(cs)
-        proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{new_crunch_pt.x, new_crunch_pt.y, new_crunch_pt.z, 1})
-        return ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
-    } 
-    return pls.screen_crunch_pt
-}
-
-
-updated_can_press_dash :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
-    contact_state := pls.contact_state
-    can_bunny_hop := f32(elapsed_time) - pls.dash_hop_debounce_t > BUNNY_DASH_DEBOUNCE
-    got_bunny_hop_input := contact_state.state != .IN_AIR && math.abs(contact_state.touch_time - pls.jump_pressed_time) < BUNNY_WINDOW
-    pressed_dash := is.x_pressed && pls.can_press_dash
-    if got_bunny_hop_input && can_bunny_hop {
-        return true
-    } 
-    if did_dash(is, pls) {
-        return false
-    }
-    if !pls.can_press_dash {
-        return !is.x_pressed && contact_state.state == .ON_GROUND
-    } 
-    return true
-}
-
-
-did_dash :: proc(is: Input_State, pls: Player_State) -> bool {
-    return is.x_pressed && pls.can_press_dash && pls.velocity != 0 
-}
-
-
-updated_dashing :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
-    if did_dash(is, pls) {
-        return true
-    }
+on_surface :: proc(pls: Player_State) -> bool {
     state := pls.contact_state.state
-    if state == .ON_WALL || state == .ON_SLOPE || state == .ON_GROUND || f32(elapsed_time) > pls.dash_state.dash_time + DASH_LEN {
-        return false 
-    }
-    return pls.dashing
-}
-
-
-apply_dash_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time: f32) -> [3]f32 {
-    if pls.dashing {
-        dash_t := (f32(elapsed_time) - pls.dash_state.dash_time) / DASH_LEN
-        dash_delta := pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos
-        return pls.dash_state.dash_start_pos + dash_delta * dash_t
-    }
-    return position
-}
-
-
-apply_restart_to_position :: proc(is: Input_State, position: [3]f32) -> [3]f32 {
-  return is.r_pressed ? INIT_PLAYER_POS : position
-}
-
-
-apply_collisions_to_lgs :: proc(lgs: Level_Geometry_Soa, collision_ids: map[int]struct{}, elapsed_time: f32) -> Level_Geometry_Soa {
-    lgs := dynamic_soa_copy(lgs)
-    for id in collision_ids {
-        lg := &lgs[id]
-        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.crack_time
-    }
-    return lgs 
-}
-
-
-apply_restart_to_lgs :: proc(is: Input_State, lgs: Level_Geometry_Soa) -> Level_Geometry_Soa {
-  lgs := dynamic_soa_copy(lgs)
-  if is.r_pressed {
-    for &lg in lgs {
-      lg.crack_time = 0
-    }
-  }
-  return lgs
-}
-
-
-apply_dash_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_time: f32) -> [3]f32 {
-  velocity := velocity
-  state := pls.contact_state.state
-  dash_expired := f32(elapsed_time) > pls.dash_state.dash_time + DASH_LEN
-  hit_surface := state == .ON_WALL || state == .ON_GROUND || state == .ON_WALL
-  if pls.dashing {
-    if hit_surface || dash_expired {
-      velocity = la.normalize(pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos) * DASH_SPD
-    } else {
-      velocity = 0
-    }
-
-  } 
-  return velocity
-}
-
-
-apply_restart_to_velocity :: proc(is: Input_State, velocity: [3]f32) -> [3]f32 {
-  return is.r_pressed ? {0, 0, 0} : velocity
+    return state == .ON_GROUND || state == .ON_SLOPE || state == .ON_WALL
 }
 
 
@@ -210,41 +78,18 @@ input_dir :: proc(is: Input_State) -> [2]f32 {
 }
 
 
-updated_dash_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> Dash_State {
-    ds := pls.dash_state
-    input_dir := input_dir(is)  
-    if did_dash(is, pls) {
-        ds.dash_start_pos = pls.position
-        dash_input := input_dir == 0 ? la.normalize0(pls.velocity.xz) : input_dir
-        ds.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
-        ds.dash_end_pos = pls.position + DASH_DIST * ds.dash_dir
-        ds.dash_time = f32(elapsed_time)
-    }
-    return ds
-}
-
-
-updated_crunch_time :: proc(pls: Player_State, elapsed_time: f32) -> f32 {
-    did_bunny_hop := did_bunny_hop(pls, elapsed_time)
-    return did_bunny_hop ? elapsed_time : pls.crunch_time 
-}
-
-
-move_spd :: proc(pls: Player_State) -> f32 {
-    state := pls.contact_state.state
-    if state == .ON_SLOPE {
-        return SLOPE_SPEED
-    } else if state == .IN_AIR {
-        return AIR_SPEED
-    }
-    return P_ACCEL
-}
-
-
+// ================
+// VELOCITY UPDATES
+// ================
 apply_directional_input_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, delta_time: f32) -> [3]f32 {
     velocity := velocity
     cs := pls.contact_state
-    move_spd := move_spd(pls)
+    move_spd := P_ACCEL
+    if cs.state == .ON_SLOPE {
+        move_spd =  SLOPE_SPEED
+    } else if cs.state == .IN_AIR {
+        move_spd =  AIR_SPEED
+    }
     grounded := cs.state == .ON_GROUND || cs.state == .ON_SLOPE
     right_vec := grounded ? cs.ground_x : [3]f32{1, 0, 0}
     fwd_vec := grounded ? cs.ground_z : [3]f32{0, 0, -1}
@@ -279,13 +124,8 @@ clamp_horizontal_velocity_to_max_speed :: proc(velocity: [3]f32) -> [3]f32 {
 }
 
 
-got_dir_input :: proc(is: Input_State) -> bool {
-    return is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
-}
-
-
 apply_friction_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, delta_time: f32) -> [3]f32 {
-    got_dir_input := got_dir_input(is)
+    got_dir_input :=  is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
     return (pls.contact_state.state == .ON_GROUND && !got_dir_input) ? velocity * math.pow(GROUND_FRICTION, delta_time) : velocity
 }
 
@@ -332,70 +172,48 @@ apply_jumps_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3
 }
 
 
-updated_dash_hop_debounce_t :: proc(pls: Player_State, elapsed_time: f32) -> f32 {
-    return did_bunny_hop(pls, elapsed_time) ? elapsed_time : pls.dash_hop_debounce_t 
+apply_dash_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_time: f32) -> [3]f32 {
+    velocity := velocity
+    state := pls.contact_state.state
+    dash_expired := f32(elapsed_time) > pls.dash_state.dash_time + DASH_LEN
+    hit_surface := state == .ON_WALL || state == .ON_GROUND || state == .ON_WALL
+    if pls.dash_state.dashing {
+        if hit_surface || dash_expired {
+            velocity = la.normalize(pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos) * DASH_SPD
+        } else {
+            velocity = 0
+        }
+
+    } 
+    return velocity
 }
 
 
-apply_velocity :: proc(
-    contact_state: Contact_State,
-    position: [3]f32,
-    velocity: [3]f32,
-    entities: #soa[]Level_Geometry, 
-    level_colliders: [SHAPE]Collider_Data,
-    static_collider_vertices: [dynamic][3]f32,
-    elapsed_time: f32,
-    delta_time: f32
-) -> (
-    new_contact_state: Contact_State,
-    new_position: [3]f32,
-    new_velocity: [3]f32,
-    collision_ids: map[int]struct{}
-) {
-    new_position = position
-    new_velocity = velocity
-    collision_ids = make(map[int]struct{})
-    collisions, got_contact := get_collisions(entities[:], position, velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time);
-    defer delete(collisions)
-    for collision in collisions {
-        collision_ids[collision.id] = {}
-    }
-    new_contact_state = update_player_contact_state( contact_state, collisions[:], got_contact, elapsed_time)
-    init_velocity_len := la.length(velocity)
-    remaining_vel := init_velocity_len * delta_time
-    if remaining_vel > 0 {
-        velocity_normal := la.normalize(velocity)
-        loops := 0
-        for len(collisions) > 0 && loops < 10 {
-            loops += 1
-            earliest_coll_t: f32 = 1.1
-            earliest_coll_idx := -1
-            for coll, idx in collisions {
-                if coll.t < earliest_coll_t {
-                    earliest_coll_idx = idx
-                    earliest_coll_t = coll.t
-                }
-            }
-            earliest_coll := collisions[earliest_coll_idx]
-            new_position += (remaining_vel * (earliest_coll_t) - .01) * velocity_normal
-            remaining_vel *= 1.0 - earliest_coll_t
-            velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
-            new_velocity = (velocity_normal * remaining_vel) / delta_time
-            delete(collisions)
-            collisions, got_contact = get_collisions(entities, new_position, new_velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time)
-            for collision in collisions {
-                collision_ids[collision.id] = {}
-            }
-            new_contact_state = update_player_contact_state(
-                new_contact_state,
-                collisions[:],
-                got_contact,
-                elapsed_time)
+apply_slide_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_time: f32) -> [3]f32 {
+    velocity := velocity
+    state := pls.contact_state.state
+    slide_expired := f32(elapsed_time) > pls.slide_state.slide_time + SLIDE_LEN
+    if pls.slide_state.sliding {
+        if slide_expired || !on_surface(pls) {
+            velocity = pls.slide_state.slide_dir * SLIDE_SPD 
+        } else {
+            velocity = 0
         }
-        new_position += velocity_normal * remaining_vel
-        new_velocity = velocity_normal * init_velocity_len
     }
-    return
+    return velocity
+}
+
+
+apply_restart_to_velocity :: proc(is: Input_State, velocity: [3]f32) -> [3]f32 {
+  return is.r_pressed ? {0, 0, 0} : velocity
+}
+
+
+// ============================
+// CONTACT / COLLISIONS UPDATES
+// ============================
+apply_jump_to_player_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> Player_States {
+    return !pls.slide_state.sliding && jumped(pls, is, elapsed_time) ? .IN_AIR : pls.contact_state.state
 }
 
 
@@ -460,7 +278,7 @@ get_collisions :: proc(
 
 
 updated_contact_state :: proc(state: Player_States, collisions: []Collision, et: f32, got_contact: bool, best_plane_normal: [3]f32) -> Player_States {
-    if !got_contact && (state == .ON_GROUND || state == .ON_WALL || state == .ON_SLOPE){
+    if !got_contact && (state == .ON_GROUND || state == .ON_WALL || state == .ON_SLOPE) {
         return .IN_AIR
     }
     if best_plane_normal.y >= 0.85 && best_plane_normal.y < 100.0 {
@@ -474,19 +292,19 @@ updated_contact_state :: proc(state: Player_States, collisions: []Collision, et:
 }
 
 
+updated_touch_time :: proc(state: Player_States, old_state: Player_States, touch_time: f32, elapsed_time: f32) -> f32 {
+    if state != old_state && state != .IN_AIR {
+        return elapsed_time
+    }
+    return touch_time 
+}
+
+
 updated_left_ground :: proc(state: Player_States, left_ground: f32, elapsed_time: f32) -> f32 {
     if state == .ON_GROUND {
         return elapsed_time
     }
     return left_ground 
-}
-
-
-updated_left_wall :: proc(state: Player_States, left_wall: f32, elapsed_time: f32) -> f32 {
-    if state == .ON_WALL {
-        return elapsed_time
-    }
-    return left_wall
 }
 
 
@@ -498,11 +316,11 @@ updated_left_slope :: proc(state: Player_States, left_slope: f32, elapsed_time: 
 }
 
 
-updated_touch_time :: proc(state: Player_States, old_state: Player_States, touch_time: f32, elapsed_time: f32) -> f32 {
-    if state != old_state {
+updated_left_wall :: proc(state: Player_States, left_wall: f32, elapsed_time: f32) -> f32 {
+    if state == .ON_WALL {
         return elapsed_time
     }
-    return touch_time 
+    return left_wall
 }
 
 
@@ -511,30 +329,6 @@ updated_contact_ray :: proc(contact_ray: [3]f32, best_plane_normal: [3]f32) -> [
         return -best_plane_normal * GROUND_RAY_LEN
     }
     return contact_ray
-}
-
-
-updated_can_press_jump :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
-    if jumped(pls, is, elapsed_time) {
-        return false
-    }
-    return pls.can_press_jump || !is.z_pressed && on_surface(pls)
-}
-
-
-updated_tgt_particle_displacement :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> [3]f32 {
-    new_tgt_particle_displacement := jumped(pls, is, elapsed_time) ? pls.velocity : pls.tgt_particle_displacement
-    if pls.contact_state.state != .ON_GROUND {
-        new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, pls.velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
-    } else {
-        new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, [3]f32{0, 0, 0}, TGT_PARTICLE_DISPLACEMENT_LERP)
-    }
-    return new_tgt_particle_displacement
-}
-
-
-updated_particle_displacement :: proc(pls: Player_State) -> [3]f32 {
-    return la.lerp(pls.particle_displacement, pls.tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
 }
 
 
@@ -565,24 +359,232 @@ update_player_contact_state :: proc(cs: Contact_State, collisions: []Collision, 
     cs.left_slope             = updated_left_slope(cs.state, cs.left_slope, elapsed_time)
     cs.left_wall              = updated_left_wall(cs.state, cs.left_wall, elapsed_time)
     cs.contact_ray            = updated_contact_ray(cs.contact_ray, best_plane_normal)
-    cs.ground_x, cs.ground_z = updated_ground_move_dirs(cs.state, cs.ground_x, cs.ground_z, best_plane_normal)
+    cs.ground_x, cs.ground_z  = updated_ground_move_dirs(cs.state, cs.ground_x, cs.ground_z, best_plane_normal)
     return cs
 }
 
 
-updated_camera_state :: proc(cs: Camera_State, player_pos: [3]f32) -> Camera_State {
-    cs := cs 
-    cs.prev_position = cs.position
-    cs.prev_target = cs.target
-    tgt_y := player_pos.y + CAMERA_PLAYER_Y_OFFSET
-    tgt_z := player_pos.z + CAMERA_PLAYER_Z_OFFSET
-    tgt_x := player_pos.x + CAMERA_PLAYER_X_OFFSET
-    tgt : [3]f32 = {tgt_x, tgt_y, tgt_z}
-    cs.position = math.lerp(cs.position, tgt, f32(CAMERA_POS_LERP))
-    cs.target.x = math.lerp(cs.target.x, player_pos.x, f32(CAMERA_X_LERP))
-    cs.target.y = math.lerp(cs.target.y, player_pos.y, f32(CAMERA_Y_LERP))
-    cs.target.z = math.lerp(cs.target.z, player_pos.z, f32(CAMERA_Z_LERP))
-    return cs
+apply_velocity :: proc(
+    contact_state: Contact_State,
+    position: [3]f32,
+    velocity: [3]f32,
+    entities: #soa[]Level_Geometry, 
+    level_colliders: [SHAPE]Collider_Data,
+    static_collider_vertices: [dynamic][3]f32,
+    elapsed_time: f32,
+    delta_time: f32
+) -> (
+    new_contact_state: Contact_State,
+    new_position: [3]f32,
+    new_velocity: [3]f32,
+    collision_ids: map[int]struct{}
+) {
+    new_position = position
+    new_velocity = velocity
+    collision_ids = make(map[int]struct{})
+    collisions, got_contact := get_collisions(entities[:], position, velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time);
+    defer delete(collisions)
+    for collision in collisions {
+        collision_ids[collision.id] = {}
+    }
+    new_contact_state = update_player_contact_state(contact_state, collisions[:], got_contact, elapsed_time)
+    init_velocity_len := la.length(velocity)
+    remaining_vel := init_velocity_len * delta_time
+    if remaining_vel > 0 {
+        velocity_normal := la.normalize(velocity)
+        loops := 0
+        for len(collisions) > 0 && loops < 10 {
+            loops += 1
+            earliest_coll_t: f32 = 1.1
+            earliest_coll_idx := -1
+            for coll, idx in collisions {
+                if coll.t < earliest_coll_t {
+                    earliest_coll_idx = idx
+                    earliest_coll_t = coll.t
+                }
+            }
+            earliest_coll := collisions[earliest_coll_idx]
+            new_contact_state.last_touched = earliest_coll.id
+            collision_ids[earliest_coll.id] = {}
+            new_position += (remaining_vel * (earliest_coll_t) - .01) * velocity_normal
+            remaining_vel *= 1.0 - earliest_coll_t
+            velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
+            new_velocity = (velocity_normal * remaining_vel) / delta_time
+            delete(collisions)
+            collisions, got_contact = get_collisions(entities, new_position, new_velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time)
+            new_contact_state = update_player_contact_state(
+                new_contact_state,
+                collisions[:],
+                got_contact,
+                elapsed_time)
+        }
+        new_position += velocity_normal * remaining_vel
+        new_velocity = velocity_normal * init_velocity_len
+    }
+    return
+}
+
+
+// ================
+// POSITION UPDATES
+// ================
+apply_dash_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time: f32) -> [3]f32 {
+    if pls.dash_state.dashing {
+        dash_t := (f32(elapsed_time) - pls.dash_state.dash_time) / DASH_LEN
+        dash_delta := pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos
+        return pls.dash_state.dash_start_pos + dash_delta * dash_t
+    }
+    return position
+}
+
+
+apply_slide_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time: f32) -> [3]f32 {
+    sls := pls.slide_state
+    if sls.sliding {
+        slide_t := (f32(elapsed_time) - pls.slide_state.slide_time) / SLIDE_LEN
+        return sls.slide_start_pos + sls.slide_dir * SLIDE_DIST * slide_t
+    }
+    return position
+}
+
+
+apply_restart_to_position :: proc(is: Input_State, position: [3]f32) -> [3]f32 {
+  return is.r_pressed ? INIT_PLAYER_POS : position
+}
+
+
+// ==========================
+// OTHER PLAYER STATE UPDATES
+// ==========================
+updated_trail_sample :: proc(pls: Player_State) -> [3][3]f32 {
+    return {ring_buffer_at(pls.trail, -4), ring_buffer_at(pls.trail, -8), ring_buffer_at(pls.trail, -12)}
+}
+
+
+
+updated_trail_buffer :: proc(pls: Player_State) -> RingBuffer(TRAIL_SIZE, [3]f32) {
+    new_trail := ring_buffer_copy(pls.trail)
+    ring_buffer_push(&new_trail, [3]f32 {f32(pls.position.x), f32(pls.position.y), f32(pls.position.z)})
+    return new_trail
+}
+
+
+updated_jump_pressed_time :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> f32 {
+    if did_bunny_hop(pls, elapsed_time) {
+        return 0
+    }
+    return (is.z_pressed && !pls.jump_held) ? elapsed_time : pls.jump_pressed_time
+}
+
+
+updated_spike_compression :: proc(pls: Player_State) -> f64 {
+    if pls.contact_state.state == .ON_GROUND {
+        return math.lerp(pls.spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
+    } 
+    return math.lerp(pls.spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
+}
+
+
+updated_crunch_time :: proc(pls: Player_State, elapsed_time: f32) -> f32 {
+    did_bunny_hop := did_bunny_hop(pls, elapsed_time)
+    return did_bunny_hop ? elapsed_time : pls.crunch_time 
+}
+
+
+updated_dash_hop_debounce_t :: proc(pls: Player_State, elapsed_time: f32) -> f32 {
+    return did_bunny_hop(pls, elapsed_time) ? elapsed_time : pls.dash_hop_debounce_t 
+}
+
+
+updated_crunch_pt :: proc(pls: Player_State, elapsed_time: f32) -> [3]f32 {
+    did_bunny_hop := did_bunny_hop(pls, elapsed_time)
+    return did_bunny_hop ? pls.position : pls.crunch_pt
+}
+
+
+updated_screen_crunch_pt :: proc(pls: Player_State, cs: Camera_State, elapsed_time: f32) -> [2]f32 {
+    new_crunch_pt := updated_crunch_pt(pls, elapsed_time)
+    did_bunny_hop(pls, elapsed_time)
+    if did_bunny_hop(pls, elapsed_time) {
+        proj_mat :=  construct_camera_matrix(cs)
+        proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{new_crunch_pt.x, new_crunch_pt.y, new_crunch_pt.z, 1})
+        return ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
+    } 
+    return pls.screen_crunch_pt
+}
+
+
+updated_can_press_jump :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> bool {
+    if jumped(pls, is, elapsed_time) {
+        return false
+    }
+    return pls.can_press_jump || !is.z_pressed && on_surface(pls)
+}
+
+
+updated_tgt_particle_displacement :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> [3]f32 {
+    new_tgt_particle_displacement := jumped(pls, is, elapsed_time) ? pls.velocity : pls.tgt_particle_displacement
+    if pls.contact_state.state != .ON_GROUND {
+        new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, pls.velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
+    } else {
+        new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, [3]f32{0, 0, 0}, TGT_PARTICLE_DISPLACEMENT_LERP)
+    }
+    return new_tgt_particle_displacement
+}
+
+
+updated_particle_displacement :: proc(pls: Player_State) -> [3]f32 {
+    return la.lerp(pls.particle_displacement, pls.tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
+}
+
+
+updated_dash_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> Dash_State {
+    ds := pls.dash_state
+    input_dir := input_dir(is)  
+    if !on_surface(pls) && pls.slide_state.sliding == false && is.x_pressed && pls.dash_state.can_dash && pls.velocity != 0 {
+        ds.dashing = true 
+        ds.dash_start_pos = pls.position
+        dash_input := input_dir == 0 ? la.normalize0(pls.velocity.xz) : input_dir
+        ds.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
+        ds.dash_end_pos = pls.position + DASH_DIST * ds.dash_dir
+        ds.dash_time = f32(elapsed_time)
+        ds.can_dash = false
+    } else {
+        if on_surface(pls) || f32(elapsed_time) > ds.dash_time + DASH_LEN {
+            if ds.dashing {
+            }
+            ds.dashing = false 
+        }
+        if !pls.dash_state.can_dash {
+            ds.can_dash = !ds.dashing && (pls.contact_state.state == .ON_GROUND || did_bunny_hop(pls, elapsed_time))
+        } 
+    }
+    return ds
+}
+
+
+updated_slide_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> Slide_State {
+    sls := pls.slide_state
+    if on_surface(pls) && pls.slide_state.can_slide && is.x_pressed && pls.velocity != 0 {
+        sls.sliding = true
+        sls.can_slide = false
+        sls.slide_time = elapsed_time
+        sls.slide_start_pos = pls.position
+
+        input_dir := input_dir(is)  
+        surface_normal := la.normalize0(la.cross(pls.contact_state.ground_x, pls.contact_state.ground_z))
+        slide_input := input_dir == 0 ? la.normalize0(pls.velocity) : {input_dir.x, 0, input_dir.y}
+        sls.slide_dir = la.normalize(slide_input - la.dot(slide_input, surface_normal) * surface_normal)
+    } else {
+        if sls.sliding && (!on_surface(pls) || elapsed_time > sls.slide_time + SLIDE_LEN) {
+            sls.sliding = false
+            sls.slide_end_time = elapsed_time
+        }
+        if !sls.can_slide && !sls.sliding && sls.slide_end_time + SLIDE_COOLDOWN < elapsed_time {
+            sls.can_slide = true
+        }
+    }
+    return sls
 }
 
 
@@ -606,4 +608,57 @@ updated_crunch_pts :: proc(pls: Player_State, cs: Camera_State, elapsed_time: f3
     }
     return
 }
+
+
+// ======================
+// LEVEL GEOMETRY UPDATES
+// ======================
+apply_restart_to_lgs :: proc(is: Input_State, lgs: Level_Geometry_Soa) -> Level_Geometry_Soa {
+  lgs := dynamic_soa_copy(lgs)
+  if is.r_pressed {
+    for &lg in lgs {
+      lg.crack_time = 0
+    }
+  }
+  return lgs
+}
+
+
+apply_collisions_to_lgs :: proc(lgs: Level_Geometry_Soa, collision_ids: map[int]struct{}, elapsed_time: f32) -> Level_Geometry_Soa {
+    lgs := dynamic_soa_copy(lgs)
+    for id in collision_ids {
+        lg := &lgs[id]
+        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.crack_time
+    }
+    return lgs 
+}
+
+
+apply_bunny_hop_to_lgs :: proc(lgs: Level_Geometry_Soa, pls: Player_State,  elapsed_time: f32) -> Level_Geometry_Soa {
+    lgs := dynamic_soa_copy(lgs)
+    if did_bunny_hop(pls, elapsed_time) {
+        lgs[pls.contact_state.last_touched].crack_time = elapsed_time - BREAK_DELAY
+    }
+    return lgs 
+}
+
+
+// ==============
+// CAMERA UPDATES
+// ==============
+updated_camera_state :: proc(cs: Camera_State, player_pos: [3]f32) -> Camera_State {
+    cs := cs 
+    cs.prev_position = cs.position
+    cs.prev_target = cs.target
+    tgt_y := player_pos.y + CAMERA_PLAYER_Y_OFFSET
+    tgt_z := player_pos.z + CAMERA_PLAYER_Z_OFFSET
+    tgt_x := player_pos.x + CAMERA_PLAYER_X_OFFSET
+    tgt : [3]f32 = {tgt_x, tgt_y, tgt_z}
+    cs.position = math.lerp(cs.position, tgt, f32(CAMERA_POS_LERP))
+    cs.target.x = math.lerp(cs.target.x, player_pos.x, f32(CAMERA_X_LERP))
+    cs.target.y = math.lerp(cs.target.y, player_pos.y, f32(CAMERA_Y_LERP))
+    cs.target.z = math.lerp(cs.target.z, player_pos.z, f32(CAMERA_Z_LERP))
+    return cs
+}
+
 

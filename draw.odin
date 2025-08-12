@@ -165,6 +165,8 @@ draw :: proc(
         set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
+        slide_t := clamp((f32(time) - pls.slide_state.slide_time) / SLIDE_LEN, 0, 1)
+        set_float_uniform(shs, "slide_t", slide_t)
         gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
 

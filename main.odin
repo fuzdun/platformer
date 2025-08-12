@@ -129,7 +129,9 @@ main :: proc () {
     // init player state
     pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
-    pls.can_press_dash = true
+    pls.dash_state.can_dash = true
+    pls.slide_state.slide_end_time = -SLIDE_COOLDOWN
+    pls.slide_state.can_slide = true
     pls.can_press_jump = false
     pls.contact_state.ground_x = {1, 0, 0}
     pls.contact_state.ground_z = {0, 0, -1}
@@ -197,7 +199,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
