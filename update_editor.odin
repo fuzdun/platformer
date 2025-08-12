@@ -7,16 +7,18 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
     // get selected geometry distances
     clear(&es.connections)
     selected_geometry := lgs.entities[es.selected_entity]
-    for lg, idx in lgs.entities {
-        if idx == es.selected_entity {
-            continue
-        } 
-        lg_dist := la.length2(selected_geometry.transform.position - lg.transform.position)
-        if lg_dist > MAX_DRAW_GEOMETRY_DIST2 {
-            continue
+    if is.c_pressed {
+        for lg, idx in lgs.entities {
+            if idx == es.selected_entity {
+                continue
+            } 
+            lg_dist := la.length2(selected_geometry.transform.position - lg.transform.position)
+            if lg_dist > MAX_DRAW_GEOMETRY_DIST2 {
+                continue
+            }
+            s0, s1, dist := get_geometry_dist(phs^, selected_geometry, lg)
+            append(&es.connections, Connection{{s0, s1}, int(abs(dist))})
         }
-        s0, s1, dist := get_geometry_dist(phs^, selected_geometry, lg)
-        append(&es.connections, Connection{{s0, s1}, int(abs(dist))})
     }
 
     // move camera

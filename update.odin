@@ -72,7 +72,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     new_lgs := apply_restart_to_lgs(is, lgs.entities)
     new_lgs = apply_collisions_to_lgs(new_lgs, collision_ids, elapsed_time) 
-    new_lgs = apply_bunny_hop_to_lgs(new_lgs, pls^, elapsed_time)
+    // new_lgs = apply_bunny_hop_to_lgs(new_lgs, pls^, elapsed_time)
     dynamic_soa_swap(&lgs.entities, &new_lgs)
 
     cs^ = updated_camera_state(cs^, new_position)

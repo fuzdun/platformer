@@ -19,14 +19,14 @@ I_MAT :: glm.mat4(1.0)
 
 SHAPE :: enum {
     CUBE,
+    CYLINDER,
     ICO,
-    CYLINDER
 }
 
 SHAPE_FILENAME := [SHAPE]string {
     .CUBE = "basic_cube",
+    .CYLINDER = "cylinder",
     .ICO = "icosphere",
-    .CYLINDER = "cylinder"
 }
 
 TEXT_VERTICES :: [4]Quad_Vertex4 {

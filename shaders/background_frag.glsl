@@ -80,10 +80,11 @@ vec3 tonemap(vec3 x)
 }
 
 void main() {
-    float shade = pattern(uv);
+    float shade = pattern(round(uv * 100) / 100.0);
     vec3 pattern_col = vec3(colormap(shade).rgb) * .8;
     fragColor = vec4(0);
-    vec4 col = vec4(pattern_col * 0.5, 0.3);
+    // vec4 col = vec4(pattern_col * 0.5, 0.3);
+    vec4 col = vec4(pattern_col * 0.0, 0.3);
 
     // float t = i_time / 1000.0;
     vec2 center_uv = uv * 2.0 - 1.0;

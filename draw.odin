@@ -59,7 +59,7 @@ draw :: proc(
         count := u32(next_off - g_off)
         if count == 0 do continue
         shape := SHAPE(idx % len(SHAPE))
-        render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(Level_Geometry_Render_Type))))
+        render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(SHAPE))))
         sd := sr[shape] 
         command: gl.DrawElementsIndirectCommand = {
             u32(len(sd.indices)),
