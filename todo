@@ -1,5 +1,8 @@
+- integrate imgui into editor
+
 - add slide animation
 - boosted slide if hit within landing window
 - dash-breakable barriers
 - slide-under obstacles
 - adjust uv scaling for different-sized surfaces
+- combine geometry shattering with thumper vertex distortion so as to emphasize the latter more

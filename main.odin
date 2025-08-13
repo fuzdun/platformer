@@ -1,5 +1,6 @@
 package main
 
+import "core:encoding/xml/example"
 import "core:fmt"
 import "core:mem"
 import "core:os"
@@ -9,7 +10,6 @@ import SDL "vendor:sdl2"
 import TTF "vendor:sdl2/ttf"
 import gl "vendor:OpenGL"
 import ft "shared:freetype"
-import tm "core:time"
 
 
 EDIT :: #config(EDIT, false)
@@ -19,15 +19,17 @@ PLAYER_DRAW :: #config(PLAYER_DRAW, false)
 WIDTH :: 1920.0
 HEIGHT :: 1080.0
 FULLSCREEN :: true
-TARGET_FRAME_RATE :: 60.0
-FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
 // WIDTH :: 900
 // HEIGHT :: 900
 // FULLSCREEN :: false
+TARGET_FRAME_RATE :: 60.0
+FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
+FORCE_EXTERNAL_MONITOR :: true
 
 TITLE :: "platformer"
 
 quit_app := false
+
 
 main :: proc () {
     controller : ^SDL.GameController
@@ -52,7 +54,7 @@ main :: proc () {
             mem.tracking_allocator_destroy(&track)
         }
     }
-
+    
     //create SDL window
     if SDL.Init({.VIDEO, .GAMECONTROLLER}) < 0 {
         fmt.println("SDL could not initialize")
@@ -68,14 +70,33 @@ main :: proc () {
             controller = SDL.GameControllerOpen(i)
         }
     }
-    window := SDL.CreateWindow(
-        TITLE,
-        SDL.WINDOWPOS_UNDEFINED,
-        SDL.WINDOWPOS_UNDEFINED,
-        WIDTH,
-        HEIGHT,
-        {.OPENGL}
-    )
+
+    window: ^SDL.Window
+
+    if FORCE_EXTERNAL_MONITOR {
+        external_display_rect: SDL.Rect
+        SDL.GetDisplayBounds(1, &external_display_rect)
+
+        window = SDL.CreateWindow(
+            TITLE,
+            external_display_rect.x,
+            external_display_rect.y,
+            external_display_rect.w,
+            external_display_rect.h,
+            {.OPENGL}
+        )
+
+    } else {
+        window = SDL.CreateWindow(
+            TITLE,
+            0,
+            0,
+            WIDTH,
+            HEIGHT,
+            {.OPENGL}
+        )
+    }
+
     if window == nil {
         fmt.eprintln("Failed to create window")
     }
@@ -442,7 +463,6 @@ main :: proc () {
     resync := true
     quit_handler :: proc () { quit_app = true }
 
-    frame_time := tm.now()
     for !quit_app {
         if quit_app do break
 
@@ -497,9 +517,12 @@ main :: proc () {
         }
 
         // Render
-        // update_vertices(&lgs, sr, &rs)
-        draw_time := tm.now()
         draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
+
+        // imgui update
+        if EDIT {
+        }
+
 
         SDL.GL_SwapWindow(window)
     }
