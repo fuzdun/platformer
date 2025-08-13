@@ -179,7 +179,12 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         es.zoom = max(0, es.zoom - 5)
     }
     if is.tab_pressed && es.can_switch {
-        es.selected_entity = (es.selected_entity + 1) % len(lgs.entities)
+        if is.lshift_pressed {
+            nxt_selected_entity := es.selected_entity - 1
+            es.selected_entity = nxt_selected_entity < 0 ? len(lgs.entities) - 1 : nxt_selected_entity
+        } else {
+            es.selected_entity = (es.selected_entity + 1) % len(lgs.entities)
+        }
     }
     if is.ent_pressed {
         if !es.saved {

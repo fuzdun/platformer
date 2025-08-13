@@ -6,6 +6,10 @@ out vec4 fragColor;
 uniform sampler2D ourTexture;
 
 void main() {
-    fragColor = vec4(1.0, 1.0, 1.0, texture(ourTexture, uv).r);
+    float transparency = texture(ourTexture, uv).r;
+    if (transparency == 0) {
+        discard;
+    }
+    fragColor = vec4(1.0, 1.0, 1.0, transparency);
 }
 

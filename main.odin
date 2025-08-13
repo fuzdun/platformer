@@ -8,9 +8,12 @@ import glm "core:math/linalg/glsl"
 import str "core:strings"
 import SDL "vendor:sdl2"
 import TTF "vendor:sdl2/ttf"
+import  "core:strconv"
 import gl "vendor:OpenGL"
 import ft "shared:freetype"
-
+import imgui "shared:odin-imgui"
+import imsdl "shared:odin-imgui/imgui_impl_sdl2"
+import imgl "shared:odin-imgui/imgui_impl_opengl3"
 
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
@@ -29,7 +32,6 @@ FORCE_EXTERNAL_MONITOR :: true
 TITLE :: "platformer"
 
 quit_app := false
-
 
 main :: proc () {
     controller : ^SDL.GameController
@@ -441,6 +443,20 @@ main :: proc () {
     // load level data
     load_level_geometry(&lgs, sr, &phs, &rs, "test_level")
 
+    if EDIT {
+        // imgui init
+        imgui.create_context()
+        imgui.style_colors_dark()
+        io := imgui.get_io()
+        // io.config_flags |= {imgui.Config_Flag.Nav_Enable_Keyboard}
+        // io.config_flags |= {imgui.Config_Flag.Nav_Enable_Gamepad}
+        io.config_flags |= {imgui.Config_Flag.Docking_Enable}
+
+        imsdl.init_for_open_gl(window, gl_context)
+        imgl.init()
+    }
+    
+    
     // start frame loop
     clocks_per_second := i64(SDL.GetPerformanceFrequency())
     target_frame_clocks := clocks_per_second / TARGET_FRAME_RATE
@@ -517,14 +533,44 @@ main :: proc () {
         }
 
         // Render
-        draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
-
-        // imgui update
+        draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, is, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
         if EDIT {
+            imgl.new_frame()
+            imsdl.new_frame()
+            imgui.new_frame()
+
+            imgui.begin("Level Editor")
+            imgui.text("Level Geometry")
+            imgui.begin_child("Scrolling")
+            {
+                for lg, lg_idx in lgs.entities {
+                    color: imgui.Vec4 = es.selected_entity == lg_idx ? {1, 0, 0, 1} : {1, 1, 1, 1}
+                    buf: [4]byte
+                    num_string := strconv.itoa(buf[:], lg_idx)
+                    shape_string := SHAPE_FILENAME[lg.shape]
+                    display_name := str.concatenate({num_string, ": ", shape_string})
+                    imgui.text_colored(color, str.unsafe_string_to_cstring(display_name))
+                    if imgui.is_item_clicked(imgui.Mouse_Button.Left) {
+                        es.selected_entity = lg_idx 
+                    }
+                }
+            }
+            imgui.end_child()
+            imgui.end()
+
+            // imgui.show_demo_window()
+            imgui.render()
+            imgl.render_draw_data(imgui.get_draw_data())
+        } else {
         }
 
-
         SDL.GL_SwapWindow(window)
+    }
+
+    if EDIT {
+        imgl.shutdown()
+        imsdl.shutdown()
+        imgui.destroy_context()
     }
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import SDL "vendor:sdl2"
+import imsdl "shared:odin-imgui/imgui_impl_sdl2"
 
 
 Input_State :: struct {
@@ -27,6 +28,8 @@ Input_State :: struct {
     ent_pressed: bool,
     spc_pressed: bool,
     alt_pressed: bool,
+    lctrl_pressed: bool,
+    lshift_pressed: bool,
     hor_axis: f32,
     vert_axis: f32
 }
@@ -36,6 +39,13 @@ free_input_state :: proc(is: ^Input_State) {}
 process_input :: proc (is: ^Input_State, quit_handler: proc()) {
     event : SDL.Event
     for SDL.PollEvent(&event) {
+        #partial switch event.type {
+        case .QUIT:
+            quit_handler()
+        }
+        if EDIT {
+            imsdl.process_event(&event)
+        }
         #partial switch event.type {
         case .CONTROLLERAXISMOTION:
             if event.jaxis.axis == 0 {
@@ -116,6 +126,10 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
                 is.spc_pressed = true
             case .LALT:
                 is.alt_pressed = true
+            case .LCTRL:
+                is.lctrl_pressed = true
+            case .LSHIFT:
+                is.lshift_pressed = true
             }
         case .KEYUP:
             #partial switch event.key.keysym.sym {
@@ -165,9 +179,12 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
                 is.spc_pressed = false
             case .LALT:
                 is.alt_pressed = false
+            case .LCTRL:
+                is.lctrl_pressed = false
+            case .LSHIFT:
+                is.lshift_pressed = false
             }
-        case .QUIT:
-            quit_handler()
         }
     }
 }
+

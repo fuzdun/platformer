@@ -2,9 +2,10 @@ package main
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import "core:strconv"
+import "core:fmt"
     
 
-draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, rg: Render_Groups, proj_mat: glm.mat4) {
+draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, is: Input_State, lgs: Level_Geometry_State, rg: Render_Groups, proj_mat: glm.mat4) {
     gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
     gl.ClearColor(0, 0, 0, 1)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -21,13 +22,13 @@ draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, rg:
 
     // draw geometry connections
     lines := make([dynamic]Line_Vertex); defer delete(lines)
+    gl.BindVertexArray(rs.text_vao)
+    use_shader(shs, rs, .Text)
+    gl.Enable(gl.BLEND)
+    gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     if len(es.connections) > 0 {
-        gl.BindVertexArray(rs.text_vao)
-        gl.Enable(gl.BLEND)
-        gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         // scale := es.zoom / 800
         scale: f32 = 0.2
-        use_shader(shs, rs, .Text)
         for el in es.connections {
             append(
                 &lines,
@@ -39,7 +40,14 @@ draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, rg:
             strconv.itoa(dist_txt_buf[:], el.dist)
             render_screen_text(shs, rs, string(dist_txt_buf[:]), avg_pos, proj_mat, scale)
         }
+    }
 
+    if is.lctrl_pressed {
+        for lg, lg_idx in lgs.entities {
+            buf: [4]byte
+            idx_string := strconv.itoa(buf[:], lg_idx)
+            render_screen_text(shs, rs, idx_string, lg.transform.position, proj_mat, 0.3)
+        }
     }
 
     // draw player spawn marker
