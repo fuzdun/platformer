@@ -2,3 +2,4 @@
 - boosted slide if hit within landing window
 - dash-breakable barriers
 - slide-under obstacles
+- adjust uv scaling for different-sized surfaces
