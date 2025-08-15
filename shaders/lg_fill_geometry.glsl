@@ -43,7 +43,9 @@ out vec3 t0_pos;
 out vec3 t1_pos;
 out vec3 t2_pos;
 
-out vec3 tzd;
+out float t0zd;
+out float t1zd;
+out float t2zd;
 
 out vec2 t0_uv;
 out vec2 t1_uv;
@@ -125,7 +127,9 @@ void main() {
 
     proj_t0_pos = proj_t0.xy / proj_t0.w;
 
-    tzd = vec3(1.0 / proj_t0.w, 1.0 / proj_t1.w, 1.0 / proj_t2.w);
+    t0zd = 1.0 / proj_t0.w;
+    t1zd = 1.0 / proj_t1.w;
+    t2zd = 1.0 / proj_t2.w;
 
     t0_uv = te_out[0].t0_uv;
     t1_uv = te_out[0].t1_uv;

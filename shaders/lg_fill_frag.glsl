@@ -25,7 +25,9 @@ in vec2 t0_uv;
 in vec2 t1_uv;
 in vec2 t2_uv;
 in vec2 proj_t0_pos;
-in vec3 tzd;
+in float t0zd;
+in float t1zd;
+in float t2zd;
 in vec2 v0;
 in vec2 v1;
 in float d00;
@@ -173,15 +175,18 @@ void main()
     vec2 v2 = ndc - proj_t0_pos;
     float d20 = dot(v2, v0);
     float d21 = dot(v2, v1);
-    vec3 bary;
     float bary_1 = (d11 * d20 - d01 * d21) / denom;
     float bary_2 = (d00 * d21 - d01 * d20) / denom;
-    bary = vec3(1.0 - bary_1 - bary_2, bary_1, bary_2);
-    bary *= tzd;
-    bary /= (bary.x + bary.y + bary.z);
+    float bary_0 = (1.0 - bary_1 - bary_2) * t0zd;
+    bary_1 *= t1zd;
+    bary_2 *= t2zd;
+    float bary_sum = bary_0 + bary_1 + bary_2;
+    bary_0 /= bary_sum;
+    bary_1 /= bary_sum;
+    bary_2 /= bary_sum;
 
-    vec2 uv = (t0_uv * bary[0] + t1_uv * bary[1] + t2_uv * bary[2]);
-    vec3 intersection = (t0_pos * bary[0] + t1_pos * bary[1] + t2_pos * bary[2]);
+    vec2 uv = (t0_uv * bary_0 + t1_uv * bary_1 + t2_uv * bary_2);
+    vec3 intersection = (t0_pos * bary_0 + t1_pos * bary_1 + t2_pos * bary_2);
 
     float plane_off = dot(normal_frag, global_pos);
     float dist = (dot(normal_frag, player_pos) - plane_off) - 1.5;
@@ -247,6 +252,5 @@ void main()
     vec4 glassColor = mix(vec4(0.05, 0.05, 0.075, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
-    // fragColor.b = proj_t0_pos.z / 1.0;
 }
 
