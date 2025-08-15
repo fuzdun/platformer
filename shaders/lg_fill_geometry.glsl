@@ -26,6 +26,7 @@ in TE_OUT {
     vec3 t0_pos;
     vec3 t1_pos;
     vec3 t2_pos;
+
     vec2 t0_uv;
     vec2 t1_uv;
     vec2 t2_uv;
@@ -39,9 +40,14 @@ out vec3 normal_frag;
 out float plane_dist;
 out float displacement;
 
-out vec3 t0_pos;
-out vec3 t1_pos;
-out vec3 t2_pos;
+out vec2 proj_t0_pos;
+out vec2 proj_t1_pos;
+out vec2 proj_t2_pos;
+
+out float t0zd;
+out float t1zd;
+out float t2zd;
+
 out vec2 t0_uv;
 out vec2 t1_uv;
 out vec2 t2_uv;
@@ -109,9 +115,18 @@ void main() {
     // disp.z *= 0.75;
     vec4 new_avg = avg_pos + disp;
 
-    t0_pos = te_out[0].t0_pos;
-    t1_pos = te_out[0].t1_pos;
-    t2_pos = te_out[0].t2_pos;
+    vec4 proj_t0 = projection * vec4(te_out[0].t0_pos, 1.0);
+    vec4 proj_t1 = projection * vec4(te_out[0].t1_pos, 1.0);
+    vec4 proj_t2 = projection * vec4(te_out[0].t2_pos, 1.0);
+
+    proj_t0_pos = proj_t0.xy / proj_t0.w;
+    proj_t1_pos = proj_t1.xy / proj_t1.w;
+    proj_t2_pos = proj_t2.xy / proj_t2.w;
+
+    t0zd = 1.0 / proj_t0.w;
+    t1zd = 1.0 / proj_t1.w;
+    t2zd = 1.0 / proj_t2.w;
+
     t0_uv = te_out[0].t0_uv;
     t1_uv = te_out[0].t1_uv;
     t2_uv = te_out[0].t2_uv;

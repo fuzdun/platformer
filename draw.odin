@@ -160,6 +160,8 @@ draw :: proc(
         player_trail := interpolated_trail(pls, f32(interp_t))
         set_vec3_uniform(shs, "player_trail", 3, &player_trail[0])
         set_float_uniform(shs, "crunch_time", f32(pls.crunch_time) / 1000)
+        view := only_view_matrix(cs, f32(interp_t))
+        set_matrix_uniform(shs, "view", &view)
         inverse_view := glm.inverse(only_view_matrix(cs, f32(interp_t)))
         set_matrix_uniform(shs, "inverse_view", &inverse_view)
         inverse_proj := glm.inverse(only_projection_matrix(cs, f32(interp_t)))

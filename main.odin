@@ -514,9 +514,9 @@ main :: proc () {
         }
 
         if(resync) {
-            accumulator = 0;
-            delta_time = target_frame_clocks;
-            resync = false;
+            accumulator = 0
+            delta_time = target_frame_clocks
+            resync = false
         }
 
         // Handle input
@@ -558,10 +558,8 @@ main :: proc () {
             imgui.end_child()
             imgui.end()
 
-            // imgui.show_demo_window()
             imgui.render()
             imgl.render_draw_data(imgui.get_draw_data())
-        } else {
         }
 
         SDL.GL_SwapWindow(window)

@@ -19,9 +19,14 @@ in vec3 normal_frag;
 in float displacement;
 
 in float plane_dist;
-in vec3 t0_pos;
-in vec3 t1_pos;
-in vec3 t2_pos;
+
+in vec2 proj_t0_pos;
+in vec2 proj_t1_pos;
+in vec2 proj_t2_pos;
+in float t0zd;
+in float t1zd;
+in float t2zd;
+
 in vec2 t0_uv;
 in vec2 t1_uv;
 in vec2 t2_uv;
@@ -32,6 +37,7 @@ uniform vec3 crunch_pt;
 uniform float crunch_time;
 uniform mat4 inverse_projection;
 uniform mat4 inverse_view;
+uniform mat4 view;
 uniform float slide_t;
 
 uniform sampler2D ditherTexture;
@@ -141,7 +147,8 @@ float reshapeUniformToTriangle(float v) {
     return v + 0.5;
 }
 
-#define SAMPLE_RES 640.0
+// #define SAMPLE_RES 240.0
+#define SAMPLE_RES 140.0
 
 void main()
 {
@@ -157,37 +164,33 @@ void main()
     screen_uv = floor(screen_uv * SAMPLE_RES) / SAMPLE_RES;
 
     vec2 rounded_frag = screen_uv * screen_width;
-    vec3 ndc = vec3(
+    vec2 ndc = vec2(
         (rounded_frag.x / screen_width - 0.5) * 2.0,
-        (rounded_frag.y / screen_height - 0.5) * 2.0,
-        1.0
+        (rounded_frag.y / screen_height - 0.5) * 2.0
     );
-    vec4 ray_clip = vec4(ndc.xy, -1.0, 1.0);
-    vec4 ray_eye = inverse_projection * ray_clip;
-    vec3 ray_wor = normalize((inverse_view * vec4(ray_eye.xy, -1.0, 0.0)).xyz);
-    vec3 intersection = (plane_dist + dot(-camera_pos, normal_frag)) / dot(-normal_frag, ray_wor) * ray_wor - camera_pos;
-    intersection *= -1;
 
-    vec3 v0 = t1_pos - t0_pos;
-    vec3 v1 = t2_pos - t0_pos;
-    vec3 v2 = intersection - t0_pos;
-    float d00 = dot(v0, v0);
-    float d01 = dot(v0, v1);
-    float d11 = dot(v1, v1);
-    float d20 = dot(v2, v0);
-    float d21 = dot(v2, v1);
-    float denom =  d00 * d11 - d01 * d01;
-    float bary_1 = (d11 * d20 - d01 * d21) / denom;
-    float bary_2 = (d00 * d21 - d01 * d20) / denom;
-    float bary_0 = 1.0 - bary_1 - bary_2;
-    vec2 uv = t0_uv * bary_0 + t1_uv * bary_1 + t2_uv * bary_2;
+    vec2 v0 = proj_t1_pos - proj_t0_pos;
+    vec2 v1 = proj_t2_pos - proj_t0_pos;
+    vec2 v2 = ndc - proj_t0_pos;
+    float den = v0.x * v1.y - v1.x * v0.y;
+    float bary_1 = ((v2.x * v1.y - v1.x * v2.y) / den);
+    float bary_2 = ((v0.x * v2.y - v2.x * v0.y) / den);
+    float bary_0 = (1.0 - bary_1 - bary_2) * t0zd;
+    bary_1 *= t1zd;
+    bary_2 *= t2zd;
+    float ur = bary_1 + bary_2 + bary_0;
+    bary_0 /= ur;
+    bary_1 /= ur;
+    bary_2 /= ur;
+
+    vec2 uv = (t0_uv * bary_0 + t1_uv * bary_1 + t2_uv * bary_2);
 
     float plane_off = dot(normal_frag, global_pos);
     float dist = (dot(normal_frag, player_pos) - plane_off) - 1.5;
     vec3 proj_pt = player_pos - dist * normal_frag;
 
     vec3 diff = global_pos - player_pos;
-    vec3 t_diff = intersection - player_pos;
+    vec3 t_diff = global_pos - player_pos;
     vec3 planar_diff = proj_pt - global_pos;
     vec3 up = normal_frag.y == 1.0 ? vec3(1, 0, 0) : vec3(1.0, 0, 0);
     vec3 plane_x = normalize(cross(up, normal_frag));
@@ -204,8 +207,6 @@ void main()
     //     noise_border = 0;
     // }
     vec3 proximity_outline_col = vec3(1.0, 1.0, 1.0) * noise_border;
-
-    vec3 pattern_col = render(uv * 4.0 - 2.0).xyz;
 
     vec3 trail_col = vec3(0.0, 0, 0);
     vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);
@@ -235,6 +236,11 @@ void main()
         impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
     }
 
+    vec3 pattern_col = render(uv * 4.0 - 2.0).xyz;
+    // float c_dist = length(uv - 0.5);
+    // vec3 pattern_col = vec3(1.0, 0, 0) * smoothstep(0.25, 0.3, c_dist) - smoothstep(0.3, 0.35, c_dist);
+    // vec3 pattern_col = vec3(uv.x, uv.y, 1);
+
     vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
 
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * (SAMPLE_RES / 64.0)).r;
@@ -243,5 +249,6 @@ void main()
     vec4 glassColor = mix(vec4(0.05, 0.05, 0.075, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
+    // fragColor.b = proj_t0_pos.z / 1.0;
 }
 
