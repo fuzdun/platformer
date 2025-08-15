@@ -20,7 +20,6 @@ in TE_OUT {
     vec4 obj_pos;
     float player_dist;
     float plane_dist;
-    // vec3 pos;
     float crack_time;
 
     vec3 t0_pos;
@@ -40,23 +39,28 @@ out vec3 normal_frag;
 out float plane_dist;
 out float displacement;
 
-out vec2 proj_t0_pos;
-out vec2 proj_t1_pos;
-out vec2 proj_t2_pos;
+out vec3 t0_pos;
+out vec3 t1_pos;
+out vec3 t2_pos;
 
-out float t0zd;
-out float t1zd;
-out float t2zd;
+out vec3 tzd;
 
 out vec2 t0_uv;
 out vec2 t1_uv;
 out vec2 t2_uv;
 
+out vec2 proj_t0_pos;
+out vec2 v0;
+out vec2 v1;
+out float d00;
+out float d01;
+out float d11;
+out float denom;
+
 #define MIN_INTERVAL 100.0
 #define MAX_INTERVAL 400.0 
 #define ASSEMBLE_WINDOW 400.0
 
-// #define SHATTER_DELAY 2000.0
 #define SHATTER_INTERVAL 1300.0
 #define SHATTER_WINDOW 1500.0
 #define SHATTER_HORIZONTAL_DIST 70.0
@@ -120,16 +124,23 @@ void main() {
     vec4 proj_t2 = projection * vec4(te_out[0].t2_pos, 1.0);
 
     proj_t0_pos = proj_t0.xy / proj_t0.w;
-    proj_t1_pos = proj_t1.xy / proj_t1.w;
-    proj_t2_pos = proj_t2.xy / proj_t2.w;
 
-    t0zd = 1.0 / proj_t0.w;
-    t1zd = 1.0 / proj_t1.w;
-    t2zd = 1.0 / proj_t2.w;
+    tzd = vec3(1.0 / proj_t0.w, 1.0 / proj_t1.w, 1.0 / proj_t2.w);
 
     t0_uv = te_out[0].t0_uv;
     t1_uv = te_out[0].t1_uv;
     t2_uv = te_out[0].t2_uv;
+
+    t0_pos = te_out[0].t0_pos;
+    t1_pos = te_out[1].t1_pos;
+    t2_pos = te_out[2].t2_pos;
+
+    v0 = proj_t1.xy / proj_t1.w - proj_t0_pos;
+    v1 = proj_t2.xy / proj_t2.w - proj_t0_pos;
+    d00 = dot(v0, v0);
+    d01 = dot(v0, v1);
+    d11 = dot(v1, v1);
+    denom =  d00 * d11 - d01 * d01;
 
     plane_dist = te_out[0].plane_dist; 
     displacement = dist_fact;
@@ -163,11 +174,7 @@ void main() {
         local_pos *= cracked ? 1.0 - (seed_val_2 * CRACK_WIDTH) : 1.0;
         local_pos *= 1.0 - dist_fact;
         new_pos = new_avg + local_pos;
-        // new_pos += shrink_vec * crack_amt;
-        // new_pos += SHRINK ? shrink_vec * (dist_fact - crack_amt) : vec4(0);
         if (shattered) {
-            // float shatter_inverval = MAX_SHATTER_INTERVAL * seed_val_2;
-            // new_pos += shrink_vec * shatter_t;
             new_pos.y -= fall_t * SHATTER_VERTICAL_DIST;
             vec4 offset_vec = vec4(horizontal_offset.x, 0, horizontal_offset.y , 0);
             new_pos += shatter_t * offset_vec;
@@ -175,12 +182,7 @@ void main() {
 
 
         vec4 proj_pos = projection * new_pos;
-        // vec4 proj_pos = projection * gl_in[i].gl_Position;
         vec4 snapped_pos = proj_pos;
-        // snapped_pos.xyz /= proj_pos.w;
-        // bool in_ndc = snapped_pos.x >= -1 && snapped_pos.x <= 1 && snapped_pos.y >= -1 && snapped_pos.y <= 1;
-        // snapped_pos.xy = floor(100 * snapped_pos.xy) / 100;
-        // snapped_pos.xyz *= proj_pos.w;
         gl_Position = snapped_pos;
         global_pos = new_pos.xyz;
         perspective_uv = te_out[i].uv;

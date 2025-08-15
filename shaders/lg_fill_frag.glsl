@@ -18,18 +18,20 @@ in vec2 perspective_uv;
 in vec3 normal_frag;
 in float displacement;
 
-in float plane_dist;
-
-in vec2 proj_t0_pos;
-in vec2 proj_t1_pos;
-in vec2 proj_t2_pos;
-in float t0zd;
-in float t1zd;
-in float t2zd;
-
+in vec3 t0_pos;
+in vec3 t1_pos;
+in vec3 t2_pos;
 in vec2 t0_uv;
 in vec2 t1_uv;
 in vec2 t2_uv;
+in vec2 proj_t0_pos;
+in vec3 tzd;
+in vec2 v0;
+in vec2 v1;
+in float d00;
+in float d01;
+in float d11;
+in float denom;
 
 uniform vec3 camera_pos;
 uniform vec3[3] player_trail;
@@ -147,8 +149,7 @@ float reshapeUniformToTriangle(float v) {
     return v + 0.5;
 }
 
-// #define SAMPLE_RES 240.0
-#define SAMPLE_RES 140.0
+#define SAMPLE_RES 240.0
 
 void main()
 {
@@ -169,28 +170,25 @@ void main()
         (rounded_frag.y / screen_height - 0.5) * 2.0
     );
 
-    vec2 v0 = proj_t1_pos - proj_t0_pos;
-    vec2 v1 = proj_t2_pos - proj_t0_pos;
     vec2 v2 = ndc - proj_t0_pos;
-    float den = v0.x * v1.y - v1.x * v0.y;
-    float bary_1 = ((v2.x * v1.y - v1.x * v2.y) / den);
-    float bary_2 = ((v0.x * v2.y - v2.x * v0.y) / den);
-    float bary_0 = (1.0 - bary_1 - bary_2) * t0zd;
-    bary_1 *= t1zd;
-    bary_2 *= t2zd;
-    float ur = bary_1 + bary_2 + bary_0;
-    bary_0 /= ur;
-    bary_1 /= ur;
-    bary_2 /= ur;
+    float d20 = dot(v2, v0);
+    float d21 = dot(v2, v1);
+    vec3 bary;
+    float bary_1 = (d11 * d20 - d01 * d21) / denom;
+    float bary_2 = (d00 * d21 - d01 * d20) / denom;
+    bary = vec3(1.0 - bary_1 - bary_2, bary_1, bary_2);
+    bary *= tzd;
+    bary /= (bary.x + bary.y + bary.z);
 
-    vec2 uv = (t0_uv * bary_0 + t1_uv * bary_1 + t2_uv * bary_2);
+    vec2 uv = (t0_uv * bary[0] + t1_uv * bary[1] + t2_uv * bary[2]);
+    vec3 intersection = (t0_pos * bary[0] + t1_pos * bary[1] + t2_pos * bary[2]);
 
     float plane_off = dot(normal_frag, global_pos);
     float dist = (dot(normal_frag, player_pos) - plane_off) - 1.5;
     vec3 proj_pt = player_pos - dist * normal_frag;
 
     vec3 diff = global_pos - player_pos;
-    vec3 t_diff = global_pos - player_pos;
+    vec3 t_diff = intersection - player_pos;
     vec3 planar_diff = proj_pt - global_pos;
     vec3 up = normal_frag.y == 1.0 ? vec3(1, 0, 0) : vec3(1.0, 0, 0);
     vec3 plane_x = normalize(cross(up, normal_frag));
