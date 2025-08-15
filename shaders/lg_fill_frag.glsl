@@ -26,6 +26,13 @@ in vec2 t0_uv;
 in vec2 t1_uv;
 in vec2 t2_uv;
 
+in vec3 v0;
+in vec3 v1;
+in float d00;
+in float d01;
+in float d11;
+in float denom;
+
 uniform vec3 camera_pos;
 uniform vec3[3] player_trail;
 uniform vec3 crunch_pt;
@@ -168,15 +175,9 @@ void main()
     vec3 intersection = (plane_dist + dot(-camera_pos, normal_frag)) / dot(-normal_frag, ray_wor) * ray_wor - camera_pos;
     intersection *= -1;
 
-    vec3 v0 = t1_pos - t0_pos;
-    vec3 v1 = t2_pos - t0_pos;
     vec3 v2 = intersection - t0_pos;
-    float d00 = dot(v0, v0);
-    float d01 = dot(v0, v1);
-    float d11 = dot(v1, v1);
     float d20 = dot(v2, v0);
     float d21 = dot(v2, v1);
-    float denom =  d00 * d11 - d01 * d01;
     float bary_1 = (d11 * d20 - d01 * d21) / denom;
     float bary_2 = (d00 * d21 - d01 * d20) / denom;
     float bary_0 = 1.0 - bary_1 - bary_2;

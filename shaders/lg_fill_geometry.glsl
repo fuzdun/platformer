@@ -20,7 +20,6 @@ in TE_OUT {
     vec4 obj_pos;
     float player_dist;
     float plane_dist;
-    // vec3 pos;
     float crack_time;
 
     vec3 t0_pos;
@@ -45,6 +44,13 @@ out vec3 t2_pos;
 out vec2 t0_uv;
 out vec2 t1_uv;
 out vec2 t2_uv;
+
+out vec3 v0;
+out vec3 v1;
+out float d00;
+out float d01;
+out float d11;
+out float denom;
 
 #define MIN_INTERVAL 100.0
 #define MAX_INTERVAL 400.0 
@@ -112,6 +118,14 @@ void main() {
     t0_pos = te_out[0].t0_pos;
     t1_pos = te_out[0].t1_pos;
     t2_pos = te_out[0].t2_pos;
+
+    v0 = t1_pos - t0_pos;
+    v1 = t2_pos - t0_pos;
+    d00 = dot(v0, v0);
+    d01 = dot(v0, v1);
+    d11 = dot(v1, v1);
+    denom =  d00 * d11 - d01 * d01;
+
     t0_uv = te_out[0].t0_uv;
     t1_uv = te_out[0].t1_uv;
     t2_uv = te_out[0].t2_uv;
