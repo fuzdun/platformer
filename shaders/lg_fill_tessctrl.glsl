@@ -30,6 +30,7 @@ patch out float crack_time;
 
 out TC_OUT {
     vec2 uv;
+    vec3 pos;
 } tc_out[];
 
 void main() {
@@ -46,6 +47,7 @@ void main() {
     d01 = dot(v0, v1);
     d11 = dot(v1, v1);
     denom =  d00 * d11 - d01 * d01;
+    tc_out[gl_InvocationID].pos = vs_out[gl_InvocationID].pos;
   
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 

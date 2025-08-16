@@ -4,6 +4,7 @@ layout(triangles, equal_spacing, ccw) in;
 
 in TC_OUT {
     vec2 uv;
+    vec3 pos;
 } tc_out[];
 
 patch in vec3 v0;
@@ -60,9 +61,12 @@ void main() {
     te_out.plane_dist = plane_dist;
     te_out.crack_time = crack_time;
 
-    te_out.t0_pos = gl_in[0].gl_Position.xyz;
-    te_out.t1_pos = gl_in[1].gl_Position.xyz;
-    te_out.t2_pos = gl_in[2].gl_Position.xyz;
+    // te_out.t0_pos = gl_in[0].gl_Position.xyz;
+    // te_out.t1_pos = gl_in[1].gl_Position.xyz;
+    // te_out.t2_pos = gl_in[2].gl_Position.xyz;
+    te_out.t0_pos = tc_out[0].pos;
+    te_out.t1_pos = tc_out[1].pos;
+    te_out.t2_pos = tc_out[2].pos;
 
     te_out.t0_uv = tc_out[0].uv;
     te_out.t1_uv = tc_out[1].uv;

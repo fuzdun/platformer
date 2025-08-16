@@ -241,15 +241,16 @@ void main()
     }
 
     // vec3 pattern_col = render(uv * 4.0 - 2.0).xyz;
-    vec3 pattern_col = vec3(0, 0.8, 1.0);
-    vec3 border_col = smoothstep(0.45, 0.5, length(uv)) * vec3(1, 0, 0);
+    // vec3 pattern_col = vec3(0, 0.8, 1.0);
+    vec3 border_col = (smoothstep(0.25, 0.3, length(uv)) - smoothstep(0.3, 0.35, length(uv))) * vec3(1, 0, 0);
 
-    vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col + border_col;
+    // vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
+    vec3 col = vec3(bary_0, bary_1, bary_2);
 
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * (SAMPLE_RES / 64.0)).r;
     mask = reshapeUniformToTriangle(mask);
     mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.15)); 
-    // fragColor = mix(vec4(col, 1.0), glassColor, mask);
-    // fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
-    fragColor = vec4(border_col, 1.0);
+    fragColor = mix(vec4(col, 1.0), glassColor, mask);
+    fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
+    fragColor = vec4(col, 1.0);
 }
