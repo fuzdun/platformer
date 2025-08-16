@@ -148,7 +148,7 @@ float reshapeUniformToTriangle(float v) {
     return v + 0.5;
 }
 
-#define SAMPLE_RES 240.0
+#define SAMPLE_RES 50.0
 
 void main()
 {
@@ -241,11 +241,12 @@ void main()
     }
 
     // vec3 pattern_col = render(uv * 4.0 - 2.0).xyz;
-    // vec3 pattern_col = vec3(0, 0.8, 1.0);
-    vec3 border_col = (smoothstep(0.25, 0.3, length(uv)) - smoothstep(0.3, 0.35, length(uv))) * vec3(1, 0, 0);
+    vec3 pattern_col = vec3(0, 0.8, 1.0);
+    vec3 border_col = smoothstep(0.40, 0.50, max(abs(uv.x - 0.5), abs(uv.y - 0.5))) * vec3(1, 0, 0);
 
     // vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
-    vec3 col = vec3(bary_0, bary_1, bary_2);
+    vec3 col = border_col;
+    // vec3 col = vec3(bary_0, bary_1, bary_2);
 
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * (SAMPLE_RES / 64.0)).r;
     mask = reshapeUniformToTriangle(mask);

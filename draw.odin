@@ -191,7 +191,7 @@ draw :: proc(
         gl.Disable(gl.DEPTH_TEST)
         use_shader(shs, rs, .Level_Geometry_Outline)
         gl.BindVertexArray(rs.standard_vao)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
+        // draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
 

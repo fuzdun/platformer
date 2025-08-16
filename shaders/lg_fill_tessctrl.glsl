@@ -6,7 +6,7 @@ in VS_OUT {
     vec2 uv;
     vec3 normal_frag;
     vec4 obj_pos;
-    vec4 proj_pos;
+    // vec4 proj_pos;
     float player_dist;
     float plane_dist;
     vec3 pos;
@@ -41,8 +41,8 @@ void main() {
     crack_time = vs_out[gl_InvocationID].crack_time;
     tc_out[gl_InvocationID].uv = vs_out[gl_InvocationID].uv;
 
-    v0 = (vs_out[1].proj_pos - vs_out[0].proj_pos).xyz;
-    v1 = (vs_out[2].proj_pos - vs_out[0].proj_pos).xyz;
+    v0 = (gl_in[1].gl_Position - gl_in[0].gl_Position).xyz;
+    v1 = (gl_in[2].gl_Position - gl_in[0].gl_Position).xyz;
     d00 = dot(v0, v0);
     d01 = dot(v0, v1);
     d11 = dot(v1, v1);
