@@ -2,7 +2,6 @@
 
 layout (triangles) in; 
 layout (triangle_strip, max_vertices = 3) out;
-
 layout (std140, binding = 0) uniform Common
 {
     mat4 projection;
@@ -28,6 +27,13 @@ in TE_OUT {
     vec2 t0_uv;
     vec2 t1_uv;
     vec2 t2_uv;
+
+    in vec3 v0;
+    in vec3 v1;
+    in float d00;
+    in float d01;
+    in float d11;
+    in float denom;
 } te_out[];
 
 uniform float shatter_delay;
@@ -119,12 +125,12 @@ void main() {
     t1_pos = te_out[0].t1_pos;
     t2_pos = te_out[0].t2_pos;
 
-    v0 = t1_pos - t0_pos;
-    v1 = t2_pos - t0_pos;
-    d00 = dot(v0, v0);
-    d01 = dot(v0, v1);
-    d11 = dot(v1, v1);
-    denom =  d00 * d11 - d01 * d01;
+    v0 = te_out[0].v0;
+    v1 = te_out[0].v1;
+    d00 = te_out[0].d00;
+    d01 = te_out[0].d01;
+    d11 = te_out[0].d11;
+    denom = te_out[0].denom;
 
     t0_uv = te_out[0].t0_uv;
     t1_uv = te_out[0].t1_uv;

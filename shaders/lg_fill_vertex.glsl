@@ -37,6 +37,7 @@ out VS_OUT {
     vec2 uv;
     vec3 normal_frag;
     vec4 obj_pos;
+    vec4 proj_pos;
     float player_dist;
     float plane_dist;
     vec3 pos;
@@ -53,6 +54,7 @@ void main() {
     vec3 rot_normal = normalize(mat3(transpose(inverse(matrices_data[gl_BaseInstance + gl_InstanceID]))) * normal_in).xyz;
 
     vs_out.obj_pos = vec4(transform[3][0], transform[3][1], transform[3][2], 1.0);
+    vs_out.proj_pos = projection * new_pos;
     vs_out.uv = vertexUV;
     vs_out.normal_frag = rot_normal;
     vs_out.player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;

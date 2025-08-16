@@ -148,10 +148,16 @@ float reshapeUniformToTriangle(float v) {
     return v + 0.5;
 }
 
-#define SAMPLE_RES 640.0
+#define SAMPLE_RES 240.0
 
 void main()
 {
+    vec4 glassColor = mix(vec4(0.05, 0.05, 0.075, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
+    // if (displacement > 0.00) {
+    //     fragColor = glassColor;
+    //     return;
+    // }
+
     float time = i_time / 1000.0;
 
     // get floored uv
@@ -206,8 +212,6 @@ void main()
     // }
     vec3 proximity_outline_col = vec3(1.0, 1.0, 1.0) * noise_border;
 
-    vec3 pattern_col = render(uv * 4.0 - 2.0).xyz;
-
     vec3 trail_col = vec3(0.0, 0, 0);
     vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);
     vec2 res2 = distanceToSegment(player_trail[0], player_trail[1], global_pos);
@@ -236,13 +240,16 @@ void main()
         impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
     }
 
-    vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
+    // vec3 pattern_col = render(uv * 4.0 - 2.0).xyz;
+    vec3 pattern_col = vec3(0, 0.8, 1.0);
+    vec3 border_col = smoothstep(0.45, 0.5, length(uv)) * vec3(1, 0, 0);
+
+    vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col + border_col;
 
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * (SAMPLE_RES / 64.0)).r;
     mask = reshapeUniformToTriangle(mask);
     mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.15)); 
-    vec4 glassColor = mix(vec4(0.05, 0.05, 0.075, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
-    fragColor = mix(vec4(col, 1.0), glassColor, mask);
-    fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
+    // fragColor = mix(vec4(col, 1.0), glassColor, mask);
+    // fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
+    fragColor = vec4(border_col, 1.0);
 }
-
