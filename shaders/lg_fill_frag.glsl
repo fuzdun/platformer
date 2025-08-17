@@ -20,8 +20,6 @@ in float displacement;
 
 in float plane_dist;
 in vec3 t0_pos;
-in vec3 t1_pos;
-in vec3 t2_pos;
 in vec2 t0_uv;
 in vec2 t1_uv;
 in vec2 t2_uv;
@@ -68,75 +66,6 @@ float noise(vec2 p) {
                u.y);
 }
 
-const vec3 sundir = vec3(-0.7071,0.0,-0.7071);
-
-float rand(vec3 p) 
-{
-    return fract(sin(dot(p, vec3(12.345, 67.89, 412.12))) * 42123.45) * 2.0 - 1.0;
-}
-
-float noise(vec3 p) 
-{
-    vec3 u = floor(p);
-    vec3 v = fract(p);
-    vec3 s = smoothstep(0.0, 1.0, v);
-    
-    float a = rand(u);
-    float b = rand(u + vec3(1.0, 0.0, 0.0));
-    float c = rand(u + vec3(0.0, 1.0, 0.0));
-    float d = rand(u + vec3(1.0, 1.0, 0.0));
-    float e = rand(u + vec3(0.0, 0.0, 1.0));
-    float f = rand(u + vec3(1.0, 0.0, 1.0));
-    float g = rand(u + vec3(0.0, 1.0, 1.0));
-    float h = rand(u + vec3(1.0, 1.0, 1.0));
-    
-    return mix(mix(mix(a, b, s.x), mix(c, d, s.x), s.y),
-               mix(mix(e, f, s.x), mix(g, h, s.x), s.y),
-               s.z);
-}
-
-float map(in vec3 p)
-{    
-    vec3 q = (p - vec3(0.1,0.2,0.1)* i_time / 200) * 2.0;    
-    float f = 0.0;
-    f += 0.2000*noise( q );
-    q *= 1.5;    
-    f += 0.0900*noise( q );
-    q *= 2.1;   
-    f += 0.03250*noise( q );    
-    return clamp( f - p.y + 0.6, 0.0,1.0 );
-}
-
-vec4 raymarch( in vec2 uv)
-{    
-    vec4 sum = vec4(0.0);    
-    float t = 0.01;
-    for(int i =0; i < 8; i++) {
-        vec3 pos = vec3(uv.x, 0.0, uv.y);
-        pos.y += t;
-        if (sum.a > 0.99)
-            break;
-        float den = map(pos);
-        if(den > 0.01) {
-            float dif = clamp((den - map(pos+0.2 * sundir)) * 1.0, 0.0, 1.0);
-            vec3  lin = vec3(0.2,0.8,1.5)*dif+vec3(0.5,.6  ,0.7);
-            vec4  col = vec4( mix( vec3(0.2,0.3,0.5), vec3(0.2,1.2 ,1.6), den ), den );
-            col.xyz *= lin;
-            col.rgb *= col.a;
-            sum += col*(1.0-sum.a);
-        }
-        t += max(0.05,0.05*t);
-    }    
-    return clamp( sum, 0.0, 1.0 );
-}
-
-vec4 render( in vec2 uv)
-{
-    vec4 res = raymarch(uv);    
-    vec3 col = (1.0 - res.a) + res.xyz;        
-    return vec4( col, 1.0 );
-}
-
 float jaggy(float x)
 {
     return abs(mod(x, 1) - .5) - .5;
@@ -148,15 +77,15 @@ float reshapeUniformToTriangle(float v) {
     return v + 0.5;
 }
 
-#define SAMPLE_RES 50.0
+#define SAMPLE_RES 240.0
 
 void main()
 {
     vec4 glassColor = mix(vec4(0.05, 0.05, 0.075, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
-    // if (displacement > 0.00) {
-    //     fragColor = glassColor;
-    //     return;
-    // }
+    if (displacement > 0.00) {
+        fragColor = glassColor;
+        return;
+    }
 
     float time = i_time / 1000.0;
 
@@ -240,18 +169,13 @@ void main()
         impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
     }
 
-    // vec3 pattern_col = render(uv * 4.0 - 2.0).xyz;
     vec3 pattern_col = vec3(0, 0.8, 1.0);
-    vec3 border_col = smoothstep(0.40, 0.50, max(abs(uv.x - 0.5), abs(uv.y - 0.5))) * vec3(1, 0, 0);
 
-    // vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
-    vec3 col = border_col;
-    // vec3 col = vec3(bary_0, bary_1, bary_2);
+    vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
 
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * (SAMPLE_RES / 64.0)).r;
     mask = reshapeUniformToTriangle(mask);
     mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.15)); 
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
-    fragColor = vec4(col, 1.0);
 }

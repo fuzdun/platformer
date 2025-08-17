@@ -9,7 +9,7 @@ in VS_OUT {
     // vec4 proj_pos;
     float player_dist;
     float plane_dist;
-    vec3 pos;
+    // vec3 pos;
     float crack_time;
     float outer_tess_amt;
     float inner_tess_amt;
@@ -30,7 +30,6 @@ patch out float crack_time;
 
 out TC_OUT {
     vec2 uv;
-    vec3 pos;
 } tc_out[];
 
 void main() {
@@ -47,7 +46,7 @@ void main() {
     d01 = dot(v0, v1);
     d11 = dot(v1, v1);
     denom =  d00 * d11 - d01 * d01;
-    tc_out[gl_InvocationID].pos = vs_out[gl_InvocationID].pos;
+    // tc_out[gl_InvocationID].pos = vs_out[gl_InvocationID].pos;
   
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 

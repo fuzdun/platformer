@@ -176,7 +176,6 @@ draw :: proc(
         gl.Disable(gl.DEPTH_TEST)
         use_shader(shs, rs, .Background)
         if len(pls.crunch_pts) > 0 {
-            // fmt.println(pls.crunch_pts)
             cpts := pls.crunch_pts[:]
             set_vec4_uniform(shs, "crunch_pts", i32(len(pls.crunch_pts)), &cpts[0])
         }
@@ -191,7 +190,7 @@ draw :: proc(
         gl.Disable(gl.DEPTH_TEST)
         use_shader(shs, rs, .Level_Geometry_Outline)
         gl.BindVertexArray(rs.standard_vao)
-        // draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
 
