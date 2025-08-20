@@ -89,7 +89,7 @@ updated_particle_displacement :: proc(pls: Player_State) -> [3]f32 {
 updated_dash_state :: proc(pls: Player_State, is: Input_State, collisions: map[int]struct{}, elapsed_time: f32) -> Dash_State {
     ds := pls.dash_state
     input_dir := input_dir(is)  
-    if !on_surface(pls) && pls.slide_state.sliding == false && is.x_pressed && pls.dash_state.can_dash && pls.velocity != 0 {
+    if !on_surface(pls) && pls.slide_state.sliding == false && is.x_pressed && pls.dash_state.can_dash && pls.velocity != 0 && elapsed_time > pls.hurt_t + DAMAGE_LEN {
         ds.dashing = true 
         ds.dash_start_pos = pls.position
         dash_input := input_dir == 0 ? la.normalize0(pls.velocity.xz) : input_dir
