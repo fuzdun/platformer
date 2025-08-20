@@ -107,12 +107,7 @@ apply_dash_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_time
     dash_expired := f32(elapsed_time) > pls.dash_state.dash_time + DASH_LEN
     hit_surface := state == .ON_WALL || state == .ON_GROUND || state == .ON_WALL
     if pls.dash_state.dashing {
-        if hit_surface || dash_expired {
-            velocity = la.normalize(pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos) * DASH_SPD
-        } else {
-            velocity = 0
-        }
-
+        velocity = la.normalize(pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos) * DASH_SPD
     } 
     return velocity
 }
@@ -123,14 +118,16 @@ apply_slide_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_tim
     state := pls.contact_state.state
     slide_expired := f32(elapsed_time) > pls.slide_state.slide_time + SLIDE_LEN
     if pls.slide_state.sliding {
-        if slide_expired || !on_surface(pls) {
+        // if slide_expired || !on_surface(pls) {
             velocity = pls.slide_state.slide_dir * SLIDE_SPD 
-        } else {
-            velocity = 0
-        }
+        // } else {
+        //     velocity = 0
+        // }
     }
     return velocity
 }
+
+// apply_break_to_velocity :: proc(pls: Player_State, velocity: [3]f32, )
 
 
 apply_restart_to_velocity :: proc(is: Input_State, velocity: [3]f32) -> [3]f32 {
@@ -172,7 +169,7 @@ get_collisions :: proc(
     filter: Level_Geometry_Attributes = { .Collider }
     for lg, id in entities {
         coll := level_colliders[lg.collider] 
-        if lg.crack_time == 0 || et < lg.crack_time + BREAK_DELAY {
+        if (lg.crack_time == 0 || et < lg.crack_time + BREAK_DELAY) && lg.break_time == 0 {
             if filter <= lg.attributes {
                 if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
                     vertices := transformed_coll_vertices[tv_offset:tv_offset + len(coll.vertices)] 
@@ -305,6 +302,7 @@ apply_velocity :: proc(
     contact_state: Contact_State,
     position: [3]f32,
     velocity: [3]f32,
+    dashing: bool,
     entities: #soa[]Level_Geometry, 
     level_colliders: [SHAPE]Collider_Data,
     static_collider_vertices: [dynamic][3]f32,
@@ -345,14 +343,15 @@ apply_velocity :: proc(
             collision_ids[earliest_coll.id] = {}
             new_position += (remaining_vel * (earliest_coll_t) - .01) * velocity_normal
             remaining_vel *= 1.0 - earliest_coll_t
-            if .Hazardous in entities[earliest_coll.id].attributes {
+            if .Dash_Breakable in entities[earliest_coll.id].attributes && dashing {
+               remaining_vel = BREAK_BOOST_VELOCITY 
+            } else if .Hazardous in entities[earliest_coll.id].attributes {
                 remaining_vel = DAMAGE_VELOCITY
                 velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal * 1.25 
-                new_velocity = (velocity_normal * remaining_vel) / delta_time
             } else {
                 velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
-                new_velocity = (velocity_normal * remaining_vel) / delta_time
             }
+            new_velocity = (velocity_normal * remaining_vel) / delta_time
             delete(collisions)
             collisions, got_contact = get_collisions(entities, new_position, new_velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time)
             new_contact_state = update_player_contact_state(

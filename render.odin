@@ -89,6 +89,7 @@ Render_State :: struct {
     transforms_ssbo: u32,
     z_widths_ssbo: u32,
     crack_time_ssbo: u32,
+    break_data_ssbo: u32,
 
     common_ubo: u32,
     dash_ubo: u32,
@@ -147,11 +148,18 @@ Vertex_Offsets :: [len(SHAPE)]u32
 
 Index_Offsets :: [len(SHAPE)]u32
 
+Break_Data :: struct {
+    time: f32,
+    pos: [3]f32,
+    dir: [3]f32
+}
+
 Lg_Render_Data :: struct {
     render_group: int,
     transform_mat: glm.mat4,
     z_width: f32,
-    crack_time: f32
+    crack_time: f32,
+    break_data: Break_Data
 }
 
 Level_Geometry_Render_Type :: enum {

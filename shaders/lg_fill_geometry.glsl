@@ -20,6 +20,7 @@ in TE_OUT {
     float player_dist;
     float plane_dist;
     float crack_time;
+    float break_data[7];
 
     vec3 t0_pos;
 
@@ -99,6 +100,11 @@ float random2 (vec2 st) {
 }
 
 void main() {
+    float[7] break_data = te_out[0].break_data;
+    float break_time = break_data[0];
+    vec3 break_pos = vec3(break_data[1], break_data[2], break_data[3]);
+    vec3 break_dir = vec3(break_data[4], break_data[5], break_data[6]);
+    bool broken = break_time != 0;
     float seed_val_1 = random2(te_out[0].uv + te_out[1].uv + te_out[2].uv) * 0.5 + .5;
     float seed_val_2 = fract(seed_val_1 * 43758.5453123);
     float seed_val_3 = fract(seed_val_2 * 43758.5453123);
@@ -112,7 +118,10 @@ void main() {
     float dist_fact = max(0, min(1, offset_dist / interval));
     vec4 avg_pos = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
 
-    vec4 disp = ASSEMBLE ? (avg_pos - te_out[0].obj_pos) * easeOutCubic(easeInCubic(dist_fact)) * 1.5 : vec4(0);
+    float break_pt_dist = length(avg_pos.xyz - break_pos) / 3.0;
+    break_pt_dist *= break_pt_dist;
+    float break_disp = clamp((i_time - break_time) / 1000.0, 0, 1);
+    vec4 disp = broken ? vec4(break_dir * break_disp * seed_val_1 * 3000.0 / break_pt_dist, 0.0) : (avg_pos - te_out[0].obj_pos) * easeOutCubic(easeInCubic(dist_fact)) * 1.5;
     vec4 new_avg = avg_pos + disp;
 
     t0_pos = te_out[0].t0_pos;
@@ -134,7 +143,6 @@ void main() {
 
     float dist = te_out[0].player_dist;
     float crack_time = te_out[0].crack_time;
-
     vec3 rot_vec = vec3(random(seed_val_1), random(seed_val_2), random(seed_val_3));
     mat4 rot_mat = rotation3d(rot_vec, (seed_val_2 - 0.5) * CRACK_ROT_AMT);
     float shatter_time = crack_time + shatter_delay;
@@ -158,7 +166,7 @@ void main() {
         local_pos = cracked ? rot_mat * local_pos : local_pos;
         local_pos *= shattered ? 1.0 - shatter_t : 1.0;
         local_pos *= cracked ? 1.0 - (seed_val_2 * CRACK_WIDTH) : 1.0;
-        local_pos *= 1.0 - dist_fact;
+        local_pos *= broken ? 1.0 - break_disp : 1.0 - dist_fact;
         new_pos = new_avg + local_pos;
         new_pos.y -= shattered ? fall_t * SHATTER_VERTICAL_DIST : 0;
         new_pos += shattered ? (shatter_t * vec4(horizontal_offset.x, 0, horizontal_offset.y , 0)) : vec4(0);

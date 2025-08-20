@@ -19,15 +19,15 @@ EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
 PLAYER_DRAW :: #config(PLAYER_DRAW, false)
 
-WIDTH :: 1400.0
-HEIGHT :: 900.0
+WIDTH :: 1920.0
+HEIGHT :: 1080.0
 FULLSCREEN :: true
 // WIDTH :: 900
 // HEIGHT :: 900
 // FULLSCREEN :: false
 TARGET_FRAME_RATE :: 60.0
 FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
-FORCE_EXTERNAL_MONITOR :: true
+FORCE_EXTERNAL_MONITOR :: false
 
 TITLE :: "platformer"
 
@@ -162,7 +162,8 @@ main :: proc () {
     pls.spike_compression = 1.0
     pls.crunch_time = -10000.0;
     pls.crunch_pts = make([dynamic][4]f32); defer delete(pls.crunch_pts)
-    pls.hurt_t = -1000.0
+    pls.hurt_t = -5000.0
+    pls.broke_t = -5000.0
 
     ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
 
@@ -293,6 +294,7 @@ main :: proc () {
 
     gl.GenBuffers(1, &rs.z_widths_ssbo)
     gl.GenBuffers(1, &rs.crack_time_ssbo)
+    gl.GenBuffers(1, &rs.break_data_ssbo)
     gl.GenBuffers(1, &rs.common_ubo)
     gl.GenBuffers(1, &rs.dash_ubo)
     gl.GenBuffers(1, &rs.ppos_ubo)

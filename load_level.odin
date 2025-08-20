@@ -83,7 +83,7 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
             if lg.shape == .DASH_BARRIER {
-                lg.attributes += {.Hazardous}
+                lg.attributes += {.Hazardous, .Dash_Breakable}
                 lg.render_type = .Dash_Barrier
             }
             loaded_level_geometry[idx] = lg

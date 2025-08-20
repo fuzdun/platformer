@@ -20,6 +20,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_velocity = apply_dash_to_velocity(pls^, new_velocity, elapsed_time)
     new_velocity = apply_slide_to_velocity(pls^, new_velocity, elapsed_time)
     new_velocity = apply_restart_to_velocity(is, new_velocity)
+    // new_velocity = apply_break_to_velocity(pls^, new_velocity)
 
     new_contact_state := pls.contact_state
     new_contact_state.state = apply_jump_to_player_state(pls^, is, elapsed_time)
@@ -31,6 +32,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_contact_state,
         pls.position,
         new_velocity,
+        pls.dash_state.dashing,
         lgs.entities[:],
         phs.level_colliders,
         phs.static_collider_vertices,
@@ -38,8 +40,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         delta_time
     ); defer delete(collision_ids)
 
-    new_position = apply_dash_to_position(pls^, new_position, elapsed_time) 
-    new_position = apply_slide_to_position(pls^, new_position, elapsed_time) 
+    // new_position = apply_dash_to_position(pls^, new_position, elapsed_time) 
+    // new_position = apply_slide_to_position(pls^, new_position, elapsed_time) 
     new_position = apply_restart_to_position(is, new_position)
 
     // ========================================
@@ -64,15 +66,16 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_pls.can_press_jump            = updated_can_press_jump(pls^, is, elapsed_time)
     new_pls.tgt_particle_displacement = updated_tgt_particle_displacement(pls^, is, elapsed_time)
     new_pls.particle_displacement     = updated_particle_displacement(pls^) 
-    new_pls.dash_state                = updated_dash_state(pls^, is, elapsed_time)
     new_pls.slide_state               = updated_slide_state(pls^, is, elapsed_time) 
+    new_pls.dash_state                = updated_dash_state(pls^, is, collision_ids, elapsed_time)
     new_pls.hurt_t                    = updated_hurt_t(pls^, collision_ids, lgs.entities, elapsed_time)
+    new_pls.broke_t                   = updated_broke_t(pls^, collision_ids, lgs.entities, elapsed_time)
 
     new_crunch_pts := updated_crunch_pts(pls^, cs^, elapsed_time)
     dynamic_array_swap(&new_pls.crunch_pts, &new_crunch_pts)
 
     new_lgs := apply_restart_to_lgs(is, lgs.entities)
-    new_lgs = apply_collisions_to_lgs(new_lgs, collision_ids, elapsed_time) 
+    new_lgs = apply_collisions_to_lgs(new_lgs, pls^, collision_ids, elapsed_time) 
     new_lgs = apply_bunny_hop_to_lgs(new_lgs, pls^, elapsed_time)
     dynamic_soa_swap(&lgs.entities, new_lgs)
 

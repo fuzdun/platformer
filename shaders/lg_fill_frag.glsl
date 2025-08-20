@@ -77,7 +77,7 @@ float reshapeUniformToTriangle(float v) {
     return v + 0.5;
 }
 
-#define SAMPLE_RES 100.0
+#define SAMPLE_RES 200.0
 
 void main()
 {
@@ -90,8 +90,8 @@ void main()
     float time = i_time / 1000.0;
 
     // get floored uv
-    float screen_width = 1440.0;
-    float screen_height = 900.0;
+    float screen_width = 1920.0;
+    float screen_height = 1080.0;
 
     vec2 screen_uv = gl_FragCoord.xy;
     screen_uv.x /= screen_width;

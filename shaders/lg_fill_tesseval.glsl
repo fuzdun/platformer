@@ -19,6 +19,7 @@ patch in vec4 obj_pos;
 patch in float player_dist;
 patch in float plane_dist;
 patch in float crack_time;
+patch in float break_data[7];
 
 out TE_OUT {
     vec2 uv;
@@ -27,6 +28,7 @@ out TE_OUT {
     float player_dist;
     float plane_dist;
     float crack_time;
+    float break_data[7];
 
     vec3 t0_pos;
 
@@ -59,6 +61,7 @@ void main() {
     te_out.player_dist = player_dist;
     te_out.plane_dist = plane_dist;
     te_out.crack_time = crack_time;
+    te_out.break_data = break_data;
 
     te_out.t0_pos = gl_in[0].gl_Position.xyz;
 

@@ -1,5 +1,7 @@
 package main
+
 import "core:math"
+import "core:fmt"
 import la "core:math/linalg"
 
 
@@ -84,7 +86,7 @@ updated_particle_displacement :: proc(pls: Player_State) -> [3]f32 {
 }
 
 
-updated_dash_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> Dash_State {
+updated_dash_state :: proc(pls: Player_State, is: Input_State, collisions: map[int]struct{}, elapsed_time: f32) -> Dash_State {
     ds := pls.dash_state
     input_dir := input_dir(is)  
     if !on_surface(pls) && pls.slide_state.sliding == false && is.x_pressed && pls.dash_state.can_dash && pls.velocity != 0 {
@@ -96,9 +98,7 @@ updated_dash_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32
         ds.dash_time = f32(elapsed_time)
         ds.can_dash = false
     } else {
-        if on_surface(pls) || f32(elapsed_time) > ds.dash_time + DASH_LEN {
-            if ds.dashing {
-            }
+        if len(collisions) > 0 || on_surface(pls) || f32(elapsed_time) > ds.dash_time + DASH_LEN {
             ds.dashing = false 
         }
         if !pls.dash_state.can_dash {
@@ -156,11 +156,27 @@ updated_crunch_pts :: proc(pls: Player_State, cs: Camera_State, elapsed_time: f3
 }
 
 updated_hurt_t :: proc(pls: Player_State, collisions: map[int]struct{}, lgs: Level_Geometry_Soa, elapsed_time: f32) -> f32 {
+    if pls.dash_state.dashing {
+        return pls.hurt_t
+    }
     for id in collisions {
         if .Hazardous in lgs[id].attributes {
             return elapsed_time
         }
     } 
     return pls.hurt_t
+}
+
+
+updated_broke_t :: proc(pls: Player_State, collisions: map[int]struct{}, lgs: Level_Geometry_Soa, elapsed_time: f32) -> f32 {
+    if pls.dash_state.dashing {
+        for id in collisions {
+            if .Hazardous in lgs[id].attributes {
+                return elapsed_time
+            }
+        } 
+    }
+    return pls.broke_t
+
 }
 

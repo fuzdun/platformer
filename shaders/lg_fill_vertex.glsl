@@ -16,6 +16,10 @@ layout (std430, binding = 2) buffer crack_time {
     float crack_time_data[];
 };
 
+layout (std430, binding = 3) buffer Break_Data {
+    float break_data[][7];
+};
+
 layout (std140, binding = 0) uniform Common
 {
     mat4 projection;
@@ -40,6 +44,7 @@ out VS_OUT {
     float player_dist;
     float plane_dist;
     float crack_time;
+    float break_data[7];
     float outer_tess_amt;
     float inner_tess_amt;
 } vs_out;
@@ -57,6 +62,7 @@ void main() {
     vs_out.player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
     vs_out.plane_dist = dot((transform * aPos).xyz, rot_normal);
     vs_out.crack_time = crack_time_data[gl_BaseInstance + gl_InstanceID];
+    vs_out.break_data = break_data[gl_BaseInstance + gl_InstanceID];
     vs_out.outer_tess_amt = outer_amt;
     vs_out.inner_tess_amt = inner_amt;
 }

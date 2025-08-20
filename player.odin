@@ -17,8 +17,11 @@ GROUND_BUNNY_V_SPEED: f32: 70
 GROUND_BUNNY_H_SPEED: f32: 30
 MIN_BUNNY_XZ_VEL: f32: 20.0
 
-DAMAGE_VELOCITY: f32: 3.0
+DAMAGE_VELOCITY: f32: 1.0
 DAMAGE_LEN: f32: 500.0
+
+BREAK_BOOST_VELOCITY: f32: 5.0
+BREAK_BOOST_LEN: f32: 250
 
 // jump
 P_JUMP_SPEED: f32: 60.0
@@ -38,7 +41,7 @@ BUNNY_DASH_DEBOUNCE: f32: 400
 BUNNY_WINDOW: f32: 120
 
 // dash
-DASH_SPD: f32: 75.0
+DASH_SPD: f32: 125.0
 DASH_LEN: f32: 175 
 DASH_DIST: f32: 15.0
 
@@ -127,6 +130,7 @@ Player_State :: struct {
     dash_hop_debounce_t: f32,
 
     hurt_t: f32,
+    broke_t: f32,
 
     crunch_pt: [3]f32,
     crunch_pts: [dynamic][4]f32,
