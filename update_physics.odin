@@ -1,12 +1,16 @@
 package main
 import "core:math"
+import "core:fmt"
 import la "core:math/linalg"
 
 
 // ================
 // VELOCITY UPDATES
 // ================
-apply_directional_input_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, delta_time: f32) -> [3]f32 {
+apply_directional_input_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, elapsed_time: f32, delta_time: f32) -> [3]f32 {
+    if elapsed_time < pls.hurt_t + DAMAGE_LEN {
+        return pls.velocity
+    }
     velocity := velocity
     cs := pls.contact_state
     move_spd := P_ACCEL
@@ -165,7 +169,7 @@ get_collisions :: proc(
     transformed_coll_vertices := static_collider_vertices
     tv_offset := 0
 
-    filter: Level_Geometry_Attributes = { .Collider, .Transform }
+    filter: Level_Geometry_Attributes = { .Collider }
     for lg, id in entities {
         coll := level_colliders[lg.collider] 
         if lg.crack_time == 0 || et < lg.crack_time + BREAK_DELAY {
@@ -202,7 +206,10 @@ get_collisions :: proc(
 }
 
 
-updated_contact_state :: proc(state: Player_States, collisions: []Collision, et: f32, got_contact: bool, best_plane_normal: [3]f32) -> Player_States {
+updated_contact_state :: proc(state: Player_States, hit_hazard: bool, et: f32, got_contact: bool, best_plane_normal: [3]f32) -> Player_States {
+    if hit_hazard {
+        return state
+    }
     if !got_contact && (state == .ON_GROUND || state == .ON_WALL || state == .ON_SLOPE) {
         return .IN_AIR
     }
@@ -269,16 +276,21 @@ updated_ground_move_dirs :: proc(state: Player_States, ground_x: [3]f32, ground_
 }
 
 
-update_player_contact_state :: proc(cs: Contact_State, collisions: []Collision, got_contact: bool, elapsed_time: f32) -> Contact_State {
+update_player_contact_state :: proc(cs: Contact_State, collisions: []Collision, lgs: #soa[]Level_Geometry, got_contact: bool, elapsed_time: f32) -> Contact_State {
     cs := cs
     best_plane_normal: [3]f32 = {100, 100, 100}
+    earliest_coll_t: f32 = 1000
+    earliest_coll_id: int = 0 
     for coll in collisions {
         if abs(coll.normal.y) < best_plane_normal.y {
             best_plane_normal = coll.normal
+            earliest_coll_t = min(coll.t, earliest_coll_t)
+            earliest_coll_id = coll.id
         }
     }
+    hit_hazard := len(collisions) > 0 && .Hazardous in lgs[earliest_coll_id].attributes
     old_state := cs.state
-    cs.state                  = updated_contact_state(cs.state, collisions[:], elapsed_time, got_contact, best_plane_normal)
+    cs.state                  = updated_contact_state(cs.state, hit_hazard, elapsed_time, got_contact, best_plane_normal)
     cs.touch_time             = updated_touch_time(cs.state, old_state, cs.touch_time, elapsed_time)
     cs.left_ground            = updated_left_ground(cs.state, cs.left_ground, elapsed_time)
     cs.left_slope             = updated_left_slope(cs.state, cs.left_slope, elapsed_time)
@@ -312,7 +324,7 @@ apply_velocity :: proc(
     for collision in collisions {
         collision_ids[collision.id] = {}
     }
-    new_contact_state = update_player_contact_state(contact_state, collisions[:], got_contact, elapsed_time)
+    new_contact_state = update_player_contact_state(contact_state, collisions[:], entities, got_contact, elapsed_time)
     init_velocity_len := la.length(velocity)
     remaining_vel := init_velocity_len * delta_time
     if remaining_vel > 0 {
@@ -333,13 +345,20 @@ apply_velocity :: proc(
             collision_ids[earliest_coll.id] = {}
             new_position += (remaining_vel * (earliest_coll_t) - .01) * velocity_normal
             remaining_vel *= 1.0 - earliest_coll_t
-            velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
-            new_velocity = (velocity_normal * remaining_vel) / delta_time
+            if .Hazardous in entities[earliest_coll.id].attributes {
+                remaining_vel = DAMAGE_VELOCITY
+                velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal * 1.25 
+                new_velocity = (velocity_normal * remaining_vel) / delta_time
+            } else {
+                velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
+                new_velocity = (velocity_normal * remaining_vel) / delta_time
+            }
             delete(collisions)
             collisions, got_contact = get_collisions(entities, new_position, new_velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time)
             new_contact_state = update_player_contact_state(
                 new_contact_state,
                 collisions[:],
+                entities,
                 got_contact,
                 elapsed_time)
         }

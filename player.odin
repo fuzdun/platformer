@@ -17,6 +17,9 @@ GROUND_BUNNY_V_SPEED: f32: 70
 GROUND_BUNNY_H_SPEED: f32: 30
 MIN_BUNNY_XZ_VEL: f32: 20.0
 
+DAMAGE_VELOCITY: f32: 3.0
+DAMAGE_LEN: f32: 500.0
+
 // jump
 P_JUMP_SPEED: f32: 60.0
 WALL_JUMP_FORCE :: 25 
@@ -78,7 +81,7 @@ MAX_SPIKE_COMPRESSION :: 1.0
 SPIKE_COMPRESSION_LERP :: 0.15
 
 // geometry crack timing
-CRACK_DELAY :: 150000
+CRACK_DELAY :: 1500000
 BREAK_DELAY :: 1500
 
 
@@ -122,6 +125,8 @@ Player_State :: struct {
     touch_pt: [3]f32,
     bunny_hop_y: f32,
     dash_hop_debounce_t: f32,
+
+    hurt_t: f32,
 
     crunch_pt: [3]f32,
     crunch_pts: [dynamic][4]f32,

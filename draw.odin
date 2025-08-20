@@ -152,8 +152,8 @@ draw :: proc(
         gl.Enable(gl.DEPTH_TEST)
 
         // draw level geometry
-        use_shader(shs, rs, .Level_Geometry_Fill)
         gl.BindVertexArray(rs.standard_vao)
+        use_shader(shs, rs, .Level_Geometry_Fill)
         gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
         crunch_pt : glm.vec3 = pls.crunch_pt
         set_vec3_uniform(shs, "crunch_pt", 1, &crunch_pt)
@@ -168,8 +168,11 @@ draw :: proc(
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
         slide_t := clamp((f32(time) - pls.slide_state.slide_time) / SLIDE_LEN, 0, 1)
         set_float_uniform(shs, "slide_t", slide_t)
-        gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
+
+        use_shader(shs, rs, .Barrier)
+        set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
+        draw_indirect_render_queue(rs^, lg_render_groups[.Dash_Barrier][:], gl.PATCHES)
 
         // draw background
         gl.Enable(gl.BLEND)
@@ -191,6 +194,7 @@ draw :: proc(
         use_shader(shs, rs, .Level_Geometry_Outline)
         gl.BindVertexArray(rs.standard_vao)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Dash_Barrier][:], gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
 

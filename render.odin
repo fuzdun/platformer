@@ -23,12 +23,14 @@ SHAPE :: enum {
     CUBE,
     CYLINDER,
     ICO,
+    DASH_BARRIER
 }
 
 SHAPE_FILENAME := [SHAPE]string {
     .CUBE = "basic_cube",
     .CYLINDER = "cylinder",
     .ICO = "icosphere",
+    .DASH_BARRIER = "dash_barrier"
 }
 
 TEXT_VERTICES :: [4]Quad_Vertex4 {
@@ -154,7 +156,8 @@ Lg_Render_Data :: struct {
 
 Level_Geometry_Render_Type :: enum {
     Standard,
-    Dither_Test
+    Dither_Test,
+    Dash_Barrier
 }
 
 Common_Ubo :: struct {

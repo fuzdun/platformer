@@ -19,8 +19,8 @@ EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
 PLAYER_DRAW :: #config(PLAYER_DRAW, false)
 
-WIDTH :: 1920.0
-HEIGHT :: 1080.0
+WIDTH :: 1400.0
+HEIGHT :: 900.0
 FULLSCREEN :: true
 // WIDTH :: 900
 // HEIGHT :: 900
@@ -158,9 +158,11 @@ main :: proc () {
     pls.can_press_jump = false
     pls.contact_state.ground_x = {1, 0, 0}
     pls.contact_state.ground_z = {0, 0, -1}
+    pls.contact_state.touch_time = -1000.0
     pls.spike_compression = 1.0
     pls.crunch_time = -10000.0;
     pls.crunch_pts = make([dynamic][4]f32); defer delete(pls.crunch_pts)
+    pls.hurt_t = -1000.0
 
     ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
 

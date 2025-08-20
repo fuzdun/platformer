@@ -58,10 +58,11 @@ Aabb :: struct{
 }
 
 Level_Geometry_Component_Name :: enum {
-    Transform = 0,
-    Shape = 1,
-    Collider = 2,
-    Active_Shaders = 3,
-    Angular_Velocity = 4 
+    Collider = 0,
+    Velocity = 1,
+    Angular_Velocity = 2,
+    Crackable = 3,
+    Dash_Breakable = 4,
+    Hazardous = 5
 }
 

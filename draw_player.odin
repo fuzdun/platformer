@@ -51,6 +51,11 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
     p_color := [3]f32 {1.0, 0.0, 0.0}
+    p_outline_color := [3]f32{.5, 0, .5}
+    if time < pls.hurt_t + DAMAGE_LEN {
+        p_color = {1.0, 1.0, 0.0}
+        p_outline_color = {1.0, 1.0, 0.0}
+    }
     player_mat := interpolated_player_matrix(pls, f32(interp_t))
 
     gl.Disable(gl.CULL_FACE)
@@ -64,7 +69,7 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
 
     // draw body outline
     use_shader(shs, rs, .Player_Outline)
-    set_vec3_uniform(shs, "p_color", 1, &p_color)
+    set_vec3_uniform(shs, "p_outline_color", 1, &p_outline_color)
     set_matrix_uniform(shs, "transform", &player_mat)
     if pls.contact_state.state == .ON_GROUND {
         gl.LineWidth(2)

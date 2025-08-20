@@ -21,7 +21,8 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     aos_level_data := make([dynamic]Level_Geometry)
     defer delete(aos_level_data)
 
-    for lg in lgs.entities {
+    for &lg in lgs.entities {
+        lg.attributes = {.Collider, .Crackable}
         append(&aos_level_data, lg)
     }
 
@@ -55,7 +56,7 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             y := math.floor(f32(i) / 4)
             lg.transform = {{x * 120, y * 1 - 80, y * -45 + 200},{40, 40, 40}, rot}
             lg.render_type = .Standard
-            lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+            lg.attributes = { .Collider }
 
             loaded_level_geometry[i] = lg
         }
@@ -69,7 +70,7 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
         lg.collider = shape
         lg.transform = {{0, -1000, 0},{1000, 1000, 1000}, rot}
         lg.render_type = .Standard 
-        lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
+        lg.attributes = { .Collider }
         loaded_level_geometry[0] = lg
     } else {
         // standard load from level data=============
@@ -81,18 +82,12 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             defer delete(entry_bin)
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
+            if lg.shape == .DASH_BARRIER {
+                lg.attributes += {.Hazardous}
+                lg.render_type = .Dash_Barrier
+            }
             loaded_level_geometry[idx] = lg
         }
-        //rot := la.quaternion_from_euler_angles_f32(0, 0, 0, .XYZ)
-        //shape: SHAPE = .CUBE
-        //lg: Level_Geometry
-        //lg.shape = shape
-        //lg.collider = shape
-        //lg.transform = {{0, -1000, 0},{1000, 1000, 1000}, rot}
-        //lg.render_type = .Standard 
-        //lg.attributes = {.Shape, .Collider, .Active_Shaders, .Transform}
-        //loaded_level_geometry[0] = lg
-        // ==========================================
     }
     add_geometry_to_physics(ps, loaded_level_geometry)
     add_geometry_to_renderer(lgs, rs, ps, loaded_level_geometry)

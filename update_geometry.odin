@@ -1,5 +1,7 @@
 package main
 
+import  "core:fmt"
+
 
 apply_restart_to_lgs :: proc(is: Input_State, lgs: Level_Geometry_Soa) -> Level_Geometry_Soa {
     lgs := dynamic_soa_copy(lgs)
@@ -17,7 +19,11 @@ apply_collisions_to_lgs :: proc(lgs: Level_Geometry_Soa, collision_ids: map[int]
     lgs := dynamic_soa_copy(lgs)
     for id in collision_ids {
         lg := &lgs[id]
-        lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.crack_time
+        if .Hazardous in lg.attributes {
+            lg.crack_time = lg.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.crack_time
+        } else if .Crackable in lg.attributes {
+            lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.crack_time
+        }
     }
     return lgs 
 }

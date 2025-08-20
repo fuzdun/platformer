@@ -155,3 +155,12 @@ updated_crunch_pts :: proc(pls: Player_State, cs: Camera_State, elapsed_time: f3
     return
 }
 
+updated_hurt_t :: proc(pls: Player_State, collisions: map[int]struct{}, lgs: Level_Geometry_Soa, elapsed_time: f32) -> f32 {
+    for id in collisions {
+        if .Hazardous in lgs[id].attributes {
+            return elapsed_time
+        }
+    } 
+    return pls.hurt_t
+}
+

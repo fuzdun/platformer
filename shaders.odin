@@ -42,10 +42,16 @@ ProgramName :: enum {
     Screen_Dither,
     Player_Fill,
     Player_Outline,
-    Postprocessing
+    Postprocessing,
+    Barrier,
 }
 
 PROGRAM_CONFIGS :: #partial[ProgramName]Program {
+    .Barrier = {
+        pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "barrier_fill_frag"},
+        shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"shatter_delay"}
+    },
     .Level_Geometry_Outline = {
         pipeline = {"lg_outline_vertex", "lg_outline_tessctrl", "lg_outline_tesseval", "lg_outline_geometry", "lg_outline_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
@@ -109,7 +115,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Player_Outline = {
         pipeline = {"player_outline_vertex", "player_outline_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"transform"}
+        uniforms = {"transform", "p_outline_color"}
     },
     .Postprocessing = {
         pipeline = {"postprocessing_vertex", "postprocessing_frag"},

@@ -12,7 +12,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_pls := pls^
 
     new_velocity := pls.velocity
-    new_velocity = apply_directional_input_to_velocity(pls^, is, new_velocity, delta_time)
+    new_velocity = apply_directional_input_to_velocity(pls^, is, new_velocity, elapsed_time, delta_time)
     new_velocity = clamp_horizontal_velocity_to_max_speed(new_velocity)
     new_velocity = apply_friction_to_velocity(pls^, is, new_velocity, delta_time)
     new_velocity = apply_gravity_to_velocity(pls^, new_velocity, delta_time)
@@ -66,6 +66,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_pls.particle_displacement     = updated_particle_displacement(pls^) 
     new_pls.dash_state                = updated_dash_state(pls^, is, elapsed_time)
     new_pls.slide_state               = updated_slide_state(pls^, is, elapsed_time) 
+    new_pls.hurt_t                    = updated_hurt_t(pls^, collision_ids, lgs.entities, elapsed_time)
 
     new_crunch_pts := updated_crunch_pts(pls^, cs^, elapsed_time)
     dynamic_array_swap(&new_pls.crunch_pts, &new_crunch_pts)
