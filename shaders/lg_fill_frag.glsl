@@ -77,7 +77,15 @@ float reshapeUniformToTriangle(float v) {
     return v + 0.5;
 }
 
+const float BAYER16[16] = float[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
 #define SAMPLE_RES 480.0
+
+float GetBayerDither(float grayscale, vec2 uv) {    
+    ivec2 pixelCoord = ivec2(uv * (SAMPLE_RES));
+    int pixelIndex16 = (pixelCoord.x % 4) + (pixelCoord.y % 4) * 4;
+    return grayscale > (float(BAYER16[pixelIndex16]) + 0.5) / 16.0 ? 1.0 : 0.0;
+}
+
 
 void main()
 {
@@ -170,13 +178,28 @@ void main()
     }
 
     vec3 pattern_col = vec3(0, 0.4, 0.5);
-    // vec3 circle_col = vec3(1.0, 0.0, 0.0) * (smoothstep(0.35, 0.4, length(uv - 0.5)) - smoothstep(0.4, 0.45, length(uv - 0.5)));
+    vec3 circle_col = vec3(1.0, 0.0, 0.0) * (smoothstep(0.35, 0.4, length(uv - 0.5)) - smoothstep(0.4, 0.45, length(uv - 0.5)));
 
-    vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
+    vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col + circle_col;
 
-    float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 200.0) * (SAMPLE_RES / 64.0)).r;
-    mask = reshapeUniformToTriangle(mask);
-    mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.25)); 
+    // BAYER
+    float mask = GetBayerDither(ceil(length(t_diff) / 1.0) / 30.0 - 0.2, screen_uv);
+
+    // BAYER + BLUE NOISE
+    // float mask = GetBayerDither(ceil(length(t_diff) / 3.0) / 8.0 - 1.0 + texture(ditherTexture, screen_uv * (SAMPLE_RES / 64.0)).r, screen_uv);
+
+    // BAYER + BLUE NOISE 2
+    // float mask = GetBayerDither(ceil(length(t_diff) / 1.0) / 30.0 - 0.2, screen_uv);
+    // float mask2 = texture(ditherTexture, screen_uv * (SAMPLE_RES / 64.0)).r;
+    // mask2 = reshapeUniformToTriangle(mask2);
+    // mask2 = min(1.0, floor(mask2 + length(t_diff) / 2.0) / 60.0); 
+    // mask += mask2;
+
+    // BLUE NOISE
+    // float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 300.0) * (SAMPLE_RES / 64.0)).r;
+    // mask = reshapeUniformToTriangle(mask);
+    // mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.25)); 
+
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
 }

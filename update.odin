@@ -20,7 +20,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_velocity = apply_dash_to_velocity(pls^, new_velocity, elapsed_time)
     new_velocity = apply_slide_to_velocity(pls^, new_velocity, elapsed_time)
     new_velocity = apply_restart_to_velocity(is, new_velocity)
-    // new_velocity = apply_break_to_velocity(pls^, new_velocity)
 
     new_contact_state := pls.contact_state
     new_contact_state.state = apply_jump_to_player_state(pls^, is, elapsed_time)
@@ -40,8 +39,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         delta_time
     ); defer delete(collision_ids)
 
-    // new_position = apply_dash_to_position(pls^, new_position, elapsed_time) 
-    // new_position = apply_slide_to_position(pls^, new_position, elapsed_time) 
     new_position = apply_restart_to_position(is, new_position)
 
     // ========================================

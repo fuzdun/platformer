@@ -131,7 +131,7 @@ apply_slide_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_tim
 
 
 apply_restart_to_velocity :: proc(is: Input_State, velocity: [3]f32) -> [3]f32 {
-  return is.r_pressed ? {0, 0, 0} : velocity
+    return is.r_pressed ? {0, 0, 0} : velocity
 }
 
 
@@ -154,10 +154,10 @@ get_collisions :: proc(
     dt: f32,
 ) -> (
     collisions: [dynamic]Collision,
-    got_contact: bool
+    contacts: [dynamic]int
 ) {
     collisions = make([dynamic]Collision)
-    got_contact = false
+    contacts = make([dynamic]int)
     player_velocity := velocity * dt
     player_velocity_len := la.length(player_velocity)
     player_velocity_normal := la.normalize(player_velocity)
@@ -192,7 +192,9 @@ get_collisions :: proc(
                         if did_collide {
                             append(&collisions, Collision{id, normal, t})
                         }
-                        got_contact = got_contact || contact
+                        if contact {
+                            append(&contacts, id)
+                        }
                     }
                 }
             }         
@@ -273,7 +275,7 @@ updated_ground_move_dirs :: proc(state: Player_States, ground_x: [3]f32, ground_
 }
 
 
-update_player_contact_state :: proc(cs: Contact_State, collisions: []Collision, lgs: #soa[]Level_Geometry, got_contact: bool, elapsed_time: f32) -> Contact_State {
+update_player_contact_state :: proc(cs: Contact_State, collisions: []Collision, lgs: #soa[]Level_Geometry, contacts: []int, elapsed_time: f32) -> Contact_State {
     cs := cs
     best_plane_normal: [3]f32 = {100, 100, 100}
     earliest_coll_t: f32 = 1000
@@ -285,6 +287,7 @@ update_player_contact_state :: proc(cs: Contact_State, collisions: []Collision, 
             earliest_coll_id = coll.id
         }
     }
+    got_contact := len(contacts) > 0
     hit_hazard := len(collisions) > 0 && .Hazardous in lgs[earliest_coll_id].attributes
     old_state := cs.state
     cs.state                  = updated_contact_state(cs.state, hit_hazard, elapsed_time, got_contact, best_plane_normal)
@@ -317,12 +320,12 @@ apply_velocity :: proc(
     new_position = position
     new_velocity = velocity
     collision_ids = make(map[int]struct{})
-    collisions, got_contact := get_collisions(entities[:], position, velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time);
+    collisions, contacts := get_collisions(entities[:], position, velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time);
     defer delete(collisions)
     for collision in collisions {
         collision_ids[collision.id] = {}
     }
-    new_contact_state = update_player_contact_state(contact_state, collisions[:], entities, got_contact, elapsed_time)
+    new_contact_state = update_player_contact_state(contact_state, collisions[:], entities, contacts[:], elapsed_time)
     init_velocity_len := la.length(velocity)
     remaining_vel := init_velocity_len * delta_time
     if remaining_vel > 0 {
@@ -353,12 +356,12 @@ apply_velocity :: proc(
             }
             new_velocity = (velocity_normal * remaining_vel) / delta_time
             delete(collisions)
-            collisions, got_contact = get_collisions(entities, new_position, new_velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time)
+            collisions, contacts = get_collisions(entities, new_position, new_velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time)
             new_contact_state = update_player_contact_state(
                 new_contact_state,
                 collisions[:],
                 entities,
-                got_contact,
+                contacts[:],
                 elapsed_time)
         }
         new_position += velocity_normal * remaining_vel
