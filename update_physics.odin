@@ -153,10 +153,11 @@ get_collisions :: proc(
     et: f32,
     dt: f32,
 ) -> (
-    collisions: [dynamic]Collision,
+    collided: bool,
+    collision: Collision,
     contacts: [dynamic]int
 ) {
-    collisions = make([dynamic]Collision)
+    earliest_coll_t: f32 = 1000.0
     contacts = make([dynamic]int)
     player_velocity := velocity * dt
     player_velocity_len := la.length(player_velocity)
@@ -189,8 +190,10 @@ get_collisions :: proc(
                             contact_ray,
                             GROUNDED_RADIUS2
                         )
-                        if did_collide {
-                            append(&collisions, Collision{id, normal, t})
+                        if did_collide && t < earliest_coll_t {
+                            collided = true
+                            earliest_coll_t = t
+                            collision = Collision{id, normal, t}
                         }
                         if contact {
                             append(&contacts, id)
@@ -275,20 +278,14 @@ updated_ground_move_dirs :: proc(state: Player_States, ground_x: [3]f32, ground_
 }
 
 
-update_player_contact_state :: proc(cs: Contact_State, collisions: []Collision, lgs: #soa[]Level_Geometry, contacts: []int, elapsed_time: f32) -> Contact_State {
+update_player_contact_state :: proc(cs: Contact_State, collided: bool, collision: Collision, lgs: #soa[]Level_Geometry, contacts: []int, elapsed_time: f32) -> Contact_State {
     cs := cs
     best_plane_normal: [3]f32 = {100, 100, 100}
-    earliest_coll_t: f32 = 1000
-    earliest_coll_id: int = 0 
-    for coll in collisions {
-        if abs(coll.normal.y) < best_plane_normal.y {
-            best_plane_normal = coll.normal
-            earliest_coll_t = min(coll.t, earliest_coll_t)
-            earliest_coll_id = coll.id
-        }
+    if collided {
+        best_plane_normal = collision.normal
     }
     got_contact := len(contacts) > 0
-    hit_hazard := len(collisions) > 0 && .Hazardous in lgs[earliest_coll_id].attributes
+    hit_hazard := collided && .Hazardous in lgs[collision.id].attributes
     old_state := cs.state
     cs.state                  = updated_contact_state(cs.state, hit_hazard, elapsed_time, got_contact, best_plane_normal)
     cs.touch_time             = updated_touch_time(cs.state, old_state, cs.touch_time, elapsed_time)
@@ -320,46 +317,48 @@ apply_velocity :: proc(
     new_position = position
     new_velocity = velocity
     collision_ids = make(map[int]struct{})
-    collisions, contacts := get_collisions(entities[:], position, velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time);
-    defer delete(collisions)
-    for collision in collisions {
-        collision_ids[collision.id] = {}
-    }
-    new_contact_state = update_player_contact_state(contact_state, collisions[:], entities, contacts[:], elapsed_time)
+    collided, collision, contacts := get_collisions(
+        entities[:],
+        position,
+        velocity,
+        contact_state.contact_ray,
+        level_colliders, static_collider_vertices, elapsed_time, delta_time
+    )
+    new_contact_state = update_player_contact_state(contact_state, collided, collision, entities, contacts[:], elapsed_time)
     init_velocity_len := la.length(velocity)
     remaining_vel := init_velocity_len * delta_time
     if remaining_vel > 0 {
         velocity_normal := la.normalize(velocity)
         loops := 0
-        for len(collisions) > 0 && loops < 10 {
+        for collided && loops < 10 {
             loops += 1
-            earliest_coll_t: f32 = 1.1
-            earliest_coll_idx := -1
-            for coll, idx in collisions {
-                if coll.t < earliest_coll_t {
-                    earliest_coll_idx = idx
-                    earliest_coll_t = coll.t
-                }
-            }
-            earliest_coll := collisions[earliest_coll_idx]
-            new_contact_state.last_touched = earliest_coll.id
-            collision_ids[earliest_coll.id] = {}
-            new_position += (remaining_vel * (earliest_coll_t) - .01) * velocity_normal
-            remaining_vel *= 1.0 - earliest_coll_t
-            if .Dash_Breakable in entities[earliest_coll.id].attributes && dashing {
+            new_contact_state.last_touched = collision.id
+            collision_ids[collision.id] = {}
+            new_position += (remaining_vel * (collision.t) - .01) * velocity_normal
+            remaining_vel *= 1.0 - collision.t
+            if .Dash_Breakable in entities[collision.id].attributes && dashing {
                remaining_vel = BREAK_BOOST_VELOCITY 
-            } else if .Hazardous in entities[earliest_coll.id].attributes {
+            } else if .Hazardous in entities[collision.id].attributes {
                 remaining_vel = DAMAGE_VELOCITY
-                velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal * 1.25 
+                velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal * 1.25 
             } else {
-                velocity_normal -= la.dot(velocity_normal, earliest_coll.normal) * earliest_coll.normal
+                velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal
             }
             new_velocity = (velocity_normal * remaining_vel) / delta_time
-            delete(collisions)
-            collisions, contacts = get_collisions(entities, new_position, new_velocity, contact_state.contact_ray, level_colliders, static_collider_vertices, elapsed_time, delta_time)
+            collided, collision, contacts = get_collisions(
+                entities,
+                new_position,
+                new_velocity,
+                contact_state.contact_ray,
+                level_colliders,
+                static_collider_vertices,
+                elapsed_time,
+                delta_time
+            )
             new_contact_state = update_player_contact_state(
                 new_contact_state,
-                collisions[:],
+                collided,
+                collision,
                 entities,
                 contacts[:],
                 elapsed_time)
