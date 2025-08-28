@@ -178,12 +178,12 @@ void main()
     }
 
     vec3 pattern_col = vec3(0, 0.4, 0.5);
-    vec3 circle_col = vec3(1.0, 0.0, 0.0) * (smoothstep(0.35, 0.4, length(uv - 0.5)) - smoothstep(0.4, 0.45, length(uv - 0.5)));
+    // vec3 circle_col = vec3(1.0, 0.0, 0.0) * (smoothstep(0.35, 0.4, length(uv - 0.5)) - smoothstep(0.4, 0.45, length(uv - 0.5)));
 
-    vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col + circle_col;
+    vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
 
     // BAYER
-    float mask = GetBayerDither(ceil(length(t_diff) / 1.0) / 30.0 - 0.2, screen_uv);
+    // float mask = GetBayerDither(ceil(length(t_diff) / 1.0) / 30.0 - 0.2, screen_uv);
 
     // BAYER + BLUE NOISE
     // float mask = GetBayerDither(ceil(length(t_diff) / 3.0) / 8.0 - 1.0 + texture(ditherTexture, screen_uv * (SAMPLE_RES / 64.0)).r, screen_uv);
@@ -196,9 +196,9 @@ void main()
     // mask += mask2;
 
     // BLUE NOISE
-    // float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 300.0) * (SAMPLE_RES / 64.0)).r;
-    // mask = reshapeUniformToTriangle(mask);
-    // mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.25)); 
+    float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 300.0) * (SAMPLE_RES / 64.0)).r;
+    mask = reshapeUniformToTriangle(mask);
+    mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.25)); 
 
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;

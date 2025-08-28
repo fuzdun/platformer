@@ -179,8 +179,13 @@ draw :: proc(
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
 
         use_shader(shs, rs, .Barrier)
+        gl.Enable(gl.BLEND)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
+        set_matrix_uniform(shs, "inverse_view", &inverse_view)
+        set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
+        set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         draw_indirect_render_queue(rs^, lg_render_groups[.Dash_Barrier][:], gl.PATCHES)
+        gl.Disable(gl.BLEND)
 
         // draw background
         gl.Enable(gl.BLEND)

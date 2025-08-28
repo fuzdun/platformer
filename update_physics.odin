@@ -324,7 +324,14 @@ apply_velocity :: proc(
         contact_state.contact_ray,
         level_colliders, static_collider_vertices, elapsed_time, delta_time
     )
-    new_contact_state = update_player_contact_state(contact_state, collided, collision, entities, contacts[:], elapsed_time)
+    new_contact_state = update_player_contact_state(
+        contact_state,
+        collided,
+        collision,
+        entities,
+        contacts[:],
+        elapsed_time
+    )
     init_velocity_len := la.length(velocity)
     remaining_vel := init_velocity_len * delta_time
     if remaining_vel > 0 {

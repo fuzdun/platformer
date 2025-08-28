@@ -49,12 +49,20 @@ out vec2 t0_uv;
 out vec2 t1_uv;
 out vec2 t2_uv;
 
+// out vec3 b0_pos;
+// out vec3 b1_pos;
+// out vec3 b2_pos;
+
+out vec3 b_poss[3];
+
 out vec3 v0;
 out vec3 v1;
 out float d00;
 out float d01;
 out float d11;
 out float denom;
+
+out float did_shatter;
 
 #define MIN_INTERVAL 100.0
 #define MAX_INTERVAL 400.0 
@@ -137,6 +145,10 @@ void main() {
     t1_uv = te_out[0].t1_uv;
     t2_uv = te_out[0].t2_uv;
 
+    // b0_pos = gl_in[0].gl_Position.xyz;
+    // b1_pos = gl_in[1].gl_Position.xyz;
+    // b2_pos = gl_in[2].gl_Position.xyz;
+
     plane_dist = te_out[0].plane_dist; 
     displacement = dist_fact;
     normal_frag = te_out[0].normal_frag;
@@ -156,8 +168,11 @@ void main() {
 
     bool cracked = crack_time != 0 && i_time > crack_time;
     bool shattered = crack_time != 0 && i_time > shatter_time;
+    did_shatter = (broken || cracked || shattered) ? 1.0 : 0.0;
     float fall_t = easeInCubic(t);
     float shatter_t = easeOutCubic(t);
+
+    vec4 new_poss[3];
 
     for(int i=0; i < 3; i++) {
         vec4 new_pos = gl_in[i].gl_Position;
@@ -170,9 +185,12 @@ void main() {
         new_pos = new_avg + local_pos;
         new_pos.y -= shattered ? fall_t * SHATTER_VERTICAL_DIST : 0;
         new_pos += shattered ? (shatter_t * vec4(horizontal_offset.x, 0, horizontal_offset.y , 0)) : vec4(0);
-
-        gl_Position = projection * new_pos;
-        global_pos = new_pos.xyz;
+        new_poss[i] = new_pos;
+        b_poss[i] = new_pos.xyz;
+    }
+    for(int i=0; i < 3; i++) {
+        global_pos = b_poss[i];
+        gl_Position = projection * new_poss[i];
         perspective_uv = te_out[i].uv;
         EmitVertex();
     }
