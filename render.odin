@@ -267,6 +267,10 @@ trans_to_mat4 :: proc(trns: Transform) -> glm.mat4 {
     return off * rot * scale
 }
 
+easeout_cubic :: proc(n: f32) -> f32 {
+    return 1.0 - math.pow(1.0 - n, 3);
+}
+
 easeout :: proc(n: f32) -> f32 {
     return math.sin(n * math.PI / 2.0);
 }

@@ -390,14 +390,14 @@ apply_dash_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time
 }
 
 
-apply_slide_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time: f32) -> [3]f32 {
-    sls := pls.slide_state
-    if sls.sliding {
-        slide_t := (f32(elapsed_time) - pls.slide_state.slide_time) / SLIDE_LEN
-        return sls.slide_start_pos + sls.slide_dir * SLIDE_DIST * slide_t
-    }
-    return position
-}
+// apply_slide_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time: f32) -> [3]f32 {
+//     sls := pls.slide_state
+//     if sls.sliding {
+//         slide_t := (f32(elapsed_time) - pls.slide_state.slide_time) / SLIDE_LEN
+//         return sls.slide_start_pos + sls.slide_dir * SLIDE_DIST * slide_t
+//     }
+//     return position
+// }
 
 
 apply_restart_to_position :: proc(is: Input_State, position: [3]f32) -> [3]f32 {

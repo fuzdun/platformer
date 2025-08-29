@@ -136,21 +136,21 @@ void main()
     float uvy = dot(plane_y, planar_diff);
     float a = atan(uvx / uvy) * 25;
     float d1 = dist + noise(vec2(a + i_time / 60.0, i_time / 80.0)) * 2.5;
-
     float absd = abs(uvd - d1);
     float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.2, 0.3, absd);
-    vec4 proximity_outline_col = vec4(1.0, 0.3, 0.0, 1.0) * noise_border;
+    vec4 proximity_outline_col = vec4(1.0, 1.0, 0.0, 1.0) * noise_border;
 
     float sd = (udTriangle(b_poss[0], b_poss[1], b_poss[2], global_pos));
     float border_t = smoothstep(0, LINE_W, sd);
 
-    float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 300.0) * (SAMPLE_RES / 64.0)).r;
-    mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.25)); 
+    float mask = texture(ditherTexture, screen_uv * (SAMPLE_RES / 64.0)).r;
+    mask = min(1.0, floor(mask + ((uvd / 10.0) + dist / 100.0) / 1.5) / 3.0); 
     mask = reshapeUniformToTriangle(mask);
 
-    fragColor = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.15, 0.2, 0.4, 0.4), border_t);
-    // fragColor = mix(fragColor, vec4(0.0, 0.0, 0.0, 1.0), mask);
+    fragColor = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.15, 0.2, 0.4, 0.6), border_t);
+    fragColor = mix(fragColor, vec4(0.0, 0.0, 0.0, 1.0), mask);
     fragColor += proximity_outline_col;
+    fragColor.r *= 1.0 + (1.0 - (mask / 2.0));
     fragColor.a = min(1.0, fragColor.a);
 
 }

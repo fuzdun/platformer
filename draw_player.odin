@@ -2,6 +2,7 @@ package main
 import gl "vendor:OpenGL"
 import la "core:math/linalg"
 import rand "core:math/rand"
+import "core:fmt"
 
 draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, time: f32, interp_t: f32) {
     gl.BindVertexArray(rs.player_vao)
@@ -17,34 +18,51 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
 
     for &v, idx in offset_vertices {
         rand.reset(u64(idx))
-        v.pos = la.matrix_mul_vector(rot_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 1.0}).xyz
+        if !pls.slide_state.sliding && !(pls.contact_state.state == .ON_WALL) {
+            v.pos = la.matrix_mul_vector(rot_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 0.0}).xyz
+        }
         if v.uv.x != 1.0 {
             v.pos *= f32(pls.spike_compression)
-        } else if pls.contact_state.state == .ON_GROUND {
-            norm_pos := la.normalize(v.pos - (la.dot(v.pos, right_vec) * right_vec * 0.5))
-            down_alignment := max(0.25, min(0.75, la.dot(norm_pos, [3]f32{0, -1, 0})))
-            down_alignment = (down_alignment - 0.25) / 0.5
-
-            stretch_alignment := max(0.5, min(1.0, la.dot(norm_pos, stretch_dir)))
-            stretch_alignment = (stretch_alignment - 0.5) / 0.5
-            stretch_amt := stretch_alignment * stretch_alignment * stretch_alignment * la.length(pls.velocity) / 40.0
-
-            v.pos *= (1.0 - down_alignment * 0.5)
-            v.pos *= 1 + stretch_amt
-            // v.pos *= 1.2
         } else {
-            v.pos *= 1.5
+            if pls.contact_state.state == .ON_GROUND&& !pls.slide_state.sliding {
+                norm_pos := la.normalize(v.pos - (la.dot(v.pos, right_vec) * right_vec * 0.5))
+                down_alignment := max(0.25, min(0.75, la.dot(norm_pos, [3]f32{0, -1, 0})))
+                down_alignment = (down_alignment - 0.25) / 0.5
+
+                stretch_alignment := max(0.5, min(1.0, la.dot(norm_pos, stretch_dir)))
+                stretch_alignment = (stretch_alignment - 0.5) / 0.5
+                stretch_amt := stretch_alignment * stretch_alignment * la.length(pls.velocity) / 40.0
+
+                v.pos *= (1.0 - down_alignment * 0.5)
+                v.pos *= 1.0 + stretch_amt
+            }
+        }
+        if pls.slide_state.sliding {
+            up := la.normalize(pls.contact_state.contact_ray)
+            spin_mat := la.matrix4_rotate_f32(f32(time) / 200, up)
+            slide_t := time - pls.slide_state.slide_time
+            end_slide_t := time - (SLIDE_LEN + pls.slide_state.slide_time - SLIDE_ANIM_EASE_LEN)
+            compression_t := clamp(slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0) - clamp(end_slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0)
+            vertical_fact := la.dot(up, v.pos)
+            v.pos -= up * vertical_fact * easeout_cubic(compression_t) * abs(vertical_fact)
+            if v.uv.x == 1.0 {
+                v.pos *= (1.0 + (compression_t) * 5.0)
+            }
+            v.pos = la.matrix_mul_vector(spin_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 0.0}).xyz
         }
 
         if pls.contact_state.state == .ON_GROUND {
-        }
+            v.pos *= 1.2
+        } 
 
         displacement_fact := la.dot(displacement_dir, la.normalize0(v.pos))
         if displacement_fact > 0.25 {
             displacement_fact *= 0.5
         }
-        v.pos = la.clamp_length(v.pos + pls.particle_displacement * displacement_fact * 0.030, 3.0)
-        v.pos += pls.particle_displacement * displacement_fact * 0.030
+        if !pls.slide_state.sliding {
+            v.pos = la.clamp_length(v.pos + pls.particle_displacement * displacement_fact * 0.030, 3.0)
+            v.pos += pls.particle_displacement * displacement_fact * 0.030
+        }
     }
 
     // load vertices into buffer
@@ -59,6 +77,11 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
     if time < pls.broke_t + BREAK_BOOST_LEN {
         p_color = {0.0, 0.0, 1.0}
         p_outline_color = {0.0, 0.0, 1.0}
+    }
+    if pls.slide_state.sliding {
+        // p_color = {0.0, 1.0, 1.0}
+        // p_outline_color = {0.0, 1.0, 1.0}
+        
     }
     player_mat := interpolated_player_matrix(pls, f32(interp_t))
 
@@ -76,9 +99,12 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
     set_vec3_uniform(shs, "p_outline_color", 1, &p_outline_color)
     set_matrix_uniform(shs, "transform", &player_mat)
     if pls.contact_state.state == .ON_GROUND {
-        gl.LineWidth(2)
+        gl.LineWidth(1.5)
     } else {
-        gl.LineWidth(4)
+        gl.LineWidth(2)
+    }
+    if pls.slide_state.sliding {
+        gl.LineWidth(0.5)
     }
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
     gl.DrawElements(gl.LINES, i32(len(rs.player_outline_indices)), gl.UNSIGNED_INT, nil)
