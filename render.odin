@@ -23,14 +23,16 @@ SHAPE :: enum {
     CUBE,
     CYLINDER,
     ICO,
-    DASH_BARRIER
+    DASH_BARRIER,
+    SLIDE_ZONE
 }
 
 SHAPE_FILENAME := [SHAPE]string {
     .CUBE = "basic_cube",
     .CYLINDER = "cylinder",
     .ICO = "icosphere",
-    .DASH_BARRIER = "dash_barrier"
+    .DASH_BARRIER = "dash_barrier",
+    .SLIDE_ZONE = "slide_zone"
 }
 
 TEXT_VERTICES :: [4]Quad_Vertex4 {
