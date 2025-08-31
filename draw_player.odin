@@ -39,14 +39,14 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
         }
         if pls.slide_state.sliding {
             up := la.normalize(pls.contact_state.contact_ray)
-            spin_mat := la.matrix4_rotate_f32(f32(time) / 200, up)
+            spin_mat := la.matrix4_rotate_f32(f32(time) / 150, up)
             slide_t := time - pls.slide_state.slide_time
             end_slide_t := time - (SLIDE_LEN + pls.slide_state.slide_time - SLIDE_ANIM_EASE_LEN)
             compression_t := clamp(slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0) - clamp(end_slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0)
             vertical_fact := la.dot(up, v.pos)
-            v.pos -= up * vertical_fact * easeout_cubic(compression_t) * abs(vertical_fact)
+            v.pos -= up * vertical_fact * easeout_cubic(compression_t) * abs(vertical_fact) * 1.2
             if v.uv.x == 1.0 {
-                v.pos *= (1.0 + (compression_t) * 5.0)
+                v.pos *= (1.0 + (compression_t) * 4.0)
             }
             v.pos = la.matrix_mul_vector(spin_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 0.0}).xyz
         }

@@ -102,7 +102,7 @@ updated_dash_state :: proc(pls: Player_State, is: Input_State, collisions: map[i
             ds.dashing = false 
         }
         if !pls.dash_state.can_dash {
-            ds.can_dash = !ds.dashing && (pls.contact_state.state == .ON_GROUND || did_bunny_hop(pls, elapsed_time))
+            ds.can_dash = !ds.dashing && (pls.contact_state.state == .ON_GROUND || pls.contact_state.state == .ON_SLOPE || did_bunny_hop(pls, elapsed_time))
         } 
     }
     return ds
