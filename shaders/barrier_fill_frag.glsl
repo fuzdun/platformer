@@ -141,7 +141,7 @@ void main()
     vec4 proximity_outline_col = vec4(1.0, 1.0, 0.0, 1.0) * noise_border;
 
     float sd = (udTriangle(b_poss[0], b_poss[1], b_poss[2], global_pos));
-    float border_t = smoothstep(0, LINE_W, sd);
+    float border_t = smoothstep(0.0, LINE_W, sd);
 
     float mask = texture(ditherTexture, screen_uv * (SAMPLE_RES / 64.0)).r;
     mask = min(1.0, floor(mask + ((uvd / 10.0) + dist / 100.0) / 1.5) / 3.0); 

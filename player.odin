@@ -38,7 +38,7 @@ SLOPE_GRAV: f32: 150
 // input
 COYOTE_TIME ::  150
 BUNNY_DASH_DEBOUNCE: f32: 400
-BUNNY_WINDOW: f32: 120
+BUNNY_WINDOW: f32: 100
 
 // dash
 DASH_SPD: f32: 120.0
@@ -82,9 +82,9 @@ SPHERE_I_COUNT :: (SPHERE_STACK_COUNT - 1) * SPHERE_SECTOR_COUNT * 6
 ICOSPHERE_SUBDIVISION :: 3 
 ICOSPHERE_V_COUNT :: f32(ICOSPHERE_SUBDIVISION + 1) * f32(ICOSPHERE_SUBDIVISION + 2) / 2.0
 
-MIN_SPIKE_COMPRESSION :: 0.4
-MAX_SPIKE_COMPRESSION :: 0.8
-SPIKE_COMPRESSION_LERP :: 0.10
+MIN_SPIKE_COMPRESSION: f32: 0.4
+MAX_SPIKE_COMPRESSION: f32: 0.8
+SPIKE_COMPRESSION_LERP: f32: 0.10
 
 // geometry crack timing
 CRACK_DELAY :: 1000
@@ -156,7 +156,7 @@ Player_State :: struct {
     particle_displacement: [3]f32,
     tgt_particle_displacement: [3]f32,
 
-    spike_compression: f64
+    spike_compression: f32
 }
 
 free_player_state :: proc(ps: ^Player_State) {}

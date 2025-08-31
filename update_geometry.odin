@@ -16,15 +16,15 @@ apply_restart_to_lgs :: proc(is: Input_State, lgs: Level_Geometry_Soa) -> Level_
 }
 
 
-apply_collisions_to_lgs :: proc(lgs: Level_Geometry_Soa, pls: Player_State, collision_ids: map[int]struct{}, elapsed_time: f32) -> Level_Geometry_Soa {
+apply_collisions_to_lgs :: proc(lgs: Level_Geometry_Soa, dashing: bool, position: [3]f32, velocity: [3]f32, collision_ids: map[int]struct{}, elapsed_time: f32) -> Level_Geometry_Soa {
     defer delete(lgs)
     lgs := dynamic_soa_copy(lgs)
     for id in collision_ids {
         lg := &lgs[id]
-        if .Dash_Breakable in lg.attributes && pls.dash_state.dashing {
+        if .Dash_Breakable in lg.attributes && dashing {
             lg.break_time = lg.break_time == 0.0 ? elapsed_time : lg.break_time
-            lg.break_dir = la.normalize(pls.velocity)
-            lg.break_pos = pls.position
+            lg.break_dir = la.normalize(velocity)
+            lg.break_pos = position
             // lg.crack_time = lg.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.crack_time
         } else if .Hazardous in lg.attributes {
             lg.crack_time = lg.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.crack_time
@@ -36,11 +36,11 @@ apply_collisions_to_lgs :: proc(lgs: Level_Geometry_Soa, pls: Player_State, coll
 }
 
 
-apply_bunny_hop_to_lgs :: proc(lgs: Level_Geometry_Soa, pls: Player_State,  elapsed_time: f32) -> Level_Geometry_Soa {
+apply_bunny_hop_to_lgs :: proc(lgs: Level_Geometry_Soa, did_bunny_hop: bool, last_touched: int, elapsed_time: f32) -> Level_Geometry_Soa {
     defer delete(lgs)
     lgs := dynamic_soa_copy(lgs)
-    if did_bunny_hop(pls, elapsed_time) {
-        lgs[pls.contact_state.last_touched].crack_time = elapsed_time - BREAK_DELAY
+    if did_bunny_hop {
+        lgs[last_touched].crack_time = elapsed_time - BREAK_DELAY
     }
     return lgs 
 }

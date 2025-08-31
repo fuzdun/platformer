@@ -7,38 +7,47 @@ import la "core:math/linalg"
 // ================
 // VELOCITY UPDATES
 // ================
-apply_directional_input_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, elapsed_time: f32, delta_time: f32) -> [3]f32 {
-    if elapsed_time < pls.hurt_t + DAMAGE_LEN {
-        return pls.velocity
-    }
+apply_directional_input_to_velocity :: proc(
+  l_pressed: bool, r_pressed: bool,
+  u_pressed: bool, d_pressed: bool,
+  h_axis: f32, v_axis: f32,
+  hurt_t: f32,
+  state: Player_States,
+  ground_x: [3]f32, ground_z: [3]f32,
+  velocity: [3]f32,
+  elapsed_time: f32, delta_time: f32
+) -> [3]f32 {
     velocity := velocity
-    cs := pls.contact_state
+    if elapsed_time < hurt_t + DAMAGE_LEN {
+        return velocity
+    }
+    //cs := pls.contact_state
     move_spd := P_ACCEL
-    if cs.state == .ON_SLOPE {
+    if state == .ON_SLOPE {
         move_spd =  SLOPE_SPEED
-    } else if cs.state == .IN_AIR {
+    } else if state == .IN_AIR {
         move_spd =  AIR_SPEED
     }
-    grounded := cs.state == .ON_GROUND || cs.state == .ON_SLOPE
-    right_vec := grounded ? cs.ground_x : [3]f32{1, 0, 0}
-    fwd_vec := grounded ? cs.ground_z : [3]f32{0, 0, -1}
-    if is.left_pressed {
+    grounded := state == .ON_GROUND || state == .ON_SLOPE
+    right_vec := grounded ? ground_x : [3]f32{1, 0, 0}
+    fwd_vec := grounded ? ground_z : [3]f32{0, 0, -1}
+    if l_pressed {
         velocity -= move_spd * delta_time * right_vec
     }
-    if is.right_pressed {
+    if r_pressed {
         velocity += move_spd * delta_time * right_vec
     }
-    if is.up_pressed {
+    if u_pressed {
         velocity += move_spd * delta_time * fwd_vec
     }
-    if is.down_pressed {
+    if d_pressed {
         velocity -= move_spd * delta_time * fwd_vec
     }
-    if is.hor_axis != 0 {
-        velocity += move_spd * delta_time * is.hor_axis * right_vec
+    if h_axis != 0 {
+        velocity += move_spd * delta_time * h_axis * right_vec
     }
-    if is.vert_axis != 0 {
-        velocity += move_spd * delta_time * is.vert_axis * fwd_vec
+    if v_axis != 0 {
+        velocity += move_spd * delta_time * v_axis * fwd_vec
     }
     return velocity
 }
@@ -53,25 +62,24 @@ clamp_horizontal_velocity_to_max_speed :: proc(velocity: [3]f32) -> [3]f32 {
 }
 
 
-apply_friction_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, delta_time: f32) -> [3]f32 {
-    got_dir_input :=  is.a_pressed || is.s_pressed || is.d_pressed || is.w_pressed || is.hor_axis != 0 || is.vert_axis != 0
-    return (pls.contact_state.state == .ON_GROUND && !got_dir_input) ? velocity * math.pow(GROUND_FRICTION, delta_time) : velocity
+apply_friction_to_velocity :: proc(state: Player_States, u_pressed: bool, d_pressed: bool, l_pressed: bool, r_pressed: bool, h_axis: f32, v_axis: f32, velocity: [3]f32, delta_time: f32) -> [3]f32 {
+    got_dir_input := u_pressed || d_pressed || l_pressed || r_pressed || h_axis != 0 || v_axis != 0
+    return (state == .ON_GROUND && !got_dir_input) ? velocity * math.pow(GROUND_FRICTION, delta_time) : velocity
 }
 
 
-apply_gravity_to_velocity :: proc(pls: Player_State, velocity: [3]f32, delta_time: f32) -> [3]f32 {
-    cs := pls.contact_state
-    if cs.state != .ON_GROUND {
+apply_gravity_to_velocity :: proc(state: Player_States, contact_ray: [3]f32, velocity: [3]f32, delta_time: f32) -> [3]f32 {
+    if state != .ON_GROUND {
         down: [3]f32 = {0, -1, 0}
-        norm_contact := la.normalize(cs.contact_ray)
         grav_force := GRAV
-        if cs.state == .ON_SLOPE {
+        if state == .ON_SLOPE {
             grav_force = SLOPE_GRAV
         }
-        if cs.state == .ON_WALL {
+        if state == .ON_WALL {
             grav_force = WALL_GRAV
         }
-        if cs.state == .ON_WALL || cs.state == .ON_SLOPE {
+        if state == .ON_WALL || state == .ON_SLOPE {
+            norm_contact := la.normalize(contact_ray)
             down -= la.dot(norm_contact, down) * norm_contact
         }
         return velocity + down * grav_force * delta_time
@@ -80,49 +88,43 @@ apply_gravity_to_velocity :: proc(pls: Player_State, velocity: [3]f32, delta_tim
 }
 
 
-apply_jumps_to_velocity :: proc(pls: Player_State, is: Input_State, velocity: [3]f32, elapsed_time: f32) -> [3]f32 {
+apply_jumps_to_velocity :: proc(velocity: [3]f32, did_bunny_hop: bool, ground_jumped: bool, slope_jumped: bool, wall_jumped: bool, contact_ray: [3]f32, elapsed_time: f32) -> [3]f32 {
     velocity := velocity
-    if did_bunny_hop(pls, elapsed_time) {
+    if did_bunny_hop {
         velocity.y = GROUND_BUNNY_V_SPEED
         if la.length(velocity.xz) > MIN_BUNNY_XZ_VEL {
             velocity.xz += la.normalize(velocity.xz) * GROUND_BUNNY_H_SPEED
         }
     } 
-    if ground_jumped(pls, is, elapsed_time) {
+    if ground_jumped {
         velocity.y = P_JUMP_SPEED
-    } else if slope_jumped(pls, is, elapsed_time) {
-        velocity += -la.normalize(pls.contact_state.contact_ray) * SLOPE_JUMP_FORCE
+    } else if slope_jumped {
+        velocity += -la.normalize(contact_ray) * SLOPE_JUMP_FORCE
         velocity.y = SLOPE_V_JUMP_FORCE
-    } else if wall_jumped(pls, is, elapsed_time) {
+    } else if wall_jumped {
         velocity.y = P_JUMP_SPEED
-        velocity += -pls.contact_state.contact_ray * WALL_JUMP_FORCE 
+        velocity += -contact_ray * WALL_JUMP_FORCE 
     }
     return velocity
 }
 
 
-apply_dash_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_time: f32) -> [3]f32 {
+apply_dash_to_velocity :: proc(velocity: [3]f32, state: Player_States, ds: Dash_State, elapsed_time: f32) -> [3]f32 {
     velocity := velocity
-    state := pls.contact_state.state
-    dash_expired := f32(elapsed_time) > pls.dash_state.dash_time + DASH_LEN
+    dash_expired := f32(elapsed_time) > ds.dash_time + DASH_LEN
     hit_surface := state == .ON_WALL || state == .ON_GROUND || state == .ON_WALL
-    if pls.dash_state.dashing {
-        velocity = la.normalize(pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos) * DASH_SPD
+    if ds.dashing {
+        velocity = la.normalize(ds.dash_end_pos - ds.dash_start_pos) * DASH_SPD
     } 
     return velocity
 }
 
 
-apply_slide_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_time: f32) -> [3]f32 {
+apply_slide_to_velocity :: proc(velocity: [3]f32, state: Player_States, sls: Slide_State, elapsed_time: f32) -> [3]f32 {
     velocity := velocity
-    state := pls.contact_state.state
-    slide_expired := f32(elapsed_time) > pls.slide_state.slide_time + SLIDE_LEN
-    if pls.slide_state.sliding {
-        // if slide_expired || !on_surface(pls) {
-            velocity = pls.slide_state.slide_dir * SLIDE_SPD 
-        // } else {
-        //     velocity = 0
-        // }
+    slide_expired := f32(elapsed_time) > sls.slide_time + SLIDE_LEN
+    if sls.sliding {
+        velocity = sls.slide_dir * SLIDE_SPD 
     }
     return velocity
 }
@@ -130,16 +132,16 @@ apply_slide_to_velocity :: proc(pls: Player_State, velocity: [3]f32, elapsed_tim
 // apply_break_to_velocity :: proc(pls: Player_State, velocity: [3]f32, )
 
 
-apply_restart_to_velocity :: proc(is: Input_State, velocity: [3]f32) -> [3]f32 {
-    return is.r_pressed ? {0, 0, 0} : velocity
+apply_restart_to_velocity :: proc(velocity: [3]f32, r_pressed: bool) -> [3]f32 {
+    return r_pressed ? {0, 0, 0} : velocity
 }
 
 
 // ===========================
 // COLLISION / CONTACT UPDATES
 // ===========================
-apply_jump_to_player_state :: proc(pls: Player_State, is: Input_State, elapsed_time: f32) -> Player_States {
-    return !pls.slide_state.sliding && jumped(pls, is, elapsed_time) ? .IN_AIR : pls.contact_state.state
+apply_jump_to_player_state :: proc(state: Player_States, sliding: bool, jumped: bool, elapsed_time: f32) -> Player_States {
+    return !sliding && jumped ? .IN_AIR : state
 }
 
 
