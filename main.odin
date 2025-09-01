@@ -125,12 +125,12 @@ main :: proc () {
     rs:  Render_State;         defer free_render_state(&rs)
     pls: Player_State;         defer free_player_state(&pls)
     sr:  Shape_Resources;      defer free_level_resources(&sr)
-    szs: Slide_Zone_State;     defer free_slide_zone_state(szs)
+    szs: Slide_Zone_State;     defer free_slide_zone_state(&szs)
 
     // init game state
     lgs.entities = make(Level_Geometry_Soa)
     lgs.dirty_entities = make([dynamic]int)
-    szs = make([dynamic]Obb)
+    szs.entities = make(#soa[dynamic]Obb)
     cs.position = {10, 60, 300}
     es.y_rot = -.25
     es.zoom = 400
@@ -290,6 +290,7 @@ main :: proc () {
     gl.GenBuffers(1, &rs.z_widths_ssbo)
     gl.GenBuffers(1, &rs.crack_time_ssbo)
     gl.GenBuffers(1, &rs.break_data_ssbo)
+    gl.GenBuffers(1, &rs.transparencies_ssbo)
     gl.GenBuffers(1, &rs.common_ubo)
     gl.GenBuffers(1, &rs.dash_ubo)
     gl.GenBuffers(1, &rs.ppos_ubo)
@@ -526,13 +527,13 @@ main :: proc () {
             if EDIT {
                 editor_update(&lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
-                game_update(&lgs, is, &pls, phs, &cs, &ts, szs, f32(elapsed_time), FIXED_DELTA_TIME)
+                game_update(&lgs, is, &pls, phs, &cs, &ts, &szs, f32(elapsed_time), FIXED_DELTA_TIME)
             }
             accumulator -= target_frame_clocks 
         }
 
         // Render
-        draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, is, es, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
+        draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
         if EDIT {
             imgl.new_frame()
             imsdl.new_frame()

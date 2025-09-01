@@ -20,6 +20,10 @@ layout (std430, binding = 3) buffer Break_Data {
     float break_data[][7];
 };
 
+layout (std430, binding = 4) buffer Transparencies_Data {
+    float transparencies_data[];
+};
+
 layout (std140, binding = 0) uniform Common
 {
     mat4 projection;
@@ -47,6 +51,7 @@ out VS_OUT {
     float break_data[7];
     float outer_tess_amt;
     float inner_tess_amt;
+    float transparency;
 } vs_out;
 
 
@@ -65,5 +70,6 @@ void main() {
     vs_out.break_data = break_data[gl_BaseInstance + gl_InstanceID];
     vs_out.outer_tess_amt = outer_amt;
     vs_out.inner_tess_amt = inner_amt;
+    vs_out.transparency = transparencies_data[gl_BaseInstance + gl_InstanceID];
 }
 

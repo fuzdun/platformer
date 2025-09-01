@@ -82,6 +82,7 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             defer delete(entry_bin)
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
+            lg.transparency = 1.0
             if lg.shape == .DASH_BARRIER {
                 lg.attributes += {.Hazardous, .Dash_Breakable}
                 lg.render_type = .Dash_Barrier
@@ -118,23 +119,21 @@ lg_get_transformed_collider_vertices :: proc(lg: Level_Geometry, trans_mat: matr
 
 add_geometry_to_physics :: proc(ps: ^Physics_State, szs: ^Slide_Zone_State, lgs_in: []Level_Geometry) {
     clear_physics_state(ps)
-    for &lg in lgs_in {
+    for &lg, lg_idx in lgs_in {
         trans_mat := trans_to_mat4(lg.transform)
         vertices_len := len(ps.level_colliders[lg.shape].vertices)
         transformed_vertices := make([][3]f32, vertices_len);
         defer delete(transformed_vertices)
         if lg.shape == .SLIDE_ZONE {
-            // fmt.println(lg.transform)
-            // fmt.println(trans_mat)
             sz: Obb
+            sz.id = lg_idx
             x := [3]f32{trans_mat[0][0], trans_mat[1][0], trans_mat[2][0]}
             y := [3]f32{trans_mat[0][1], trans_mat[1][1], trans_mat[2][1]}
             z := [3]f32{trans_mat[0][2], trans_mat[1][2], trans_mat[2][2]}
             sz.axes = {la.normalize0(x), la.normalize0(y), la.normalize0(z)}
             sz.dim = [3]f32{la.length(x), la.length(y), la.length(z)}
             sz.center = [3]f32{trans_mat[3][0], trans_mat[3][1], trans_mat[3][2]}
-            append(szs, sz)
-            // fmt.println(sz)
+            append(&szs.entities, sz)
         }
         lg_get_transformed_collider_vertices(lg, trans_mat, ps^, transformed_vertices[:])
 

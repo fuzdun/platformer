@@ -1,5 +1,6 @@
 package main
 
+import "core:sort"
 import "core:fmt"
 import "core:slice"
 import "core:math"
@@ -17,6 +18,7 @@ draw :: proc(
     cs: ^Camera_State,
     is: Input_State,
     es: Editor_State,
+    szs: Slide_Zone_State,
     time: f64,
     interp_t: f64
 ) {
@@ -33,12 +35,13 @@ draw :: proc(
 
     lg_count := len(lgs.entities)
 
-    sorted_rd          := make([]Lg_Render_Data, lg_count);                 defer delete(sorted_rd)
-    sorted_transforms  := make([]glm.mat4, lg_count);                       defer delete(sorted_transforms)
-    sorted_z_widths    := make([]f32, lg_count);                            defer delete(sorted_z_widths)
-    sorted_crack_times := make([]f32, lg_count);                            defer delete(sorted_crack_times)
-    sorted_break_data  := make([]Break_Data, lg_count);                     defer delete(sorted_break_data)
-    lg_render_commands := make([]gl.DrawElementsIndirectCommand, lg_count); defer delete(lg_render_commands) 
+    sorted_rd           := make([]Lg_Render_Data, lg_count);                 defer delete(sorted_rd)
+    sorted_transforms   := make([]glm.mat4, lg_count);                       defer delete(sorted_transforms)
+    sorted_z_widths     := make([]f32, lg_count);                            defer delete(sorted_z_widths)
+    sorted_crack_times  := make([]f32, lg_count);                            defer delete(sorted_crack_times)
+    sorted_break_data   := make([]Break_Data, lg_count);                     defer delete(sorted_break_data)
+    sorted_transparency := make([]f32, lg_count);                            defer delete(sorted_transparency)
+    lg_render_commands  := make([]gl.DrawElementsIndirectCommand, lg_count); defer delete(lg_render_commands) 
 
     // sort level geometry by shader and shape
     group_offsets: [len(SHAPE) * len(Level_Geometry_Render_Type)]int
@@ -50,7 +53,8 @@ draw :: proc(
             transform_mat = trans_to_mat4(lg.transform),
             z_width =  30, // need to change this
             crack_time = lg.crack_time,
-            break_data = { lg.break_time, lg.break_pos, lg.break_dir }
+            break_data = { lg.break_time, lg.break_pos, lg.break_dir },
+            transparency = lg.transparency
         }
     }
 
@@ -81,6 +85,7 @@ draw :: proc(
         sorted_z_widths[idx] = rd.z_width
         sorted_crack_times[idx] = rd.crack_time
         sorted_break_data[idx] = rd.break_data
+        sorted_transparency[idx] = rd.transparency
     }
 
     // load level geometry attributes into buffers
@@ -92,12 +97,15 @@ draw :: proc(
     gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_crack_times[0]) * len(sorted_crack_times), raw_data(sorted_crack_times), gl.DYNAMIC_DRAW)
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.break_data_ssbo)
     gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_break_data[0]) * len(sorted_break_data), raw_data(sorted_break_data), gl.DYNAMIC_DRAW)
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transparencies_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_transparency[0]) * len(sorted_transparency), raw_data(sorted_transparency), gl.DYNAMIC_DRAW)
 
 
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.transforms_ssbo)
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 2, rs.crack_time_ssbo)
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 3, rs.break_data_ssbo)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 4, rs.transparencies_ssbo)
 
     // get projection matrix
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))

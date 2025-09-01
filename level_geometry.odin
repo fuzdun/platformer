@@ -26,7 +26,8 @@ Level_Geometry :: struct {
     crack_time: f32,
     break_time: f32,
     break_dir: [3]f32,
-    break_pos: [3]f32
+    break_pos: [3]f32,
+    transparency: f32
 }
 
 Transform :: struct{

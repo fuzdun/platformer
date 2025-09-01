@@ -34,6 +34,8 @@ in TE_OUT {
     in float d01;
     in float d11;
     in float denom;
+
+    float transparency;
 } te_out[];
 
 uniform float shatter_delay;
@@ -43,6 +45,7 @@ out vec2 perspective_uv;
 out vec3 normal_frag;
 out float plane_dist;
 out float displacement;
+out float transparency;
 
 out vec3 t0_pos;
 out vec2 t0_uv;
@@ -140,6 +143,7 @@ void main() {
     d01 = te_out[0].d01;
     d11 = te_out[0].d11;
     denom = te_out[0].denom;
+    transparency = te_out[0].transparency;
 
     t0_uv = te_out[0].t0_uv;
     t1_uv = te_out[0].t1_uv;

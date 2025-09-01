@@ -14,6 +14,7 @@ in VS_OUT {
     float break_data[7];
     float outer_tess_amt;
     float inner_tess_amt;
+    float transparency;
 } vs_out[];
 
 patch out vec3 v0;
@@ -29,6 +30,7 @@ patch out float player_dist;
 patch out float plane_dist;
 patch out float crack_time;
 patch out float break_data[7];
+patch out float transparency;
 
 out TC_OUT {
     vec2 uv;
@@ -41,6 +43,7 @@ void main() {
     plane_dist = vs_out[gl_InvocationID].plane_dist;
     crack_time = vs_out[gl_InvocationID].crack_time;
     break_data = vs_out[gl_InvocationID].break_data;
+    transparency = vs_out[gl_InvocationID].transparency;
     tc_out[gl_InvocationID].uv = vs_out[gl_InvocationID].uv;
 
     v0 = (gl_in[1].gl_Position - gl_in[0].gl_Position).xyz;

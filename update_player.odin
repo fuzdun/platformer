@@ -106,10 +106,8 @@ updated_dash_state :: proc(ds: Dash_State, state: Player_States, sliding: bool, 
     return ds
 }
 
-
-updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_States, position: [3]f32, velocity: [3]f32, ground_x: [3]f32, ground_z: [3]f32, collisions: map[int]struct{}, lgs: #soa[]Level_Geometry, szs: Slide_Zone_State, elapsed_time: f32) -> Slide_State {
+updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_States, position: [3]f32, velocity: [3]f32, ground_x: [3]f32, ground_z: [3]f32, collisions: map[int]struct{}, lgs: #soa[]Level_Geometry, slide_zone_intersections: map[int]struct{}, elapsed_time: f32) -> Slide_State {
     new_sls := sls
-    // fmt.println("=====")
     if on_surface(state) && sls.can_slide && is.x_pressed && velocity != 0 {
         new_sls.sliding = true
         new_sls.can_slide = false
@@ -121,13 +119,8 @@ updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_Sta
         slide_input := input_dir == 0 ? la.normalize0(velocity) : {input_dir.x, 0, input_dir.y}
         new_sls.slide_dir = la.normalize(slide_input - la.dot(slide_input, surface_normal) * surface_normal)
     } else {
-        if sls.sliding {
-            for sz in szs {
-                if hit, _ := sphere_obb_intersection(sz, position, PLAYER_SPHERE_RADIUS); hit {
-                    new_sls.slide_time = elapsed_time
-                    break
-                }
-            }
+        if sls.sliding && len(slide_zone_intersections) > 0{
+            new_sls.slide_time = elapsed_time
         }
         if sls.sliding && (!on_surface(state) || elapsed_time > sls.slide_time + SLIDE_LEN) {
             new_sls.sliding = false

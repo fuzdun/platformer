@@ -20,6 +20,7 @@ patch in float player_dist;
 patch in float plane_dist;
 patch in float crack_time;
 patch in float break_data[7];
+patch in float transparency;
 
 out TE_OUT {
     vec2 uv;
@@ -42,6 +43,8 @@ out TE_OUT {
     out float d01;
     out float d11;
     out float denom;
+
+    out float transparency;
 } te_out;
 
 void main() {
@@ -62,6 +65,7 @@ void main() {
     te_out.plane_dist = plane_dist;
     te_out.crack_time = crack_time;
     te_out.break_data = break_data;
+    te_out.transparency = transparency;
 
     te_out.t0_pos = gl_in[0].gl_Position.xyz;
 

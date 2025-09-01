@@ -31,9 +31,6 @@ apply_directional_input_to_velocity :: proc(
     grounded := state == .ON_GROUND || state == .ON_SLOPE
     right_vec := grounded ? ground_x : [3]f32{1, 0, 0}
     fwd_vec := grounded ? ground_z : [3]f32{0, 0, -1}
-    fmt.println("ground_x:", ground_x)
-    fmt.println("ground_z:", ground_z)
-    fmt.println(fwd_vec)
     if l_pressed {
         velocity -= move_spd * delta_time * right_vec
     }
@@ -330,7 +327,7 @@ apply_velocity :: proc(
         velocity,
         contact_state.contact_ray,
         level_colliders, static_collider_vertices, elapsed_time, delta_time
-    )
+    ); defer delete(contacts)
     new_contact_state = update_player_contact_state(
         contact_state,
         collided,
@@ -362,6 +359,7 @@ apply_velocity :: proc(
                 velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal
             }
             new_velocity = (velocity_normal * remaining_vel) / delta_time
+            delete(contacts)
             collided, collision, contacts = get_collisions(
                 entities,
                 new_position,
@@ -410,22 +408,22 @@ apply_dash_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time
 //     return position
 // }
 
-slide_zone_intersection :: proc(position: [3]f32, szs: Slide_Zone_State) -> bool {
-    for sz in szs {
+get_slide_zone_intersections :: proc(position: [3]f32, szs: Slide_Zone_State) -> (out: map[int]struct{}) {
+    for sz in szs.entities {
         if hit, _ := sphere_obb_intersection(sz, position, PLAYER_SPHERE_RADIUS); hit {
-            return true  
+            out[sz.id] = {}
         }
     }
-    return false
+    return
 }
 
-apply_slide_zones_to_slide_time :: proc(slide_time: f32, position: [3]f32, szs: Slide_Zone_State, elapsed_time: f32) -> f32 {
-    if slide_zone_intersection(position, szs) {
-        return elapsed_time
-    }
-    return slide_time
-}
-
+// apply_slide_zones_to_slide_time :: proc(slide_time: f32, position: [3]f32, szs: Slide_Zone_State, elapsed_time: f32) -> f32 {
+//     if slide_zone_intersections(position, szs) {
+//         return elapsed_time
+//     }
+//     return slide_time
+// }
+//
 
 apply_restart_to_position :: proc(is: Input_State, position: [3]f32) -> [3]f32 {
   return is.r_pressed ? INIT_PLAYER_POS : position

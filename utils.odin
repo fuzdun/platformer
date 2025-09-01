@@ -24,4 +24,11 @@ dynamic_soa_copy :: proc(a: #soa[dynamic]$T) -> #soa[dynamic]T{
     return b
 }
 
+set_swap :: proc(a: ^map[$T]struct{}, b: map[T]struct{}) {
+    clear(a)
+    for val in b {
+        a[val] = {}
+    }
+    delete(b)
+}
 
