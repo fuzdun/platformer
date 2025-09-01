@@ -126,7 +126,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Wireframe = {
         pipeline = {"wireframe_vertex", "wireframe_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"color"}
+        uniforms = {"color", "camera_pos"}
     }
 }
 

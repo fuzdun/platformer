@@ -14,8 +14,15 @@ layout (std140, binding = 0) uniform Common
     float _;
 };
 
+uniform vec3 camera_pos;
+
+out float camera_dist;
+
 void main() {
     mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
-    gl_Position = projection * transform * aPos;
+    vec4 transformed_pos = transform * aPos;
+    // float camera_dist = length(camera_pos - transformed_pos.xyz);
+    float camera_dist = length(camera_pos);
+    gl_Position = projection * transformed_pos;
 }
 

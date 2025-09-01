@@ -2,7 +2,11 @@
 
 uniform vec3 color;
 
+in float camera_dist;
+
 out vec4 fragColor;
+
+#define OPACITY_DIST 10.0
 
 void main() {
     // vec3 t_color = color;
@@ -15,6 +19,11 @@ void main() {
     // float fade_out_t = clamp((cur_time - fade_in_len) / fade_out_len, 0, 1);
     // float a = fade_in_t - fade_out_t;
     // t_color.b = t;
-    fragColor = vec4(color, 1.0);
+    // fragColor = vec4(color, clamp(camera_dist / OPACITY_DIST, 0.0, 1.0));
+    if (camera_dist == 0.0) {
+      fragColor = vec4(1.0);
+    }
+  }
+    // fragColor = vec4(color, 1.0);
 }
 
