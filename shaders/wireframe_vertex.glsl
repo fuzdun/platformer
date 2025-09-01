@@ -21,8 +21,7 @@ out float camera_dist;
 void main() {
     mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
     vec4 transformed_pos = transform * aPos;
-    // float camera_dist = length(camera_pos - transformed_pos.xyz);
-    float camera_dist = length(camera_pos);
+    camera_dist = max(0, camera_pos.z - 50.0 - transformed_pos.z);
     gl_Position = projection * transformed_pos;
 }
 
