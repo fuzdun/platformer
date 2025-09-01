@@ -155,7 +155,6 @@ draw :: proc(
         gl.Disable(gl.DEPTH_TEST)
         gl.Disable(gl.CULL_FACE)
 
-        // draw background 
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
 
@@ -186,6 +185,11 @@ draw :: proc(
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         draw_indirect_render_queue(rs^, lg_render_groups[.Dash_Barrier][:], gl.PATCHES)
         gl.Disable(gl.BLEND)
+
+        use_shader(shs, rs, .Wireframe)
+        wireframe_color := [3]f32{0.15, 0.0, 0.15}
+        set_vec3_uniform(shs, "color", 1, &wireframe_color)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Wireframe][:], gl.LINES)
 
         // draw background
         gl.Enable(gl.BLEND)

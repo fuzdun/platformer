@@ -169,7 +169,8 @@ Lg_Render_Data :: struct {
 Level_Geometry_Render_Type :: enum {
     Standard,
     Dither_Test,
-    Dash_Barrier
+    Dash_Barrier,
+    Wireframe
 }
 
 Common_Ubo :: struct {

@@ -115,17 +115,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         pls.tgt_particle_displacement
     ) 
 
-    new_pls.slide_state = updated_slide_state(
-        pls.slide_state,
-        is,
-        cts.state,
-        pls.position,
-        pls.velocity,
-        cts.ground_x,
-        cts.ground_z,
-        elapsed_time
-    )
-
     new_crunch_pts := updated_crunch_pts(
         pls.crunch_pts[:],
         pls.crunch_time,
@@ -205,6 +194,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         pls.position,
         new_velocity,
         pls.dash_state.dashing,
+        pls.slide_state.sliding,
         lgs.entities[:],
         phs.level_colliders,
         phs.static_collider_vertices,
@@ -235,9 +225,24 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         elapsed_time
     )
 
+    new_pls.slide_state = updated_slide_state(
+        pls.slide_state,
+        is,
+        cts.state,
+        pls.position,
+        pls.velocity,
+        cts.ground_x,
+        cts.ground_z,
+        collision_ids,
+        lgs.entities[:],
+        elapsed_time
+    )
+
+
     new_pls.hurt_t = updated_hurt_t(
         pls.hurt_t,
         pls.dash_state.dashing,
+        pls.slide_state.sliding,
         collision_ids,
         lgs.entities,
         elapsed_time
@@ -260,6 +265,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     new_lgs = apply_collisions_to_lgs(new_lgs,
         pls.dash_state.dashing,
+        pls.slide_state.sliding,
         pls.position,
         pls.velocity,
         collision_ids,

@@ -44,6 +44,7 @@ ProgramName :: enum {
     Player_Outline,
     Postprocessing,
     Barrier,
+    Wireframe
 }
 
 PROGRAM_CONFIGS :: #partial[ProgramName]Program {
@@ -121,6 +122,11 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         pipeline = {"postprocessing_vertex", "postprocessing_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"time", "ppos", "crunch_time"}
+    },
+    .Wireframe = {
+        pipeline = {"wireframe_vertex", "wireframe_frag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"color"}
     }
 }
 

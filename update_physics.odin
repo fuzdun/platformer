@@ -305,6 +305,7 @@ apply_velocity :: proc(
     position: [3]f32,
     velocity: [3]f32,
     dashing: bool,
+    sliding: bool,
     entities: #soa[]Level_Geometry, 
     level_colliders: [SHAPE]Collider_Data,
     static_collider_vertices: [dynamic][3]f32,
@@ -346,6 +347,8 @@ apply_velocity :: proc(
             new_position += (remaining_vel * (collision.t) - .01) * velocity_normal
             remaining_vel *= 1.0 - collision.t
             if .Dash_Breakable in entities[collision.id].attributes && dashing {
+               remaining_vel = BREAK_BOOST_VELOCITY 
+            } else if .Slide_Zone in entities[collision.id].attributes && sliding{
                remaining_vel = BREAK_BOOST_VELOCITY 
             } else if .Hazardous in entities[collision.id].attributes {
                 remaining_vel = DAMAGE_VELOCITY

@@ -107,7 +107,7 @@ updated_dash_state :: proc(ds: Dash_State, state: Player_States, sliding: bool, 
 }
 
 
-updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_States, position: [3]f32, velocity: [3]f32, ground_x: [3]f32, ground_z: [3]f32, elapsed_time: f32) -> Slide_State {
+updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_States, position: [3]f32, velocity: [3]f32, ground_x: [3]f32, ground_z: [3]f32, collisions: map[int]struct{}, lgs: #soa[]Level_Geometry, elapsed_time: f32) -> Slide_State {
     new_sls := sls
     if on_surface(state) && sls.can_slide && is.x_pressed && velocity != 0 {
         new_sls.sliding = true
@@ -120,6 +120,13 @@ updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_Sta
         slide_input := input_dir == 0 ? la.normalize0(velocity) : {input_dir.x, 0, input_dir.y}
         new_sls.slide_dir = la.normalize(slide_input - la.dot(slide_input, surface_normal) * surface_normal)
     } else {
+        if sls.sliding {
+            for coll_id in collisions {
+                if .Slide_Zone in lgs[coll_id].attributes {
+                    new_sls.slide_time = elapsed_time
+                }
+            }
+        }
         if sls.sliding && (!on_surface(state) || elapsed_time > sls.slide_time + SLIDE_LEN) {
             new_sls.sliding = false
             new_sls.slide_end_time = elapsed_time
@@ -154,10 +161,12 @@ updated_crunch_pts :: proc(crunch_pts: [][4]f32, crunch_time: f32, did_bunny_hop
     return
 }
 
-updated_hurt_t :: proc(hurt_t: f32, dashing: bool, collisions: map[int]struct{}, lgs: Level_Geometry_Soa, elapsed_time: f32) -> f32 {
+updated_hurt_t :: proc(hurt_t: f32, dashing: bool, sliding: bool, collisions: map[int]struct{}, lgs: Level_Geometry_Soa, elapsed_time: f32) -> f32 {
     if !dashing {
         for id in collisions {
-            if .Hazardous in lgs[id].attributes {
+            attr := lgs[id].attributes
+            satisfied := (dashing && .Dash_Breakable in attr) || (sliding && .Slide_Zone in attr)
+            if .Hazardous in attr && !satisfied{
                 return elapsed_time
             }
         } 

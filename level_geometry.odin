@@ -66,6 +66,7 @@ Level_Geometry_Component_Name :: enum {
     Angular_Velocity = 2,
     Crackable = 3,
     Dash_Breakable = 4,
-    Hazardous = 5
+    Hazardous = 5,
+    Slide_Zone = 6
 }
 
