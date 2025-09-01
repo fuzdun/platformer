@@ -5,7 +5,7 @@ import "core:math"
 import "core:fmt"
 
 
-game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, elapsed_time: f32, delta_time: f32) {
+game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, szs: Slide_Zone_State, elapsed_time: f32, delta_time: f32) {
     new_pls := pls^
     cts := pls.contact_state
 
@@ -43,6 +43,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         wall_jumped, did_bunny_hop,
         elapsed_time
     )
+
 
     // ==================================
     // UPDATE INTRAFRAME-INDEPENDENT STATE
@@ -132,6 +133,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // HANDLE INPUT, UPDATE PLAYER VELOCITY
     // ====================================
     new_velocity := pls.velocity
+    fmt.println("===")
 
     new_velocity = apply_directional_input_to_velocity(
         is.left_pressed, is.right_pressed,
@@ -142,6 +144,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         pls.velocity, elapsed_time,
         delta_time
     )
+    fmt.println("vel:", new_velocity)
 
     new_velocity = clamp_horizontal_velocity_to_max_speed(new_velocity)
 
@@ -185,6 +188,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         pls.slide_state.sliding,
         jumped, elapsed_time
     )
+
 
     // ========================================
     // APPLY PLAYER VELOCITY, HANDLE COLLISIONS
@@ -235,9 +239,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         cts.ground_z,
         collision_ids,
         lgs.entities[:],
+        szs,
         elapsed_time
     )
-
 
     new_pls.hurt_t = updated_hurt_t(
         pls.hurt_t,

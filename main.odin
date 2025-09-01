@@ -125,10 +125,12 @@ main :: proc () {
     rs:  Render_State;         defer free_render_state(&rs)
     pls: Player_State;         defer free_player_state(&pls)
     sr:  Shape_Resources;      defer free_level_resources(&sr)
+    szs: Slide_Zone_State;     defer free_slide_zone_state(szs)
 
     // init game state
     lgs.entities = make(Level_Geometry_Soa)
     lgs.dirty_entities = make([dynamic]int)
+    szs = make([dynamic]Obb)
     cs.position = {10, 60, 300}
     es.y_rot = -.25
     es.zoom = 400
@@ -438,7 +440,7 @@ main :: proc () {
     gl.LineWidth(5)
 
     // load level data
-    load_level_geometry(&lgs, sr, &phs, &rs, "test_level")
+    load_level_geometry(&lgs, sr, &phs, &rs, &szs, "test_level")
 
     if EDIT {
         // imgui init
@@ -524,7 +526,7 @@ main :: proc () {
             if EDIT {
                 editor_update(&lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
-                game_update(&lgs, is, &pls, phs, &cs, &ts, f32(elapsed_time), FIXED_DELTA_TIME)
+                game_update(&lgs, is, &pls, phs, &cs, &ts, szs, f32(elapsed_time), FIXED_DELTA_TIME)
             }
             accumulator -= target_frame_clocks 
         }

@@ -107,8 +107,9 @@ updated_dash_state :: proc(ds: Dash_State, state: Player_States, sliding: bool, 
 }
 
 
-updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_States, position: [3]f32, velocity: [3]f32, ground_x: [3]f32, ground_z: [3]f32, collisions: map[int]struct{}, lgs: #soa[]Level_Geometry, elapsed_time: f32) -> Slide_State {
+updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_States, position: [3]f32, velocity: [3]f32, ground_x: [3]f32, ground_z: [3]f32, collisions: map[int]struct{}, lgs: #soa[]Level_Geometry, szs: Slide_Zone_State, elapsed_time: f32) -> Slide_State {
     new_sls := sls
+    // fmt.println("=====")
     if on_surface(state) && sls.can_slide && is.x_pressed && velocity != 0 {
         new_sls.sliding = true
         new_sls.can_slide = false
@@ -121,9 +122,10 @@ updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_Sta
         new_sls.slide_dir = la.normalize(slide_input - la.dot(slide_input, surface_normal) * surface_normal)
     } else {
         if sls.sliding {
-            for coll_id in collisions {
-                if .Slide_Zone in lgs[coll_id].attributes {
+            for sz in szs {
+                if hit, _ := sphere_obb_intersection(sz, position, PLAYER_SPHERE_RADIUS); hit {
                     new_sls.slide_time = elapsed_time
+                    break
                 }
             }
         }

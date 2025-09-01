@@ -379,3 +379,21 @@ segment_cylinder_intersection :: proc(sa: [3]f32, sb: [3]f32, p: [3]f32, q: [3]f
     return
 }
 
+closest_obb_pt :: proc(obb: Obb, p: [3]f32) -> (q: [3]f32) {
+    d := p - obb.center 
+    q = obb.center
+    for i in 0..<3 {
+        dist := la.dot(d, obb.axes[i])
+        dist = clamp(dist, -obb.dim[i], obb.dim[i])
+        q += dist * obb.axes[i]
+    }
+    return
+}
+
+sphere_obb_intersection :: proc(obb: Obb, c: [3]f32, r: f32) -> (collided: bool, p: [3]f32){
+    p = closest_obb_pt(obb, c) 
+    v := p - c
+    collided = la.dot(v, v) <= r * r
+    return
+}
+

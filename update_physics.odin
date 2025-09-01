@@ -31,6 +31,9 @@ apply_directional_input_to_velocity :: proc(
     grounded := state == .ON_GROUND || state == .ON_SLOPE
     right_vec := grounded ? ground_x : [3]f32{1, 0, 0}
     fwd_vec := grounded ? ground_z : [3]f32{0, 0, -1}
+    fmt.println("ground_x:", ground_x)
+    fmt.println("ground_z:", ground_z)
+    fmt.println(fwd_vec)
     if l_pressed {
         velocity -= move_spd * delta_time * right_vec
     }
@@ -122,7 +125,7 @@ apply_dash_to_velocity :: proc(velocity: [3]f32, state: Player_States, ds: Dash_
 
 apply_slide_to_velocity :: proc(velocity: [3]f32, state: Player_States, sls: Slide_State, elapsed_time: f32) -> [3]f32 {
     velocity := velocity
-    slide_expired := f32(elapsed_time) > sls.slide_time + SLIDE_LEN
+    // slide_expired := f32(elapsed_time) > sls.slide_time + SLIDE_LEN
     if sls.sliding {
         velocity = sls.slide_dir * SLIDE_SPD 
     }
@@ -130,7 +133,6 @@ apply_slide_to_velocity :: proc(velocity: [3]f32, state: Player_States, sls: Sli
 }
 
 // apply_break_to_velocity :: proc(pls: Player_State, velocity: [3]f32, )
-
 
 apply_restart_to_velocity :: proc(velocity: [3]f32, r_pressed: bool) -> [3]f32 {
     return r_pressed ? {0, 0, 0} : velocity
@@ -260,16 +262,16 @@ updated_left_wall :: proc(state: Player_States, left_wall: f32, elapsed_time: f3
 }
 
 
-updated_contact_ray :: proc(contact_ray: [3]f32, best_plane_normal: [3]f32) -> [3]f32 {
-    if best_plane_normal.y < 100.0 {
+updated_contact_ray :: proc(contact_ray: [3]f32, best_plane_normal: [3]f32, ignore_contact: bool) -> [3]f32 {
+    if !ignore_contact && best_plane_normal.y < 100.0 {
         return -best_plane_normal * GROUND_RAY_LEN
     }
     return contact_ray
 }
 
 
-updated_ground_move_dirs :: proc(state: Player_States, ground_x: [3]f32, ground_z: [3]f32, best_plane_normal: [3]f32) -> (x: [3]f32, z: [3]f32) {
-    if best_plane_normal.y < 100 && (state == .ON_GROUND || state == .ON_SLOPE) {
+updated_ground_move_dirs :: proc(state: Player_States, ground_x: [3]f32, ground_z: [3]f32, best_plane_normal: [3]f32, ignore_contact: bool) -> (x: [3]f32, z: [3]f32) {
+    if !ignore_contact && best_plane_normal.y < 100 && (state == .ON_GROUND || state == .ON_SLOPE) {
         x = [3]f32{1, 0, 0}
         z = [3]f32{0, 0, -1}
         x = la.normalize(x - la.dot(x, best_plane_normal) * best_plane_normal)
@@ -280,22 +282,24 @@ updated_ground_move_dirs :: proc(state: Player_States, ground_x: [3]f32, ground_
 }
 
 
-update_player_contact_state :: proc(cs: Contact_State, collided: bool, collision: Collision, lgs: #soa[]Level_Geometry, contacts: []int, elapsed_time: f32) -> Contact_State {
+update_player_contact_state :: proc(cs: Contact_State, collided: bool, collision: Collision, lgs: #soa[]Level_Geometry, contacts: []int, sliding: bool, elapsed_time: f32) -> Contact_State {
     cs := cs
     best_plane_normal: [3]f32 = {100, 100, 100}
     if collided {
         best_plane_normal = collision.normal
     }
     got_contact := len(contacts) > 0
-    hit_hazard := collided && .Hazardous in lgs[collision.id].attributes
+    attr := lgs[collision.id].attributes
+    hit_hazard := collided && .Hazardous in attr
+    ignore_contact := sliding && (.Slide_Zone in attr)
     old_state := cs.state
     cs.state                  = updated_contact_state(cs.state, hit_hazard, elapsed_time, got_contact, best_plane_normal)
     cs.touch_time             = updated_touch_time(cs.state, old_state, cs.touch_time, elapsed_time)
     cs.left_ground            = updated_left_ground(cs.state, cs.left_ground, elapsed_time)
     cs.left_slope             = updated_left_slope(cs.state, cs.left_slope, elapsed_time)
     cs.left_wall              = updated_left_wall(cs.state, cs.left_wall, elapsed_time)
-    cs.contact_ray            = updated_contact_ray(cs.contact_ray, best_plane_normal)
-    cs.ground_x, cs.ground_z  = updated_ground_move_dirs(cs.state, cs.ground_x, cs.ground_z, best_plane_normal)
+    cs.contact_ray            = updated_contact_ray(cs.contact_ray, best_plane_normal, ignore_contact)
+    cs.ground_x, cs.ground_z  = updated_ground_move_dirs(cs.state, cs.ground_x, cs.ground_z, best_plane_normal, ignore_contact)
     return cs
 }
 
@@ -333,6 +337,7 @@ apply_velocity :: proc(
         collision,
         entities,
         contacts[:],
+        sliding,
         elapsed_time
     )
     init_velocity_len := la.length(velocity)
@@ -349,7 +354,7 @@ apply_velocity :: proc(
             if .Dash_Breakable in entities[collision.id].attributes && dashing {
                remaining_vel = BREAK_BOOST_VELOCITY 
             } else if .Slide_Zone in entities[collision.id].attributes && sliding{
-               remaining_vel = BREAK_BOOST_VELOCITY 
+            //    remaining_vel = BREAK_BOOST_VELOCITY 
             } else if .Hazardous in entities[collision.id].attributes {
                 remaining_vel = DAMAGE_VELOCITY
                 velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal * 1.25 
@@ -373,6 +378,7 @@ apply_velocity :: proc(
                 collision,
                 entities,
                 contacts[:],
+                sliding,
                 elapsed_time)
         }
         new_position += velocity_normal * remaining_vel
@@ -403,6 +409,22 @@ apply_dash_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time
 //     }
 //     return position
 // }
+
+slide_zone_intersection :: proc(position: [3]f32, szs: Slide_Zone_State) -> bool {
+    for sz in szs {
+        if hit, _ := sphere_obb_intersection(sz, position, PLAYER_SPHERE_RADIUS); hit {
+            return true  
+        }
+    }
+    return false
+}
+
+apply_slide_zones_to_slide_time :: proc(slide_time: f32, position: [3]f32, szs: Slide_Zone_State, elapsed_time: f32) -> f32 {
+    if slide_zone_intersection(position, szs) {
+        return elapsed_time
+    }
+    return slide_time
+}
 
 
 apply_restart_to_position :: proc(is: Input_State, position: [3]f32) -> [3]f32 {

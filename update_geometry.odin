@@ -26,7 +26,7 @@ apply_collisions_to_lgs :: proc(lgs: Level_Geometry_Soa, dashing: bool, sliding:
             lg.break_dir = la.normalize(velocity)
             lg.break_pos = position
         } else if .Slide_Zone in lg.attributes && sliding {
-            fmt.println("slid in slide zone")
+            // fmt.println("slid in slide zone")
         } else if .Hazardous in lg.attributes {
             lg.crack_time = lg.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.crack_time
         } else if .Crackable in lg.attributes {
