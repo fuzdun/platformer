@@ -121,7 +121,6 @@ lg_get_transformed_collider_vertices :: proc(lg: Level_Geometry, trans_mat: matr
 add_geometry_to_physics :: proc(ps: ^Physics_State, szs: ^Slide_Zone_State, lgs_in: []Level_Geometry) {
     clear_physics_state(ps)
     for &lg, lg_idx in lgs_in {
-        trans_mat := trans_to_mat4(lg.transform)
         rot_mat := glm.mat4FromQuat(lg.transform.rotation)
         vertices_len := len(ps.level_colliders[lg.shape].vertices)
         transformed_vertices := make([][3]f32, vertices_len);
@@ -132,21 +131,12 @@ add_geometry_to_physics :: proc(ps: ^Physics_State, szs: ^Slide_Zone_State, lgs_
             x := rot_mat * [4]f32{1, 0, 0, 0}
             y := rot_mat * [4]f32{0, 1, 0, 0}
             z := rot_mat * [4]f32{0, 0, 1, 0}
-            // x := [3]f32{trans_mat[0][0], trans_mat[1][0], trans_mat[2][0]} / lg.transform.scale
-            // y := [3]f32{trans_mat[0][1], trans_mat[1][1], trans_mat[2][1]} / lg.transform.scale
-            // z := [3]f32{trans_mat[0][2], trans_mat[1][2], trans_mat[2][2]} / lg.transform.scale
-            // sz.axes = {la.normalize0(x), la.normalize0(y), la.normalize0(z)}
             sz.axes = {x.xyz, y.xyz, z.xyz}
             sz.dim = lg.transform.scale 
-            // sz.center = [3]f32{trans_mat[3][0], trans_mat[3][1], trans_mat[3][2]} / lg.transform.scale
             sz.center = lg.transform.position
-            // fmt.println(lg.transform)
-            // fmt.println(trans_mat)
-            // fmt.println(sz.axes)
-            // fmt.println(sz.dim)
-            // fmt.println(sz.axes)
             append(&szs.entities, sz)
         }
+        trans_mat := trans_to_mat4(lg.transform)
         lg_get_transformed_collider_vertices(lg, trans_mat, ps^, transformed_vertices[:])
 
         aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
@@ -168,17 +158,6 @@ add_geometry_to_renderer :: proc(lgs: ^Level_Geometry_State, rs: ^Render_State, 
     for &lg in lgs_in {
         trans_mat := trans_to_mat4(lg.transform)
         vertices_len := len(ps.level_colliders[lg.shape].vertices)
-        // transformed_vertices := make([][3]f32, vertices_len);
-        // defer delete(transformed_vertices)
-        // lg_get_transformed_collider_vertices(lg, trans_mat, ps^, transformed_vertices[:])
-        // max_z := min(f32)
-        // min_z := max(f32)
-        // for v, vi in transformed_vertices {
-        //     max_z = max(v.z, max_z)
-        //     min_z = min(v.z, min_z)
-        // }
-        // insert transform into render state
-        // loaded_shaders: Active_Shaders = EDIT ? {.Editor_Geometry} : lg.shaders
         append(&lgs.entities, lg)
     }
 }

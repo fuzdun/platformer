@@ -6,7 +6,6 @@ import "core:fmt"
 
 
 game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, szs: ^Slide_Zone_State, elapsed_time: f32, delta_time: f32) {
-    fmt.println("=====")
     new_pls := pls^
     cts := pls.contact_state
 

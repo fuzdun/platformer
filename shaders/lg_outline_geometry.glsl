@@ -18,6 +18,7 @@ in TE_OUT {
     vec2 uv;
     vec3 obj_pos;
     flat int cracked;
+    flat int broken;
     float player_dist;
 
     vec2 t0_uv;
@@ -44,7 +45,7 @@ void main() {
     float offset = (ASSEMBLE_WINDOW - interval) * seed_val_2;
     float offset_dist = te_out[0].player_dist - offset;
     dist_fact = max(0, min(1, offset_dist / interval));
-    if (te_out[0].cracked == 1 || offset_dist > interval) {
+    if (te_out[0].cracked == 1 || te_out[0].broken == 1 || offset_dist > interval) {
         EndPrimitive();
         return;  
     }

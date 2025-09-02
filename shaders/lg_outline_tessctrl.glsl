@@ -6,15 +6,16 @@ in VS_OUT {
     vec2 uv;
     vec3 obj_pos;
     flat int cracked;
+    flat int broken; 
     float player_dist;
     float tess_amt;
-
 } vs_out[];
 
 out TC_OUT {
     vec2 uv;
     vec3 obj_pos;
     flat int cracked;
+    flat int broken;
     float player_dist;
 } tc_out[];
 
@@ -22,6 +23,7 @@ void main() {
     tc_out[gl_InvocationID].uv = vs_out[gl_InvocationID].uv;
     tc_out[gl_InvocationID].obj_pos = vs_out[gl_InvocationID].obj_pos;
     tc_out[gl_InvocationID].cracked = vs_out[gl_InvocationID].cracked;
+    tc_out[gl_InvocationID].broken = vs_out[gl_InvocationID].broken;
     tc_out[gl_InvocationID].player_dist = vs_out[gl_InvocationID].player_dist;
   
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;

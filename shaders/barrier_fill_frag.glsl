@@ -35,8 +35,6 @@ in float d01;
 in float d11;
 in float denom;
 
-in float transparency;
-
 in float did_shatter;
 
 uniform vec3 camera_pos;
@@ -149,13 +147,11 @@ void main()
     mask = min(1.0, floor(mask + ((uvd / 10.0) + dist / 100.0) / 1.5) / 3.0); 
     mask = reshapeUniformToTriangle(mask);
 
-    fragColor = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.15, 0.2, 0.4, 0.6), border_t);
+    fragColor = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.25, 0.2, 0.4, 0.8), border_t);
     fragColor = mix(fragColor, vec4(0.0, 0.0, 0.0, 1.0), mask);
     fragColor += proximity_outline_col;
     fragColor.r *= 1.0 + (1.0 - (mask / 2.0));
-    fragColor.a = min(1.0, fragColor.a);
-
-    fragColor.a = transparency;
-
+    fragColor.a *= 0.75;
+    // fragColor.a = min(1.0, fragColor.a);
 }
 

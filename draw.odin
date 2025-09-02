@@ -226,7 +226,11 @@ draw :: proc(
         gl.Disable(gl.DEPTH_TEST)
         use_shader(shs, rs, .Level_Geometry_Outline)
         gl.BindVertexArray(rs.standard_vao)
+        outline_color := [3]f32{0.75, 0.75, 0.75}
+        set_vec3_uniform(shs, "color", 1, &outline_color)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
+        barrier_outline_color := [3]f32{1.0, 0, 0}
+        set_vec3_uniform(shs, "color", 1, &barrier_outline_color)
         draw_indirect_render_queue(rs^, lg_render_groups[.Dash_Barrier][:], gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
@@ -243,6 +247,8 @@ draw :: proc(
         gl.Disable(gl.CULL_FACE)
         gl.Disable(gl.DEPTH_TEST)
         use_shader(shs, rs, .Level_Geometry_Outline)
+        slide_zone_outline_color := [3]f32{0, 0, 1.0}
+        set_vec3_uniform(shs, "color", 1, &slide_zone_outline_color)
         draw_indirect_render_queue(rs^, lg_render_groups[.Slide_Zone][:], gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)

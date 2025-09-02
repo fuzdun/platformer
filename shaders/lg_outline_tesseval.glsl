@@ -6,6 +6,7 @@ in TC_OUT {
     vec2 uv;
     vec3 obj_pos;
     flat int cracked;
+    flat int broken;
     float player_dist;
 } tc_out[];
 
@@ -13,6 +14,7 @@ out TE_OUT {
     vec2 uv;
     vec3 obj_pos;
     flat int cracked;
+    flat int broken; 
     float player_dist;
 
     vec2 t0_uv;
@@ -35,6 +37,7 @@ void main() {
     te_out.obj_pos = tc_out[0].obj_pos;
     te_out.player_dist = tc_out[0].player_dist;
     te_out.cracked = tc_out[0].cracked;
+    te_out.broken = tc_out[0].broken;
 
     te_out.t0_uv = tc_out[0].uv;
     te_out.t1_uv = tc_out[1].uv;

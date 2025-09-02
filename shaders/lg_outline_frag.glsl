@@ -1,5 +1,7 @@
 #version 460 core
 
+uniform vec3 color;
+
 in vec2 uv;
 in vec3 obj_pos;
 in float dist_fact;
@@ -20,7 +22,7 @@ void main()
     float y_border_fact = smoothstep(1.0 - v_border, 1.0, uv.y) +
         1.0 - smoothstep(0.0, v_border, uv.y);
     float border_fact = max(x_border_fact, y_border_fact);
-    fragColor = mix(vec4(0.0), vec4(0.75, 0.75, 0.75, 1.0), border_fact - dist_fact);
+    fragColor = mix(vec4(0.0), vec4(color, 1.0), border_fact - dist_fact);
     if (fragColor.a < .85) {
         discard;
     }
