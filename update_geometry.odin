@@ -36,8 +36,8 @@ apply_collisions_to_lgs :: proc(lgs: Level_Geometry_Soa, dashing: bool, sliding:
             lg.break_dir = la.normalize(velocity)
             lg.break_pos = position
         } else if .Slide_Zone in lg.attributes && sliding {
-            // fmt.println("slid in slide zone")
-        } else if .Hazardous in lg.attributes {
+            // do nothing
+        } else if .Breakable in lg.attributes {
             lg.crack_time = lg.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.crack_time
         } else if .Crackable in lg.attributes {
             lg.crack_time = lg.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.crack_time
@@ -47,16 +47,10 @@ apply_collisions_to_lgs :: proc(lgs: Level_Geometry_Soa, dashing: bool, sliding:
 }
 
 apply_transparency_to_lgs :: proc(lgs: Level_Geometry_Soa, szs: #soa[]Obb, elapsed_time: f32) -> Level_Geometry_Soa {
-    // fmt.println("====")
     defer delete(lgs)
     new_lgs := dynamic_soa_copy(lgs)
     for &sz in szs {
-    //     fade_out_t := clamp((elapsed_time - sz.enter_t) / 100.0, 0, 1)
-    //     fmt.println("fade_out:", fade_out_t)
-    //     fade_in_t  := sz.leave_t == 0 ? 0 : clamp((elapsed_time - sz.leave_t) / 100.0, 0, 1)
-    //     fmt.println("fade_in:", fade_in_t)
-        new_lgs[sz.id].transparency = sz.transparency_t//easeout_cubic(sz.transparency_t) 
-        fmt.println(new_lgs[sz.id].transparency)
+        new_lgs[sz.id].transparency = sz.transparency_t
     }
     return new_lgs
 }
@@ -68,9 +62,9 @@ apply_transparency_to_szs :: proc(szs: #soa[dynamic]Obb, intersections: map[int]
 
     for &sz in new_szs {
         if sz.id in intersections {
-            sz.transparency_t = clamp(sz.transparency_t - 5.0 * delta_time, 0.3, 1)
+            sz.transparency_t = clamp(sz.transparency_t - 5.0 * delta_time, 0.1, 0.5)
         } else {
-            sz.transparency_t = clamp(sz.transparency_t + 5.0 * delta_time, 0.3, 1)
+            sz.transparency_t = clamp(sz.transparency_t + 5.0 * delta_time, 0.1, 0.5)
         }
     }
     return new_szs

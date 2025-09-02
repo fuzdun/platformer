@@ -181,7 +181,12 @@ draw :: proc(
         set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
-        slide_t := clamp((f32(time) - pls.slide_state.slide_time) / SLIDE_LEN, 0, 1)
+        slide_middle := SLIDE_LEN / 2.0
+        start_slide_t := clamp((f32(time) - pls.slide_state.slide_time) / slide_middle, 0, 1) * 0.5
+        end_slide_t := clamp((f32(time) - (pls.slide_state.mid_slide_time + slide_middle)) / slide_middle, 0, 1) * 0.5
+        slide_t := start_slide_t + end_slide_t
+
+        // slide_t := clamp((f32(time) - pls.slide_state.slide_time) / SLIDE_LEN, 0, 1)
         set_float_uniform(shs, "slide_t", slide_t)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
 
@@ -228,6 +233,20 @@ draw :: proc(
 
         // draw player -- see player draw func below
         draw_player(rs, pls, shs, f32(time), f32(interp_t))
+
+        gl.Enable(gl.BLEND)
+        gl.BindVertexArray(rs.standard_vao)
+        use_shader(shs, rs, .Slide_Zone)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Slide_Zone][:], gl.TRIANGLES)
+        gl.Disable(gl.BLEND)
+
+        gl.Disable(gl.CULL_FACE)
+        gl.Disable(gl.DEPTH_TEST)
+        use_shader(shs, rs, .Level_Geometry_Outline)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Slide_Zone][:], gl.PATCHES)
+        gl.Enable(gl.CULL_FACE)
+        gl.Enable(gl.DEPTH_TEST)
+
 
         // draw to main framebuffer with postprocessing effects
         gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 

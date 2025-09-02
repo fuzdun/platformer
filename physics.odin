@@ -1,6 +1,7 @@
 package main
 
 import "core:math"
+import "core:fmt"
 import la "core:math/linalg"
 
 
@@ -382,11 +383,22 @@ segment_cylinder_intersection :: proc(sa: [3]f32, sb: [3]f32, p: [3]f32, q: [3]f
 closest_obb_pt :: proc(obb: Obb, p: [3]f32) -> (q: [3]f32) {
     d := p - obb.center 
     q = obb.center
+    fmt.println("player:", p)
+    fmt.println("cen:", q)
+    fmt.println("dist:", d)
+    fmt.println("axes:", obb.axes)
+    fmt.println("dim:", obb.dim)
     for i in 0..<3 {
+        axes := [3]string{"x", "y", "z"}
         dist := la.dot(d, obb.axes[i])
+        fmt.println(axes[i],":", dist)
         dist = clamp(dist, -obb.dim[i], obb.dim[i])
+        fmt.println(axes[i]," clamped:", dist)
         q += dist * obb.axes[i]
+        fmt.println(q)
     }
+    fmt.println("q:", q)
+    // fmt.println("p:", p)
     return
 }
 
@@ -394,6 +406,8 @@ sphere_obb_intersection :: proc(obb: Obb, c: [3]f32, r: f32) -> (collided: bool,
     p = closest_obb_pt(obb, c) 
     v := p - c
     collided = la.dot(v, v) <= r * r
+    // fmt.println("v:", la.length(v))
+    // fmt.println("r:", r)
     return
 }
 

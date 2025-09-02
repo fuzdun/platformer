@@ -410,6 +410,7 @@ apply_dash_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time
 
 get_slide_zone_intersections :: proc(position: [3]f32, szs: Slide_Zone_State) -> (out: map[int]struct{}) {
     for sz in szs.entities {
+        // fmt.println(sz)
         if hit, _ := sphere_obb_intersection(sz, position, PLAYER_SPHERE_RADIUS); hit {
             out[sz.id] = {}
         }

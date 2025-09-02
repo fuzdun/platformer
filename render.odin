@@ -172,7 +172,8 @@ Level_Geometry_Render_Type :: enum {
     Standard,
     Dither_Test,
     Dash_Barrier,
-    Wireframe
+    Wireframe,
+    Slide_Zone
 }
 
 Common_Ubo :: struct {

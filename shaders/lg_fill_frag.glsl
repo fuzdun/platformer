@@ -141,6 +141,7 @@ void main()
     float a = atan(uvx / uvy) * 25;
     float uvd = length(planar_diff);
     float slide_ring_size = (1.0 - (abs(slide_t - 0.5) / 0.5)) * SLIDE_RADIUS;
+    // float slide_ring_size = (1.0 - slide_t) * SLIDE_RADIUS;
     float d1 = dist + slide_ring_size + noise(vec2(a + time * 20, time * 10)) * 1.5;
     float absd = abs(uvd - d1);
     float noise_border = smoothstep(-0.05, 0.0, absd) - smoothstep(0.15, 0.20, absd);

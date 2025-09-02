@@ -68,6 +68,7 @@ Level_Geometry_Component_Name :: enum {
     Crackable = 3,
     Dash_Breakable = 4,
     Hazardous = 5,
-    Slide_Zone = 6
+    Slide_Zone = 6,
+    Breakable = 7
 }
 

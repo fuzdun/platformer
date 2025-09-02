@@ -44,7 +44,8 @@ ProgramName :: enum {
     Player_Outline,
     Postprocessing,
     Barrier,
-    Wireframe
+    Wireframe,
+    Slide_Zone
 }
 
 PROGRAM_CONFIGS :: #partial[ProgramName]Program {
@@ -127,6 +128,11 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         pipeline = {"wireframe_vertex", "wireframe_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"color", "camera_pos"}
+    },
+    .Slide_Zone = {
+        pipeline = {"slide_zone_vertex", "slide_zone_frag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {}
     }
 }
 

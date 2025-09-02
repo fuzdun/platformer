@@ -117,6 +117,7 @@ Dash_State :: struct {
 Slide_State :: struct {
     sliding: bool,
     slide_time: f32,
+    mid_slide_time: f32,
     slide_dir: [3]f32,
     slide_start_pos: [3]f32,
     slide_end_time: f32,

@@ -6,6 +6,7 @@ import "core:fmt"
 
 
 game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, szs: ^Slide_Zone_State, elapsed_time: f32, delta_time: f32) {
+    fmt.println("=====")
     new_pls := pls^
     cts := pls.contact_state
 
@@ -282,7 +283,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     szs.intersected = get_slide_zone_intersections(pls.position, szs^)
 
     new_szs := dynamic_soa_copy(szs.entities)
-
     new_szs = apply_transparency_to_szs(new_szs, szs.intersected, delta_time)
 
     // ====================================

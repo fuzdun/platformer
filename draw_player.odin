@@ -6,11 +6,11 @@ import la "core:math/linalg"
 import rand "core:math/rand"
 
 
-animate_player_vertices_sliding :: proc(vertices: []Vertex, contact_ray: [3]f32, slide_time: f32, time: f32) {
+animate_player_vertices_sliding :: proc(vertices: []Vertex, contact_ray: [3]f32, slide_time: f32, mid_slide_time: f32, time: f32) {
     up := la.normalize(contact_ray)
     spin_mat := la.matrix4_rotate_f32(f32(time) / 150, up)
     slide_t := time - slide_time
-    end_slide_t := time - (SLIDE_LEN + slide_time - SLIDE_ANIM_EASE_LEN)
+    end_slide_t := time - (SLIDE_LEN + mid_slide_time - SLIDE_ANIM_EASE_LEN)
     compression_t := clamp(slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0) - clamp(end_slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0)
     for &v, idx in vertices {
         vertical_fact := la.dot(up, v.pos)
@@ -81,11 +81,11 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
     copy(offset_vertices, rs.player_geometry.vertices[:])
 
     // animate vertices
-    if !(pls.contact_state.state == .ON_WALL) {
+    if !(pls.contact_state.state == .ON_WALL) && !pls.slide_state.sliding {
         apply_player_vertices_roll_rotation(offset_vertices[:], pls.velocity, time)
     }
     if pls.slide_state.sliding {
-        animate_player_vertices_sliding(offset_vertices[:], pls.contact_state.contact_ray, pls.slide_state.slide_time, time)
+        animate_player_vertices_sliding(offset_vertices[:], pls.contact_state.contact_ray, pls.slide_state.slide_time, pls.slide_state.mid_slide_time, time)
     } else if pls.contact_state.state == .ON_GROUND && !pls.slide_state.sliding {
         animate_player_vertices_rolling(offset_vertices[:], pls.contact_state.state, pls.velocity, pls.spike_compression, time)
     } else if pls.contact_state.state == .IN_AIR {
