@@ -132,7 +132,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Slide_Zone = {
         pipeline = {"slide_zone_vertex", "slide_zone_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {}
+        uniforms = {"shatter_delay"}
     }
 }
 

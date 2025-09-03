@@ -241,6 +241,7 @@ draw :: proc(
         gl.Enable(gl.BLEND)
         gl.BindVertexArray(rs.standard_vao)
         use_shader(shs, rs, .Slide_Zone)
+        set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
         draw_indirect_render_queue(rs^, lg_render_groups[.Slide_Zone][:], gl.TRIANGLES)
         gl.Disable(gl.BLEND)
 

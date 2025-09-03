@@ -85,10 +85,10 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             lg.attributes = trim_bit_set(lg.attributes)
             lg.transparency = 1.0
             if lg.shape == .DASH_BARRIER {
-                lg.attributes += {.Hazardous, .Dash_Breakable}
+                lg.attributes += {.Hazardous, .Dash_Breakable, .Breakable}
                 lg.render_type = .Dash_Barrier
             } else if lg.shape == .SLIDE_ZONE {
-                lg.attributes += {.Hazardous, .Slide_Zone}
+                lg.attributes += {.Hazardous, .Slide_Zone, .Breakable}
                 lg.render_type = .Slide_Zone
             } else if lg.shape == .ICE_CREAM {
                 lg.attributes -= {.Collider}

@@ -131,11 +131,11 @@ apply_dash_to_velocity :: proc(velocity: [3]f32, state: Player_States, ds: Dash_
 }
 
 
-apply_slide_to_velocity :: proc(velocity: [3]f32, state: Player_States, sls: Slide_State, elapsed_time: f32) -> [3]f32 {
+apply_slide_to_velocity :: proc(velocity: [3]f32, state: Player_States, sls: Slide_State, slide_zone_intersections: map[int]struct{}, elapsed_time: f32) -> [3]f32 {
     velocity := velocity
     // slide_expired := f32(elapsed_time) > sls.slide_time + SLIDE_LEN
     if sls.sliding {
-        velocity = sls.slide_dir * SLIDE_SPD 
+        velocity = sls.slide_dir * (len(slide_zone_intersections) > 0 ? SLIDE_SPD * 2 : SLIDE_SPD) 
     }
     return velocity
 }

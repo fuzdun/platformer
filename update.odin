@@ -181,7 +181,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     new_velocity = apply_slide_to_velocity(
         new_velocity, cts.state,
-        pls.slide_state, elapsed_time
+        pls.slide_state,
+        szs.intersected, elapsed_time
     )
 
     new_velocity = apply_restart_to_velocity(

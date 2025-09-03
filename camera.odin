@@ -4,8 +4,8 @@ import "core:math"
 import glm "core:math/linalg/glsl"
 
 
-CAMERA_PLAYER_Y_OFFSET :: 20
-CAMERA_PLAYER_Z_OFFSET :: 35 
+CAMERA_PLAYER_Y_OFFSET :: 30
+CAMERA_PLAYER_Z_OFFSET :: 55 
 CAMERA_POS_LERP :: 0.04
 // CAMERA_POS_LERP :: 0.004
 CAMERA_X_LERP :: 0.10
