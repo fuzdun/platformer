@@ -61,6 +61,14 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         elapsed_time
     ) 
 
+    new_pls.wall_detach_held_t = updated_wall_detach_held_t(
+        pls.wall_detach_held_t,
+        cts.state,
+        is,
+        cts.contact_ray,
+        delta_time
+    )
+
     new_pls.spike_compression = updated_spike_compression(
         pls.spike_compression,
         cts.state
@@ -137,8 +145,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         is.hor_axis, is.vert_axis,
         pls.hurt_t, cts.state,
         cts.ground_x, cts.ground_z,
-        pls.velocity, elapsed_time,
-        delta_time
+        pls.velocity, elapsed_time, delta_time
     )
 
     new_velocity = clamp_horizontal_velocity_to_max_speed(new_velocity)
@@ -153,6 +160,11 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_velocity = apply_gravity_to_velocity(
         cts.state, cts.contact_ray,
         new_velocity, delta_time
+    )
+
+    new_velocity = apply_wall_stick_to_velocity(
+        new_velocity, cts.state, cts.contact_ray,
+        pls.wall_detach_held_t
     )
 
     new_velocity = apply_jumps_to_velocity(

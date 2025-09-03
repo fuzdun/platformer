@@ -39,6 +39,7 @@ SLOPE_GRAV: f32: 150
 COYOTE_TIME ::  150
 BUNNY_DASH_DEBOUNCE: f32: 400
 BUNNY_WINDOW: f32: 100
+WALL_DETACH_LEN :: 200
 
 // dash
 DASH_SPD: f32: 120.0
@@ -47,10 +48,7 @@ DASH_DIST: f32: 15.0
 
 // slide
 SLIDE_LEN: f32: 320.0 
-// SLIDE_DIST: f32: 40.0
 SLIDE_SPD: f32: 100
-// SLIDE_LEN: f32: 800.0 
-// SLIDE_SPD: f32: 40
 SLIDE_COOLDOWN: f32: 100
 SLIDE_ANIM_EASE_LEN: f32: 100
 
@@ -87,9 +85,8 @@ MAX_SPIKE_COMPRESSION: f32: 0.8
 SPIKE_COMPRESSION_LERP: f32: 0.10
 
 // geometry crack timing
-CRACK_DELAY :: 750
+CRACK_DELAY :: 75000
 BREAK_DELAY :: 750
-
 
 
 Contact_State :: struct {
@@ -147,6 +144,7 @@ Player_State :: struct {
     can_press_jump: bool,
     jump_pressed_time: f32,
     jump_held: bool,
+    wall_detach_held_t: f32,
 
     prev_position: [3]f32,
 

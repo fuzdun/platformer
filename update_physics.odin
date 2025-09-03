@@ -8,14 +8,14 @@ import la "core:math/linalg"
 // VELOCITY UPDATES
 // ================
 apply_directional_input_to_velocity :: proc(
-  l_pressed: bool, r_pressed: bool,
-  u_pressed: bool, d_pressed: bool,
-  h_axis: f32, v_axis: f32,
-  hurt_t: f32,
-  state: Player_States,
-  ground_x: [3]f32, ground_z: [3]f32,
-  velocity: [3]f32,
-  elapsed_time: f32, delta_time: f32
+    l_pressed: bool, r_pressed: bool,
+    u_pressed: bool, d_pressed: bool,
+    h_axis: f32, v_axis: f32,
+    hurt_t: f32,
+    state: Player_States,
+    ground_x: [3]f32, ground_z: [3]f32,
+    velocity: [3]f32, elapsed_time: f32,
+    delta_time: f32
 ) -> [3]f32 {
     velocity := velocity
     if elapsed_time < hurt_t + DAMAGE_LEN {
@@ -83,6 +83,17 @@ apply_gravity_to_velocity :: proc(state: Player_States, contact_ray: [3]f32, vel
             down -= la.dot(norm_contact, down) * norm_contact
         }
         return velocity + down * grav_force * delta_time
+    }
+    return velocity
+}
+
+
+apply_wall_stick_to_velocity :: proc(velocity: [3]f32, state: Player_States, contact_ray: [3]f32, wall_detach_held_t: f32) -> [3]f32 {
+    velocity := velocity
+    contact_ray := la.normalize0(contact_ray)
+    if state == .ON_WALL && wall_detach_held_t < WALL_DETACH_LEN {
+        wall_stick_force := la.dot(velocity, contact_ray) 
+        velocity -= wall_stick_force * contact_ray
     }
     return velocity
 }

@@ -24,6 +24,24 @@ updated_jump_pressed_time :: proc(did_bunny_hop: bool, z_pressed: bool, jump_hel
     return (z_pressed && !jump_held) ? elapsed_time : jump_pressed_time
 }
 
+updated_wall_detach_held_t :: proc(wall_detach_held_t: f32, state: Player_States, is: Input_State, contact_ray: [3]f32, delta_time: f32) -> f32 {
+    wall_detach_held_t := wall_detach_held_t
+    contact_ray := la.normalize0(contact_ray)
+    if state == .ON_WALL {
+        input_dir := input_dir(is)  
+        vec3_input_dir := [3]f32{input_dir.x, 0, input_dir.y}
+        if la.dot(vec3_input_dir, contact_ray) >= 0 {
+            wall_detach_held_t = 0
+        } else {
+            wall_detach_held_t += delta_time * 1000.0
+            fmt.println(wall_detach_held_t)
+        }
+    } else {
+        wall_detach_held_t = 0
+    }
+    return wall_detach_held_t
+} 
+
 
 updated_spike_compression :: proc(spike_compression: f32, state: Player_States) -> f32 {
     if state == .ON_GROUND {
