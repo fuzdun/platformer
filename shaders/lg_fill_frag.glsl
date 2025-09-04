@@ -24,12 +24,16 @@ in vec2 t0_uv;
 in vec2 t1_uv;
 in vec2 t2_uv;
 
+in vec3 b_poss[3];
+
 in vec3 v0;
 in vec3 v1;
 in float d00;
 in float d01;
 in float d11;
 in float denom;
+
+in float did_shatter;
 
 uniform vec3 camera_pos;
 uniform vec3[3] player_trail;
@@ -44,6 +48,8 @@ uniform sampler2D ditherTexture;
 #define TWOPI 6.2831853
 #define SHADES 3.0
 #define SLIDE_RADIUS 15.0
+#define SAMPLE_RES 360.0
+#define LINE_W 0.2
 
 vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
 {
@@ -54,6 +60,13 @@ vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+vec3 hash2(vec3 p){
+	p = vec3( dot(p,vec3(127.1,311.7, 74.7)),
+			  dot(p,vec3(269.5,183.3,246.1)),
+			  dot(p,vec3(113.5,271.9,124.6)));
+	return -1.0 + 2.0*fract(sin(p)*43758.5453123);
 }
 
 //vec noise function
@@ -78,7 +91,6 @@ float reshapeUniformToTriangle(float v) {
 }
 
 const float BAYER16[16] = float[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
-#define SAMPLE_RES 480.0
 
 float GetBayerDither(float grayscale, vec2 uv) {    
     ivec2 pixelCoord = ivec2(uv * (SAMPLE_RES));
@@ -87,9 +99,60 @@ float GetBayerDither(float grayscale, vec2 uv) {
 }
 
 
+
+vec4 noised(vec3 x){
+    vec3 p = floor(x);
+    vec3 w = fract(x);
+    vec3 u = w*w*w*(w*(w*6.0-15.0)+10.0);
+    vec3 du = 30.0*w*w*(w*(w-2.0)+1.0);
+    
+    vec3 ga = hash2( p+vec3(0.0,0.0,0.0) );
+    vec3 gb = hash2( p+vec3(1.0,0.0,0.0) );
+    vec3 gc = hash2( p+vec3(0.0,1.0,0.0) );
+    vec3 gd = hash2( p+vec3(1.0,1.0,0.0) );
+    vec3 ge = hash2( p+vec3(0.0,0.0,1.0) );
+	vec3 gf = hash2( p+vec3(1.0,0.0,1.0) );
+    vec3 gg = hash2( p+vec3(0.0,1.0,1.0) );
+    vec3 gh = hash2( p+vec3(1.0,1.0,1.0) );
+    
+    float va = dot( ga, w-vec3(0.0,0.0,0.0) );
+    float vb = dot( gb, w-vec3(1.0,0.0,0.0) );
+    float vc = dot( gc, w-vec3(0.0,1.0,0.0) );
+    float vd = dot( gd, w-vec3(1.0,1.0,0.0) );
+    float ve = dot( ge, w-vec3(0.0,0.0,1.0) );
+    float vf = dot( gf, w-vec3(1.0,0.0,1.0) );
+    float vg = dot( gg, w-vec3(0.0,1.0,1.0) );
+    float vh = dot( gh, w-vec3(1.0,1.0,1.0) );
+	
+    return vec4( va + u.x*(vb-va) + u.y*(vc-va) + u.z*(ve-va) + u.x*u.y*(va-vb-vc+vd) + u.y*u.z*(va-vc-ve+vg) + u.z*u.x*(va-vb-ve+vf) + (-va+vb+vc-vd+ve-vf-vg+vh)*u.x*u.y*u.z,    // value
+                 ga + u.x*(gb-ga) + u.y*(gc-ga) + u.z*(ge-ga) + u.x*u.y*(ga-gb-gc+gd) + u.y*u.z*(ga-gc-ge+gg) + u.z*u.x*(ga-gb-ge+gf) + (-ga+gb+gc-gd+ge-gf-gg+gh)*u.x*u.y*u.z +   // derivatives
+                 du * (vec3(vb,vc,ve) - va + u.yzx*vec3(va-vb-vc+vd,va-vc-ve+vg,va-vb-ve+vf) + u.zxy*vec3(va-vb-ve+vf,va-vb-vc+vd,va-vc-ve+vg) + u.yzx*u.zxy*(-va+vb+vc-vd+ve-vf-vg+vh) ));
+}
+
+
+float dot2( in vec3 v ) { return dot(v,v); }
+
+float udTriangle( in vec3 v1, in vec3 v2, in vec3 v3, in vec3 p )
+{
+    vec3 v21 = v2 - v1; vec3 p1 = p - v1;
+    vec3 v32 = v3 - v2; vec3 p2 = p - v2;
+    vec3 v13 = v1 - v3; vec3 p3 = p - v3;
+    vec3 nor = cross( v21, v13 );
+
+    return sqrt(min(min( 
+        dot2(v21*clamp(dot(v21,p1)/dot2(v21),0.0,1.0)-p1), 
+        dot2(v32*clamp(dot(v32,p2)/dot2(v32),0.0,1.0)-p2)), 
+        dot2(v13*clamp(dot(v13,p3)/dot2(v13),0.0,1.0)-p3)));
+}
+
+
+
+
+
 void main()
 {
-    vec4 glassColor = mix(vec4(0.05, 0.05, 0.075, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
+    vec4 glassColor = mix(vec4(0.08, 0.08, 0.100, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
+
     if (displacement > 0.00) {
         fragColor = glassColor;
         return;
@@ -144,12 +207,10 @@ void main()
     // float slide_ring_size = (1.0 - slide_t) * SLIDE_RADIUS;
     float d1 = dist + slide_ring_size + noise(vec2(a + time * 20, time * 10)) * 1.5;
     float absd = abs(uvd - d1);
-    float noise_border = smoothstep(-0.05, 0.0, absd) - smoothstep(0.15, 0.20, absd);
+    float noise_border = smoothstep(-0.03, 0.0, absd) - smoothstep(0.30, 0.33, absd);
     // if (dist < .25) {
     //     noise_border = 0;
     // }
-    vec3 proximity_outline_col = vec3(1.0, 1.0, 1.0) * noise_border;
-
     vec3 trail_col = vec3(0.0, 0, 0);
     vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);
     vec2 res2 = distanceToSegment(player_trail[0], player_trail[1], global_pos);
@@ -178,13 +239,28 @@ void main()
         impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
     }
 
-    vec3 pattern_col = vec3(0, 0.4, 0.5);
-    // vec3 circle_col = vec3(1.0, 0.0, 0.0) * (smoothstep(0.35, 0.4, length(uv - 0.5)) - smoothstep(0.4, 0.45, length(uv - 0.5)));
 
-    vec3 col = pattern_col + proximity_outline_col + trail_col + impact_col;
+
+    vec4 grad_noise_val = noised(vec3(uv.xy * 2.0 + i_time / 1000, 0));
+    vec3 grad_normal = normalize(grad_noise_val.yzw);
+    float lighting_amt = dot(vec3(0, -1, 0), grad_normal);
+    float lighting2_amt = dot(normalize(vec3(1, 1, 1)), grad_normal);
+    vec3 pattern_col =  (lighting_amt * 0.3 + 0.7) * vec3(0.0, 0.8, 1.0) + (lighting2_amt * 0.3 + 0.7) * vec3(0.25, 0.0, 0.25);
+
+
+    // vec3 pattern_col = vec3(0, 0.8, 1.0);
+
+
+
+    
+    // vec3 circle_col = vec3(1.0, 0.0, 0.0) * (smoothstep(0.35, 0.4, length(uv - 0.5)) - smoothstep(0.4, 0.45, length(uv - 0.5)));
+    float sd = (udTriangle(b_poss[0], b_poss[1], b_poss[2], global_pos));
+    float border_t = did_shatter == 1.0 ? smoothstep(0.0, LINE_W, sd) : 1.0;
+
+    vec3 col = pattern_col + trail_col + impact_col;
 
     // BAYER
-    // float mask = GetBayerDither(ceil(length(t_diff) / 1.0) / 30.0 - 0.2, screen_uv);
+    // float mask = GetBayerDither(ceil(length(t_diff) / 1.5) / 30.0 - 0.2, screen_uv);
 
     // BAYER + BLUE NOISE
     // float mask = GetBayerDither(ceil(length(t_diff) / 3.0) / 8.0 - 1.0 + texture(ditherTexture, screen_uv * (SAMPLE_RES / 64.0)).r, screen_uv);
@@ -202,5 +278,9 @@ void main()
     mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.25)); 
 
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
+    fragColor = mix(fragColor, vec4(1.0, 1.0, 1.0, 1.0), noise_border);
+    // vec3 proximity_outline_col = vec3(1.0, 0.5, 0.5) * noise_border;
+
+    fragColor = mix(vec4(1.0, 1.0, 1.0, 1.0), fragColor, border_t);
     fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
 }

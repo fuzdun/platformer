@@ -327,7 +327,8 @@ apply_velocity :: proc(
     new_contact_state: Contact_State,
     new_position: [3]f32,
     new_velocity: [3]f32,
-    collision_ids: map[int]struct{}
+    collision_ids: map[int]struct{},
+    contact_ids: map[int]struct{}
 ) {
     new_position = position
     new_velocity = velocity
@@ -348,11 +349,17 @@ apply_velocity :: proc(
         sliding,
         elapsed_time
     )
+    for contact in contacts {
+        contact_ids[contact] = {}
+    }
     init_velocity_len := la.length(velocity)
     remaining_vel := init_velocity_len * delta_time
     if remaining_vel > 0 {
         velocity_normal := la.normalize(velocity)
         loops := 0
+        if !collided && len(contacts) > 0{
+            new_contact_state.last_touched = contacts[0]
+        }
         for collided && loops < 10 {
             loops += 1
             new_contact_state.last_touched = collision.id
@@ -388,7 +395,11 @@ apply_velocity :: proc(
                 entities,
                 contacts[:],
                 sliding,
-                elapsed_time)
+                elapsed_time
+            )
+            for contact in contacts {
+                contact_ids[contact] = {}
+            }
         }
         new_position += velocity_normal * remaining_vel
         new_velocity = velocity_normal * init_velocity_len
@@ -419,9 +430,12 @@ apply_dash_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time
 //     return position
 // }
 
-get_slide_zone_intersections :: proc(position: [3]f32, szs: Slide_Zone_State) -> (out: map[int]struct{}) {
+get_slide_zone_intersections :: proc(position: [3]f32, szs: Slide_Zone_State, lgs: Level_Geometry_Soa) -> (out: map[int]struct{}) {
     for sz in szs.entities {
         // fmt.println(sz)
+        if lgs[sz.id].crack_time != 0 {
+            continue
+        }
         if hit, _ := sphere_obb_intersection(sz, position, PLAYER_SPHERE_RADIUS); hit {
             out[sz.id] = {}
         }

@@ -51,7 +51,7 @@ draw :: proc(
         sorted_rd[idx] = Lg_Render_Data {
             render_group = render_group,
             transform_mat = trans_to_mat4(lg.transform),
-            z_width =  30, // need to change this
+            z_width =  0, // need to change this
             crack_time = lg.crack_time,
             break_data = { lg.break_time, lg.break_pos, lg.break_dir },
             transparency = lg.transparency
@@ -190,6 +190,15 @@ draw :: proc(
         set_float_uniform(shs, "slide_t", slide_t)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
 
+        use_shader(shs, rs, .Wireframe)
+        gl.Enable(gl.BLEND)
+        wireframe_color := [3]f32{0.500, 0.000, 1.000}
+        set_vec3_uniform(shs, "color", 1, &wireframe_color)
+        set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Wireframe][:], gl.LINES)
+        gl.Disable(gl.BLEND)
+
+
         use_shader(shs, rs, .Barrier)
         gl.Enable(gl.BLEND)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
@@ -197,14 +206,6 @@ draw :: proc(
         set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         draw_indirect_render_queue(rs^, lg_render_groups[.Dash_Barrier][:], gl.PATCHES)
-        gl.Disable(gl.BLEND)
-
-        use_shader(shs, rs, .Wireframe)
-        gl.Enable(gl.BLEND)
-        wireframe_color := [3]f32{0.0, 0.0, 0.25}
-        set_vec3_uniform(shs, "color", 1, &wireframe_color)
-        set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Wireframe][:], gl.LINES)
         gl.Disable(gl.BLEND)
 
         // draw background

@@ -73,26 +73,23 @@ float dot2( in vec3 v ) { return dot(v,v); }
 
 float udTriangle( in vec3 v1, in vec3 v2, in vec3 v3, in vec3 p )
 {
-    // prepare data    
     vec3 v21 = v2 - v1; vec3 p1 = p - v1;
     vec3 v32 = v3 - v2; vec3 p2 = p - v2;
     vec3 v13 = v1 - v3; vec3 p3 = p - v3;
     vec3 nor = cross( v21, v13 );
 
-    return sqrt( // inside/outside test    
-                 // (sign(dot(cross(v21,nor),p1)) + 
-                 //  sign(dot(cross(v32,nor),p2)) + 
-                 //  sign(dot(cross(v13,nor),p3))<2.0) 
-                 //  ?
-                  // 3 edges    
-                  min( min( 
-                  dot2(v21*clamp(dot(v21,p1)/dot2(v21),0.0,1.0)-p1), 
-                  dot2(v32*clamp(dot(v32,p2)/dot2(v32),0.0,1.0)-p2) ), 
-                  dot2(v13*clamp(dot(v13,p3)/dot2(v13),0.0,1.0)-p3) )
-                  // :
-                  // // 1 face    
-                  // dot(nor,p1)*dot(nor,p1)/dot2(nor) );
-                );
+    return sqrt(min(min( 
+        dot2(v21*clamp(dot(v21,p1)/dot2(v21),0.0,1.0)-p1), 
+        dot2(v32*clamp(dot(v32,p2)/dot2(v32),0.0,1.0)-p2)), 
+        dot2(v13*clamp(dot(v13,p3)/dot2(v13),0.0,1.0)-p3)));
+}
+
+const float BAYER16[16] = float[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
+
+float GetBayerDither(float grayscale, vec2 uv) {    
+    ivec2 pixelCoord = ivec2(uv * (SAMPLE_RES));
+    int pixelIndex16 = (pixelCoord.x % 4) + (pixelCoord.y % 4) * 4;
+    return grayscale > (float(BAYER16[pixelIndex16]) + 0.5) / 16.0 ? 1.0 : 0.0;
 }
 
 void main()
@@ -138,20 +135,16 @@ void main()
     float d1 = dist + noise(vec2(a + i_time / 60.0, i_time / 80.0)) * 2.5;
     float absd = abs(uvd - d1);
     float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.2, 0.3, absd);
-    vec4 proximity_outline_col = vec4(1.0, 1.0, 0.0, 1.0) * noise_border;
+    vec4 proximity_outline_col = vec4(1.0, 1.0, 1.0, 1.0) * noise_border;
 
     float sd = (udTriangle(b_poss[0], b_poss[1], b_poss[2], global_pos));
     float border_t = smoothstep(0.0, LINE_W, sd);
 
-    float mask = texture(ditherTexture, screen_uv * (SAMPLE_RES / 64.0)).r;
-    mask = min(1.0, floor(mask + ((uvd / 10.0) + dist / 100.0) / 1.5) / 3.0); 
-    mask = reshapeUniformToTriangle(mask);
+    float mask = GetBayerDither(ceil(length(t_diff) / 1.5) / 30.0 - 0.2, screen_uv);
 
-    fragColor = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.25, 0.2, 0.4, 0.8), border_t);
-    fragColor = mix(fragColor, vec4(0.0, 0.0, 0.0, 1.0), mask);
+    fragColor = mix(vec4(0.5, 0.0, 0.5, 0.8), vec4(0.0, 0.0, 0.0, 1.0), mask);
+    fragColor = mix(vec4(1.0, 0.0, 0.0, 1.0), fragColor, border_t);
     fragColor += proximity_outline_col;
     fragColor.r *= 1.0 + (1.0 - (mask / 2.0));
-    fragColor.a *= 0.75;
-    // fragColor.a = min(1.0, fragColor.a);
 }
 

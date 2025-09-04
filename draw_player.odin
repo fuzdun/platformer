@@ -100,12 +100,12 @@ draw_player :: proc(rs: ^Render_State, pls: Player_State, shs: ^Shader_State, ti
     p_color := [3]f32 {1.0, 0.0, 0.0}
     p_outline_color := [3]f32{.5, 0, .5}
     if time < pls.hurt_t + DAMAGE_LEN {
-        p_color = {1.0, 1.0, 0.0}
-        p_outline_color = {1.0, 1.0, 0.0}
+        p_color = {1.0, 0.0, 1.0}
+        p_outline_color = {1.0, 0.0, 1.0}
     }
     if time < pls.broke_t + BREAK_BOOST_LEN {
-        p_color = {0.0, 0.0, 1.0}
-        p_outline_color = {0.0, 0.0, 1.0}
+        p_color = {0.0, 1.0, 0.0}
+        p_outline_color = {0.0, 1.0, 0.0}
     }
     player_mat := interpolated_player_matrix(pls, f32(interp_t))
 

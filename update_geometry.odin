@@ -22,6 +22,9 @@ apply_bunny_hop_to_lgs :: proc(lgs: Level_Geometry_Soa, did_bunny_hop: bool, las
     new_lgs := dynamic_soa_copy(lgs)
     if did_bunny_hop {
         new_lgs[last_touched].crack_time = elapsed_time - BREAK_DELAY
+        // for id in contact_ids {
+        //     new_lgs[id].crack_time = elapsed_time - BREAK_DELAY
+        // }
     }
     return new_lgs 
 }

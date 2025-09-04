@@ -22,7 +22,7 @@ vec4 colormap(float x) {
         v = 510.0 - v;
     }
     v = v / 255.0;
-    return vec4(v, v * 1, v, 1.0);
+    return vec4(v * 1.0, v * 1.0, v * 1.5, 1.0);
 }
 
 
@@ -47,12 +47,12 @@ float ease_out(float x) {
 
 float fbm (vec2 p )
 {
-    // float intv1 = sin((i_time + 12.0) / 10.0);
-    // float intv2 = cos((i_time + 12.0) / 10.0);
+    float intv1 = sin((i_time / 2000 + 12.0) / 10.0);
+    float intv2 = cos((i_time / 2000 + 12.0) / 10.0);
 
-    // mat2 mtx_off = mat2(intv1, 1.0, intv2, 1.0);
+    mat2 mtx_off = mat2(intv1, 1.0, intv2, 1.0);
     mat2 mtx = mat2(1.6, 1.2, -1.2, 1.6);
-    // mtx = mtx_off * mtx;
+    mtx = mtx_off * mtx;
     float f = 0.0;
     f += 0.25*noise( p + (i_time / 2000) * 1.5); p = mtx*p;
     f += 0.25*noise( p ); p = mtx*p;
@@ -80,10 +80,11 @@ vec3 tonemap(vec3 x)
 }
 
 void main() {
-    float shade = pattern(round(uv * 100) / 100.0);
+    // float shade = pattern(round(uv * 100) / 100.0);
+    float shade = pattern(uv * 1.0);
     vec3 pattern_col = vec3(colormap(shade).rgb) * .8;
     fragColor = vec4(0);
-    vec4 col = vec4(pattern_col * 0.5, 0.3);
+    vec4 col = vec4(pattern_col, 0.4);
     // vec4 col = vec4(pattern_col * 0.0, 0.3);
 
     // float t = i_time / 1000.0;
@@ -105,13 +106,14 @@ void main() {
         vec2 pt_diff = center_uv - pt;
         float et = max((i_time - cpt.w), 0.01);
         float t = et / 400.0;
-        float noise_sample = noise(i_time / 5000.0 + i + normalize(pt_diff) + t * vec2(0.5, 0.5)) * 2.0;
+        float noise_sample = noise(i_time / 1000.0 + i + normalize(pt_diff) + t * vec2(0.5, 0.5)) * 2.0;
         float noise_disp = noise_sample * ease_out(t) * .2;
         float diffusion = length(pt_diff) / ((t * 1) - noise_disp);
         vec4 this_col = vec4(tonemap(abs(sin(vec3(1.0, 0.0, -2.8) + diffusion * vec3(20.0, 0.0, 4.8)))), 1.0);
         float mix_fact = clamp(diffusion * diffusion * 0.5 + 0.5 + et / 3000.0, 0, 1);
         col = mix(this_col, col, mix_fact);
-        col = clamp(col, 0.0, .5);
+        // col *= 2.0;
+        col = clamp(col, 0.0, 1.0);
     }
     fragColor = col;
     

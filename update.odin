@@ -200,7 +200,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // ========================================
     // APPLY PLAYER VELOCITY, HANDLE COLLISIONS
     // ========================================
-    collision_adjusted_contact_state, new_position, collision_adjusted_velocity, collision_ids := apply_velocity(
+    collision_adjusted_contact_state, new_position, collision_adjusted_velocity, collision_ids, contact_ids := apply_velocity(
         new_contact_state,
         pls.position,
         new_velocity,
@@ -211,7 +211,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         phs.static_collider_vertices,
         elapsed_time,
         delta_time
-    ); defer delete(collision_ids)
+    ); defer delete(collision_ids); defer delete(contact_ids)
 
     new_position = apply_restart_to_position(is, new_position)
 
@@ -274,7 +274,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_lgs = apply_bunny_hop_to_lgs(
         new_lgs,
         did_bunny_hop,
-        cts.last_touched,
+        collision_adjusted_contact_state.last_touched,
+        // contact_ids,
         elapsed_time
     )
 
@@ -292,7 +293,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     // set_swap(&szs.last_intersected, szs.intersected)
     delete(szs.intersected)
-    szs.intersected = get_slide_zone_intersections(pls.position, szs^)
+    szs.intersected = get_slide_zone_intersections(pls.position, szs^, lgs.entities)
 
     new_szs := dynamic_soa_copy(szs.entities)
     new_szs = apply_transparency_to_szs(new_szs, szs.intersected, delta_time)
