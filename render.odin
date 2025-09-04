@@ -21,7 +21,8 @@ SHAPE :: enum {
     ICO,
     DASH_BARRIER,
     SLIDE_ZONE,
-    ICE_CREAM
+    ICE_CREAM,
+    BOUNCY
 }
 
 SHAPE_FILENAME := [SHAPE]string {
@@ -30,7 +31,18 @@ SHAPE_FILENAME := [SHAPE]string {
     .ICO = "icosphere",
     .DASH_BARRIER = "dash_barrier",
     .SLIDE_ZONE = "slide_zone",
-    .ICE_CREAM = "ice_cream_cone"
+    .ICE_CREAM = "ice_cream_cone",
+    .BOUNCY = "basic_cube"
+}
+
+SHAPE_NAME := [SHAPE]string {
+    .CUBE = "CUBE",
+    .CYLINDER = "CYLINDER",
+    .ICO = "ICO",
+    .DASH_BARRIER = "DASH_BARRIER",
+    .SLIDE_ZONE = "SLIDE_ZONE",
+    .ICE_CREAM = "ICE_CREAM",
+    .BOUNCY = "BOUNCY"
 }
 
 TEXT_VERTICES :: [4]Quad_Vertex4 {
@@ -169,7 +181,8 @@ Level_Geometry_Render_Type :: enum {
     Dither_Test,
     Dash_Barrier,
     Wireframe,
-    Slide_Zone
+    Slide_Zone,
+    Bouncy
 }
 
 Common_Ubo :: struct {

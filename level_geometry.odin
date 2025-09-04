@@ -69,6 +69,7 @@ Level_Geometry_Component_Name :: enum {
     Dash_Breakable = 4,
     Hazardous = 5,
     Slide_Zone = 6,
-    Breakable = 7
+    Breakable = 7,
+    Bouncy = 8
 }
 

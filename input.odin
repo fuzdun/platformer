@@ -66,6 +66,8 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
             switch event.cbutton.button {
             case 1:
                 is.z_pressed = true
+            case 2:
+                is.r_pressed = true
             case 3:
                 is.x_pressed = true
             }
@@ -73,6 +75,8 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
             switch event.cbutton.button {
             case 1:
                 is.z_pressed = false
+            case 2:
+                is.r_pressed = false
             case 3:
                 is.x_pressed = false
             }

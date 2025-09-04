@@ -56,7 +56,7 @@ apply_directional_input_to_velocity :: proc(
 clamp_horizontal_velocity_to_max_speed :: proc(velocity: [3]f32) -> [3]f32 {
     velocity := velocity
     clamped_xz := la.clamp_length(velocity.xz, MAX_PLAYER_SPEED)
-    velocity.xz = math.lerp(velocity.xz, clamped_xz, f32(0.05))
+    velocity.xz = math.lerp(velocity.xz, clamped_xz, f32(0.9))
     velocity.y = math.clamp(velocity.y, -MAX_FALL_SPEED, MAX_FALL_SPEED)
     return velocity
 }
@@ -369,6 +369,9 @@ apply_velocity :: proc(
             remaining_vel *= 1.0 - collision.t
             if .Dash_Breakable in entities[collision.id].attributes && dashing {
                remaining_vel = BREAK_BOOST_VELOCITY 
+            // } else if .Bouncy in entities[collision.id].attributes {
+                // remaining_vel = BOUNCE_VELOCITY
+                // velocity_normal += la.dot(velocity_normal, collision.normal) * collision.normal
             } else if .Slide_Zone in entities[collision.id].attributes && sliding{
             //    remaining_vel = BREAK_BOOST_VELOCITY 
             } else if .Hazardous in entities[collision.id].attributes {
@@ -408,6 +411,19 @@ apply_velocity :: proc(
     return
 }
 
+
+apply_bounce_to_velocity :: proc(velocity: [3]f32, contact_ray: [3]f32, collision_ids: map[int]struct{}, lgs: Level_Geometry_Soa) -> [3]f32 {
+    velocity := velocity
+    for id in collision_ids {
+        if .Bouncy in lgs[id].attributes {
+            fmt.println("before:", velocity)
+            velocity = (la.normalize(velocity) - la.normalize(contact_ray)) * BOUNCE_VELOCITY
+            fmt.println("after:", velocity)
+            return velocity
+        }
+    }
+    return velocity
+}
 
 // ================
 // POSITION UPDATES

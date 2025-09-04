@@ -7,6 +7,7 @@ import "core:fmt"
 
 game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, szs: ^Slide_Zone_State, elapsed_time: f32, delta_time: f32) {
     new_pls := pls^
+    new_ts := ts^
     cts := pls.contact_state
 
     // ======================
@@ -123,6 +124,10 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         pls.tgt_particle_displacement
     ) 
 
+    new_ts.time_mult = updated_time_mult(ts.time_mult)
+
+    new_ts.time_mult = apply_bunny_hop_to_time_mult(new_ts.time_mult, did_bunny_hop)
+
     new_crunch_pts := updated_crunch_pts(
         pls.crunch_pts[:],
         pls.crunch_time,
@@ -197,6 +202,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         jumped, elapsed_time
     )
 
+
     // ========================================
     // APPLY PLAYER VELOCITY, HANDLE COLLISIONS
     // ========================================
@@ -218,10 +224,24 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // ========================================
     // UPDATE COLLISION-DEPENDENT STATE
     // ========================================
+
+    collision_adjusted_velocity = apply_bounce_to_velocity(
+        collision_adjusted_velocity,
+        collision_adjusted_contact_state.contact_ray,
+        collision_ids,
+        lgs.entities
+    )
+
     new_pls.velocity = collision_adjusted_velocity
+
     new_pls.prev_position = pls.position
     new_pls.position = new_position
     new_pls.contact_state = collision_adjusted_contact_state
+
+    new_ts.time_mult = apply_bounce_to_time_mult(
+        new_ts.time_mult,
+        collision_ids,
+        lgs.entities)
 
     new_pls.dash_state = updated_dash_state(
         pls.dash_state,
@@ -291,6 +311,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         elapsed_time
     ) 
 
+
     new_lgs = apply_transparency_to_lgs(new_lgs, szs.entities[:], elapsed_time)
 
     // set_swap(&szs.last_intersected, szs.intersected)
@@ -308,5 +329,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     cs^ = updated_camera_state(cs^, new_position)
     pls^ = new_pls
+    ts^ = new_ts
 }
 

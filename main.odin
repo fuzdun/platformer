@@ -547,7 +547,7 @@ main :: proc () {
                     color: imgui.Vec4 = es.selected_entity == lg_idx ? {1, 0, 0, 1} : {1, 1, 1, 1}
                     buf: [4]byte
                     num_string := strconv.itoa(buf[:], lg_idx)
-                    shape_string := SHAPE_FILENAME[lg.shape]
+                    shape_string := SHAPE_NAME[lg.shape]
                     display_name := str.concatenate({num_string, ": ", shape_string})
                     imgui.text_colored(color, str.unsafe_string_to_cstring(display_name))
                     if imgui.is_item_clicked(imgui.Mouse_Button.Left) {

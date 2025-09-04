@@ -51,7 +51,7 @@ draw :: proc(
         sorted_rd[idx] = Lg_Render_Data {
             render_group = render_group,
             transform_mat = trans_to_mat4(lg.transform),
-            z_width =  0, // need to change this
+            z_width =  20, // need to change this
             crack_time = lg.crack_time,
             break_data = { lg.break_time, lg.break_pos, lg.break_dir },
             transparency = lg.transparency
@@ -186,9 +186,21 @@ draw :: proc(
         start_slide_t := clamp(pls.slide_state.slide_total / slide_middle, 0, 1) * 0.5
         end_slide_t := clamp(((pls.slide_state.slide_total - slide_off) - (slide_middle)) / slide_middle, 0, 1) * 0.5
         slide_t := start_slide_t + end_slide_t
-
         set_float_uniform(shs, "slide_t", slide_t)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
+
+        gl.BindVertexArray(rs.standard_vao)
+        use_shader(shs, rs, .Bouncy)
+        gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
+        set_vec3_uniform(shs, "crunch_pt", 1, &crunch_pt)
+        set_vec3_uniform(shs, "player_trail", 3, &player_trail[0])
+        set_float_uniform(shs, "crunch_time", f32(pls.crunch_time) / 1000)
+        set_matrix_uniform(shs, "inverse_view", &inverse_view)
+        set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
+        set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
+        set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
+        set_float_uniform(shs, "slide_t", slide_t)
+        draw_indirect_render_queue(rs^, lg_render_groups[.Bouncy][:], gl.PATCHES)
 
         use_shader(shs, rs, .Wireframe)
         gl.Enable(gl.BLEND)
