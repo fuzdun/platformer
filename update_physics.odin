@@ -122,10 +122,11 @@ apply_jumps_to_velocity :: proc(velocity: [3]f32, did_bunny_hop: bool, ground_ju
 
 apply_dash_to_velocity :: proc(velocity: [3]f32, state: Player_States, ds: Dash_State, elapsed_time: f32) -> [3]f32 {
     velocity := velocity
-    dash_expired := f32(elapsed_time) > ds.dash_time + DASH_LEN
+    // dash_expired := f32(elapsed_time) > ds.dash_time + DASH_LEN
+    dash_expired := ds.dash_total > DASH_LEN
     hit_surface := state == .ON_WALL || state == .ON_GROUND || state == .ON_WALL
     if ds.dashing {
-        velocity = la.normalize(ds.dash_end_pos - ds.dash_start_pos) * DASH_SPD
+        velocity = ds.dash_dir * DASH_SPD
     } 
     return velocity
 }
@@ -411,14 +412,14 @@ apply_velocity :: proc(
 // ================
 // POSITION UPDATES
 // ================
-apply_dash_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time: f32) -> [3]f32 {
-    if pls.dash_state.dashing {
-        dash_t := (f32(elapsed_time) - pls.dash_state.dash_time) / DASH_LEN
-        dash_delta := pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos
-        return pls.dash_state.dash_start_pos + dash_delta * dash_t
-    }
-    return position
-}
+// apply_dash_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time: f32) -> [3]f32 {
+//     if pls.dash_state.dashing {
+//         dash_t := (f32(elapsed_time) - pls.dash_state.dash_time) / DASH_LEN
+//         dash_delta := pls.dash_state.dash_end_pos - pls.dash_state.dash_start_pos
+//         return pls.dash_state.dash_start_pos + dash_delta * dash_t
+//     }
+//     return position
+// }
 
 
 // apply_slide_to_position :: proc(pls: Player_State, position: [3]f32, elapsed_time: f32) -> [3]f32 {

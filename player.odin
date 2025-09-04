@@ -85,7 +85,7 @@ MAX_SPIKE_COMPRESSION: f32: 0.8
 SPIKE_COMPRESSION_LERP: f32: 0.10
 
 // geometry crack timing
-CRACK_DELAY :: 750
+CRACK_DELAY :: 75000
 BREAK_DELAY :: 750
 
 
@@ -107,13 +107,14 @@ Dash_State :: struct {
     dash_end_pos: [3]f32,
     dash_dir: [3]f32,
     dash_time: f32,
-    dash_end_time: f32,
+    dash_total: f32,
     can_dash: bool,
 }
 
 Slide_State :: struct {
     sliding: bool,
     slide_time: f32,
+    slide_total: f32,
     mid_slide_time: f32,
     slide_dir: [3]f32,
     slide_start_pos: [3]f32,

@@ -102,8 +102,11 @@ updated_particle_displacement :: proc(particle_displacement: [3]f32, tgt_particl
 }
 
 
-updated_dash_state :: proc(ds: Dash_State, state: Player_States, sliding: bool, hurt_t: f32, position: [3]f32, velocity: [3]f32, is: Input_State, did_bunny_hop: bool, collisions: map[int]struct{}, elapsed_time: f32) -> Dash_State {
+updated_dash_state :: proc(ds: Dash_State, state: Player_States, sliding: bool, hurt_t: f32, position: [3]f32, velocity: [3]f32, is: Input_State, did_bunny_hop: bool, collisions: map[int]struct{}, elapsed_time: f32, delta_time: f32) -> Dash_State {
     ds := ds
+    if ds.dashing {
+        ds.dash_total += delta_time * 1000
+    }
     if !on_surface(state) && sliding == false && is.x_pressed && ds.can_dash && velocity != 0 && elapsed_time > hurt_t + DAMAGE_LEN {
         input_dir := input_dir(is)  
         ds.dashing = true 
@@ -112,10 +115,13 @@ updated_dash_state :: proc(ds: Dash_State, state: Player_States, sliding: bool, 
         ds.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
         ds.dash_end_pos = position + DASH_DIST * ds.dash_dir
         ds.dash_time = f32(elapsed_time)
+        ds.dash_total = 0 
         ds.can_dash = false
     } else {
-        if len(collisions) > 0 || on_surface(state) || f32(elapsed_time) > ds.dash_time + DASH_LEN {
+        // if len(collisions) > 0 || on_surface(state) || f32(elapsed_time) > ds.dash_time + DASH_LEN {
+        if (elapsed_time < hurt_t + DAMAGE_LEN) || on_surface(state) || ds.dash_total > DASH_LEN {
             ds.dashing = false 
+            ds.dash_total = 0
         }
         if !ds.can_dash {
             ds.can_dash = !ds.dashing && (state == .ON_GROUND || state == .ON_SLOPE || did_bunny_hop)
@@ -124,14 +130,18 @@ updated_dash_state :: proc(ds: Dash_State, state: Player_States, sliding: bool, 
     return ds
 }
 
-updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_States, position: [3]f32, velocity: [3]f32, ground_x: [3]f32, ground_z: [3]f32, collisions: map[int]struct{}, lgs: #soa[]Level_Geometry, slide_zone_intersections: map[int]struct{}, elapsed_time: f32) -> Slide_State {
+updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_States, position: [3]f32, velocity: [3]f32, ground_x: [3]f32, ground_z: [3]f32, collisions: map[int]struct{}, lgs: #soa[]Level_Geometry, slide_zone_intersections: map[int]struct{}, elapsed_time: f32, delta_time: f32) -> Slide_State {
     new_sls := sls
+    if sls.sliding {
+        new_sls.slide_total += delta_time * 1000.0
+    }
     if on_surface(state) && sls.can_slide && is.x_pressed && velocity != 0 {
         new_sls.sliding = true
         new_sls.can_slide = false
         new_sls.slide_time = elapsed_time
         new_sls.mid_slide_time = elapsed_time
         new_sls.slide_start_pos = position
+        new_sls.slide_total = 0
 
         input_dir := input_dir(is)  
         surface_normal := la.normalize0(la.cross(ground_x, ground_z))
@@ -141,9 +151,12 @@ updated_slide_state :: proc(sls: Slide_State, is: Input_State, state: Player_Sta
         if sls.sliding && len(slide_zone_intersections) > 0{
             new_sls.mid_slide_time = elapsed_time
         }
-        if sls.sliding && (!on_surface(state) || elapsed_time > sls.mid_slide_time + SLIDE_LEN) {
+        // if sls.sliding && (!on_surface(state) || elapsed_time > sls.mid_slide_time + SLIDE_LEN) {
+        slide_off := sls.mid_slide_time - sls.slide_time
+        if sls.sliding && (!on_surface(state) || (new_sls.slide_total - slide_off) > SLIDE_LEN) {
             new_sls.sliding = false
             new_sls.slide_end_time = elapsed_time
+            new_sls.slide_total = 0
         }
         if !sls.can_slide && !sls.sliding && sls.slide_end_time + SLIDE_COOLDOWN < elapsed_time {
             new_sls.can_slide = true

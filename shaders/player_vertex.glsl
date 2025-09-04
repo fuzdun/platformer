@@ -18,7 +18,7 @@ layout (std140, binding = 0) uniform Common
 layout (std140, binding = 1) uniform Dash
 {
     float dash_time;
-    float dash_end_time;
+    float dash_total;
     vec3 constrain_dir;
 };
 

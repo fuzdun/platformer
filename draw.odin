@@ -117,7 +117,7 @@ draw :: proc(
     }
     dash_ubo : Dash_Ubo = {
         dash_time = pls.dash_state.dash_time,
-        dash_end_time = pls.dash_state.dash_end_time,
+        dash_total = pls.dash_state.dash_total,
         constrain_dir = la.normalize0(pls.dash_state.dash_dir)
     }
     tess_ubo : Tess_Ubo = {
@@ -182,11 +182,11 @@ draw :: proc(
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
         slide_middle := SLIDE_LEN / 2.0
-        start_slide_t := clamp((f32(time) - pls.slide_state.slide_time) / slide_middle, 0, 1) * 0.5
-        end_slide_t := clamp((f32(time) - (pls.slide_state.mid_slide_time + slide_middle)) / slide_middle, 0, 1) * 0.5
+        slide_off := pls.slide_state.mid_slide_time - pls.slide_state.slide_time
+        start_slide_t := clamp(pls.slide_state.slide_total / slide_middle, 0, 1) * 0.5
+        end_slide_t := clamp(((pls.slide_state.slide_total - slide_off) - (slide_middle)) / slide_middle, 0, 1) * 0.5
         slide_t := start_slide_t + end_slide_t
 
-        // slide_t := clamp((f32(time) - pls.slide_state.slide_time) / SLIDE_LEN, 0, 1)
         set_float_uniform(shs, "slide_t", slide_t)
         draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
 

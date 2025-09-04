@@ -135,7 +135,7 @@ main :: proc () {
     es.y_rot = -.25
     es.zoom = 400
     es.connections = make([dynamic]Connection)
-    ts.time_mult = 1
+    ts.time_mult = 1.0
 
     // init physics state
     phs.debug_render_queue.vertices = make([dynamic]Vertex)
@@ -527,7 +527,7 @@ main :: proc () {
             if EDIT {
                 editor_update(&lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
-                game_update(&lgs, is, &pls, phs, &cs, &ts, &szs, f32(elapsed_time), FIXED_DELTA_TIME)
+                game_update(&lgs, is, &pls, phs, &cs, &ts, &szs, f32(elapsed_time), FIXED_DELTA_TIME * ts.time_mult)
             }
             accumulator -= target_frame_clocks 
         }

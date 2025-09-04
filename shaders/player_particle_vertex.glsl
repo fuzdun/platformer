@@ -13,7 +13,7 @@ layout (std140, binding = 0) uniform Common
 layout (std140, binding = 1) uniform Dash
 {
     float dash_time;
-    float dash_end_time;
+    float dash_total;
     vec3 constrain_dir;
 };
 
@@ -41,9 +41,11 @@ void main() {
     vec3 constrain_proj = constrain_dir * dot(constrain_dir, offset.xyz);
     vec3 constrained_pos = offset.xyz - constrain_proj;
     float dash_pos_t = length(constrain_dir - constrain_proj) / 2.0;
-    float constrain_start_t = dash_time + 50.0 * dash_pos_t;
-    float constrain_amt = 1.0 - easeout(clamp((i_time - constrain_start_t) / 300.0, 0.0, 1.0));
-    if (i_time - dash_time > 200) {
+    // float constrain_start_t = dash_time + 50.0 * dash_pos_t;
+    float constrain_start_t = 50.0 * dash_pos_t;
+    float constrain_amt = 1.0 - easeout(clamp((dash_total - constrain_start_t) / 300.0, 0.0, 1.0));
+    // if (i_time - dash_time > 200) {
+    if (dash_total > 200) {
         constrain_amt = 1.0;
     }
     f_radius = radius * constrain_amt;

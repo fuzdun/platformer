@@ -12,7 +12,7 @@ layout (std140, binding = 0) uniform Common
 layout (std140, binding = 1) uniform Dash
 {
     float dash_time;
-    float dash_end_time;
+    float dash_total;
     vec3 dash_dir;
 };
 
@@ -32,7 +32,7 @@ void main() {
     for(int i=0; i < 3; i++) {
         gl_Position = projection * gl_in[0].gl_Position + step * i;
         t = float(i) / resolution - 1;
-        dash_time_frag = dash_time;
+        dash_time_frag = dash_total;
         i_time_frag = i_time;
         EmitVertex();
     }
@@ -48,7 +48,7 @@ void main() {
 
         gl_Position = projection * interp_pos;
         t = float(i) / resolution - 1;
-        dash_time_frag = dash_time;
+        dash_time_frag = dash_total;
         i_time_frag = i_time;
         EmitVertex();
     }
@@ -56,7 +56,7 @@ void main() {
     for(int i=int(resolution - 3); i < resolution; i++) {
         gl_Position = projection * gl_in[1].gl_Position - (resolution - i) * step;
         t = float(i) / resolution - 1;
-        dash_time_frag = dash_time;
+        dash_time_frag = dash_total;
         i_time_frag = i_time;
         EmitVertex();
     }

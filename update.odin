@@ -233,7 +233,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         is,
         did_bunny_hop,
         collision_ids,
-        elapsed_time
+        elapsed_time,
+        delta_time
     )
 
     new_pls.slide_state = updated_slide_state(
@@ -247,7 +248,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         collision_ids,
         lgs.entities[:],
         szs.intersected,
-        elapsed_time
+        elapsed_time,
+        delta_time
     )
 
     new_pls.hurt_t = updated_hurt_t(

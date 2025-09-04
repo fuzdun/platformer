@@ -179,7 +179,8 @@ Common_Ubo :: struct {
 
 Dash_Ubo :: struct {
     dash_time: f32,
-    dash_end_time: f32,
+    dash_total: f32,
+    // dash_end_time: f32,
     constrain_dir: glm.vec3,
 }
 

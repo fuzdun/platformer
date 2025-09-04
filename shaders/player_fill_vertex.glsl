@@ -18,13 +18,9 @@ layout (std140, binding = 0) uniform Common
 layout (std140, binding = 1) uniform Dash
 {
     float dash_time;
-    float dash_end_time;
+    float dash_total;
     vec3 constrain_dir_in;
 };
-
-// layout (std430, binding = 2) buffer matrices {
-//     mat4 matrices_data[];
-// };
 
 uniform mat4 transform;
 
@@ -40,9 +36,10 @@ void main() {
     vec3 constrained_pos = aPos.xyz - constrain_proj;
 
     float dash_pos_t = length(constrain_dir - constrain_proj) / 2.0;
-    float constrain_start_t = dash_time + 50.0 * dash_pos_t;
-    float constrain_amt = 1.0 - easeout(clamp((i_time - constrain_start_t) / 300.0, 0.0, 1.0));
-    if (i_time - dash_time > 200) {
+    // float constrain_start_t = dash_time + 50.0 * dash_pos_t;
+    float constrain_start_t = 50.0 * dash_pos_t;
+    float constrain_amt = 1.0 - easeout(clamp((dash_total - constrain_start_t) / 300.0, 0.0, 1.0));
+    if (dash_total > 200) {
         constrain_amt = 1.0;
     }
     constrained_pos *= constrain_amt;
