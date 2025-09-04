@@ -46,7 +46,7 @@ uniform sampler2D ditherTexture;
 out vec4 fragColor;
 
 #define LINE_W 0.2
-#define SAMPLE_RES 350.0
+#define SAMPLE_RES 640.0
 #define SCREEN_WIDTH 1920.0
 #define SCREEN_HEIGHT 1080.0
 

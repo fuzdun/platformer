@@ -48,7 +48,7 @@ uniform sampler2D ditherTexture;
 #define TWOPI 6.2831853
 #define SHADES 3.0
 #define SLIDE_RADIUS 15.0
-#define SAMPLE_RES 360.0
+#define SAMPLE_RES 640.0
 #define LINE_W 0.2
 
 vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
