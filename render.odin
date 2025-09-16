@@ -22,7 +22,8 @@ SHAPE :: enum {
     DASH_BARRIER,
     SLIDE_ZONE,
     ICE_CREAM,
-    BOUNCY
+    BOUNCY,
+    CHAIR
 }
 
 SHAPE_FILENAME := [SHAPE]string {
@@ -32,6 +33,7 @@ SHAPE_FILENAME := [SHAPE]string {
     .DASH_BARRIER = "dash_barrier",
     .SLIDE_ZONE = "slide_zone",
     .ICE_CREAM = "ice_cream_cone",
+    .CHAIR = "chair",
     .BOUNCY = "basic_cube"
 }
 
@@ -42,6 +44,7 @@ SHAPE_NAME := [SHAPE]string {
     .DASH_BARRIER = "DASH_BARRIER",
     .SLIDE_ZONE = "SLIDE_ZONE",
     .ICE_CREAM = "ICE_CREAM",
+    .CHAIR = "CHAIR",
     .BOUNCY = "BOUNCY"
 }
 

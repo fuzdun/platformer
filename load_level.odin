@@ -93,7 +93,7 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             } else if lg.shape == .BOUNCY {
                 lg.attributes += {.Bouncy}
                 lg.render_type = .Bouncy
-            } else if lg.shape == .ICE_CREAM {
+            } else if lg.shape == .ICE_CREAM || lg.shape == .CHAIR {
                 lg.attributes -= {.Collider}
                 lg.render_type = .Wireframe
             }

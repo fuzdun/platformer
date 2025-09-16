@@ -204,7 +204,7 @@ draw :: proc(
 
         use_shader(shs, rs, .Wireframe)
         gl.Enable(gl.BLEND)
-        wireframe_color := [3]f32{0.500, 0.000, 1.000}
+        wireframe_color := [3]f32{0.000, 0.300, 0.600}
         set_vec3_uniform(shs, "color", 1, &wireframe_color)
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         draw_indirect_render_queue(rs^, lg_render_groups[.Wireframe][:], gl.LINES)
