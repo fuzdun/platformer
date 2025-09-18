@@ -6,6 +6,8 @@ Built with Odin, SDL and OpenGL
 
 Currently in active development, playable soon. Planned for release sometime in 2026
 
+![HQ gameplay](https://www.youtube.com/watch?v=MdrWbIgeKYo)
+
 ![Timeline 4](https://github.com/user-attachments/assets/de699d07-460b-4c2e-a940-681eac079e86)
 
 ![Timeline 1](https://github.com/user-attachments/assets/74829cde-0cf5-45ed-8282-42893d7f4c58)
