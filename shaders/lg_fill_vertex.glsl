@@ -56,8 +56,8 @@ out VS_OUT {
 
 
 void main() {
-    mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
-    // mat4 transform = transforms[gl_BaseInstance + gl_InstanceID];
+    // mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
+    mat4 transform = transforms[gl_BaseInstance + gl_InstanceID];
     vec4 new_pos = transform * aPos;
     gl_Position = new_pos;
     // vec3 rot_normal = normalize(mat3(transpose(inverse(matrices_data[gl_BaseInstance + gl_InstanceID]))) * normal_in).xyz;

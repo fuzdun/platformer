@@ -255,8 +255,7 @@ editor_sort_lgs :: proc(lgs: ^#soa[dynamic]Level_Geometry, current_selection: in
 }
 
 sort_lgs :: proc(lgs: []Level_Geometry) -> Level_Geometry_State {
-    lg_count := len(lgs)
-    sorted_lgs := make(#soa[]Level_Geometry, lg_count)
+    sorted_lgs := make(#soa[]Level_Geometry, len(lgs))
     group_counts: [NUM_RENDER_GROUPS]int
     for lg, idx in lgs {
         group_counts[lg_render_group(lg)] += 1

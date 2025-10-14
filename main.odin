@@ -219,7 +219,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
@@ -441,19 +441,19 @@ main :: proc () {
     add_geometry_to_physics(&phs, &szs, lgs)
 
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(glm.mat4) * num_entities, nil, gl.DYNAMIC_DRAW)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
 
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * num_entities, nil, gl.DYNAMIC_DRAW)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
 
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.crack_time_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * num_entities, nil, gl.DYNAMIC_DRAW)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
 
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.break_data_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * 7 * num_entities, nil, gl.DYNAMIC_DRAW)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * 7 * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
 
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transparencies_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * num_entities, nil, gl.DYNAMIC_DRAW)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transforms_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
@@ -558,7 +558,8 @@ main :: proc () {
         }
 
         // Render
-        draw(lgs[:], sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
+        draw_slice := EDIT ? dynamic_lgs[:] : lgs[:]
+        draw(draw_slice, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
         if EDIT {
             imgl.new_frame()
             imsdl.new_frame()

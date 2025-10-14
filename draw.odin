@@ -130,7 +130,7 @@ draw :: proc(
 
     if EDIT {
         // draw edit mode UI/level geometry
-        //draw_editor(rs, shs, es, is, lgs^, lg_render_groups, proj_mat)
+        draw_editor(rs, shs, es, is, lgs, draw_commands, proj_mat)
 
     } else if PLAYER_DRAW {
         // -- see player draw func below
