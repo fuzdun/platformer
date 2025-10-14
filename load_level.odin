@@ -18,11 +18,11 @@ trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
     return
 }
 
-encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
+encode_test_level_cbor :: proc(lgs: #soa[]Level_Geometry) {
     aos_level_data := make([dynamic]Level_Geometry)
     defer delete(aos_level_data)
 
-    for &lg in lgs.entities {
+    for &lg in lgs {
         lg.attributes = {.Collider, .Crackable}
         append(&aos_level_data, lg)
     }
@@ -32,7 +32,7 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State) {
     os.write_entire_file("levels/test_level.bin", bin)
 }
 
-load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State, szs: ^Slide_Zone_State, filename: string) {
+load_level_geometry :: proc(sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State, szs: ^Slide_Zone_State, filename: string) -> []Level_Geometry {
     level_filename := str.concatenate({"levels/", filename, ".bin"})
     defer delete(level_filename)
     level_bin, read_err := os.read_entire_file(level_filename)
@@ -40,9 +40,7 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
     decoded, decode_err := cbor.decode(string(level_bin))
     defer cbor.destroy(decoded)
     decoded_arr := decoded.(^cbor.Array)
-    clear(&lgs.entities)
     loaded_level_geometry: []Level_Geometry
-    defer delete(loaded_level_geometry)
 
     if PERF_TEST {
         // perf test load======================
@@ -54,16 +52,15 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             lg.collider = .CUBE
 
             x := f32(i % 10)
-            y := math.floor(f32(i) / 4)
+            y := math.floor(f32(i) / 4) - 50
             lg.transform = {{x * 120, y * 1 - 80, y * -45 + 200},{40, 40, 40}, rot}
             lg.render_type = .Standard
             lg.attributes = { .Collider }
-
             loaded_level_geometry[i] = lg
         }
         // =====================================
     } else if PLAYER_DRAW {
-        loaded_level_geometry = make([]Level_Geometry, 1)
+        //loaded_level_geometry = make([]Level_Geometry, 1)
         rot := la.quaternion_from_euler_angles_f32(0, 0, 0, .XYZ)
         shape: SHAPE = .CUBE
         lg: Level_Geometry
@@ -100,18 +97,19 @@ load_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps:
             loaded_level_geometry[idx] = lg
         }
     }
-    add_geometry_to_physics(ps, szs, loaded_level_geometry)
-    add_geometry_to_renderer(lgs, rs, ps, loaded_level_geometry)
+    return loaded_level_geometry
+    //add_geometry_to_physics(ps, szs, loaded_level_geometry)
+    //add_geometry_to_renderer(lgs, rs, ps, loaded_level_geometry)
 }
 
 editor_reload_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State) {
-    current_level_geometry := make([]Level_Geometry, len(lgs.entities))
-    defer delete(current_level_geometry)
-    for lg, idx in lgs.entities {
-        current_level_geometry[idx] = lg
-    }
-    clear(&lgs.entities)
-    add_geometry_to_renderer(lgs, rs, ps, current_level_geometry[:])
+    //current_level_geometry := make([]Level_Geometry, len(lgs))
+    //defer delete(current_level_geometry)
+    //for lg, idx in lgs {
+    //    current_level_geometry[idx] = lg
+    //}
+    //clear(lgs)
+    //add_geometry_to_renderer(lgs, rs, ps, current_level_geometry[:])
 }
 
 lg_get_transformed_collider_vertices :: proc(lg: Level_Geometry, trans_mat: matrix[4, 4]f32, ps: Physics_State, out: [][3]f32) {
@@ -121,7 +119,7 @@ lg_get_transformed_collider_vertices :: proc(lg: Level_Geometry, trans_mat: matr
     }
 }
 
-add_geometry_to_physics :: proc(ps: ^Physics_State, szs: ^Slide_Zone_State, lgs_in: []Level_Geometry) {
+add_geometry_to_physics :: proc(ps: ^Physics_State, szs: ^Slide_Zone_State, lgs_in: #soa[]Level_Geometry) {
     clear_physics_state(ps)
     for &lg, lg_idx in lgs_in {
         rot_mat := glm.mat4FromQuat(lg.transform.rotation)
@@ -157,11 +155,11 @@ add_geometry_to_physics :: proc(ps: ^Physics_State, szs: ^Slide_Zone_State, lgs_
     }
 }
 
-add_geometry_to_renderer :: proc(lgs: ^Level_Geometry_State, rs: ^Render_State, ps: ^Physics_State, lgs_in: []Level_Geometry) {
-    for &lg in lgs_in {
-        trans_mat := trans_to_mat4(lg.transform)
-        vertices_len := len(ps.level_colliders[lg.shape].vertices)
-        append(&lgs.entities, lg)
-    }
-}
+//add_geometry_to_renderer :: proc(lgs: ^Dynamic_Level_Geometry_State, rs: ^Render_State, ps: ^Physics_State, lgs_in: []Level_Geometry) {
+//    for &lg in lgs_in {
+////        //trans_mat := trans_to_mat4(lg.transform)
+////        //vertices_len := len(ps.level_colliders[lg.shape].vertices)
+//        append(lgs, lg)
+//    }
+//}
 

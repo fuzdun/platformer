@@ -37,6 +37,11 @@ layout (std140, binding = 3) uniform Tessellation
     float outer_amt;
 };
 
+layout (std140, binding = 4) uniform Transforms
+{
+    mat4 transforms[1000]; 
+};
+
 out VS_OUT {
     vec2 uv;
     vec3 normal_frag;
@@ -52,9 +57,11 @@ out VS_OUT {
 
 void main() {
     mat4 transform = matrices_data[gl_BaseInstance + gl_InstanceID];
+    // mat4 transform = transforms[gl_BaseInstance + gl_InstanceID];
     vec4 new_pos = transform * aPos;
     gl_Position = new_pos;
-    vec3 rot_normal = normalize(mat3(transpose(inverse(matrices_data[gl_BaseInstance + gl_InstanceID]))) * normal_in).xyz;
+    // vec3 rot_normal = normalize(mat3(transpose(inverse(matrices_data[gl_BaseInstance + gl_InstanceID]))) * normal_in).xyz;
+    vec3 rot_normal = normalize(mat3(transpose(inverse(transform))) * normal_in).xyz;
 
     vs_out.obj_pos = vec4(transform[3][0], transform[3][1], transform[3][2], 1.0);
     vs_out.uv = vertexUV;

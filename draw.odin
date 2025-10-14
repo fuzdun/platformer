@@ -7,9 +7,11 @@ import "core:math"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
+import tim "core:time"
 
 draw :: proc(
-    lgs: ^Level_Geometry_State, 
+    lgs: #soa[]Level_Geometry, 
+    //sorted_lgs: #soa[]Level_Geometry,
     sr: Shape_Resources,
     pls: Player_State,
     rs: ^Render_State,
@@ -25,81 +27,54 @@ draw :: proc(
     // =====================
     //  PREPARE RENDER DATA
     // =====================
-
-    // init level geometry render queues
-    lg_render_groups: Render_Groups 
-
-    for &rg in lg_render_groups {
-        rg = make([dynamic]gl.DrawElementsIndirectCommand)
-    }; defer for &rg in lg_render_groups { delete(rg) }
-
-    lg_count := len(lgs.entities)
-
-    sorted_rd           := make([]Lg_Render_Data, lg_count);                 defer delete(sorted_rd)
-    sorted_transforms   := make([]glm.mat4, lg_count);                       defer delete(sorted_transforms)
-    sorted_z_widths     := make([]f32, lg_count);                            defer delete(sorted_z_widths)
-    sorted_crack_times  := make([]f32, lg_count);                            defer delete(sorted_crack_times)
-    sorted_break_data   := make([]Break_Data, lg_count);                     defer delete(sorted_break_data)
-    sorted_transparency := make([]f32, lg_count);                            defer delete(sorted_transparency)
-    lg_render_commands  := make([]gl.DrawElementsIndirectCommand, lg_count); defer delete(lg_render_commands) 
-
-    // sort level geometry by shader and shape
-    group_offsets: [len(SHAPE) * len(Level_Geometry_Render_Type)]int
-    for lg, idx in lgs.entities {
-        render_group := int(lg.render_type) * len(SHAPE) + int(lg.shape)
-        group_offsets[render_group] += 1
-        sorted_rd[idx] = Lg_Render_Data {
-            render_group = render_group,
-            transform_mat = trans_to_mat4(lg.transform),
-            z_width =  20, // need to change this
-            crack_time = lg.crack_time,
-            break_data = { lg.break_time, lg.break_pos, lg.break_dir },
-            transparency = lg.transparency
+    group_offsets: [NUM_RENDER_GROUPS]int
+    
+    culled_lgs := make(#soa[dynamic]Level_Geometry)
+    defer delete(culled_lgs)
+    reserve_soa(&culled_lgs, len(lgs))
+    
+    for lg, idx in lgs {
+        if true {
+            append(&culled_lgs, lg)
+            group_offsets[lg_render_group(lg)] += 1
         }
     }
+
+    num_culled_lgs := len(culled_lgs)
 
     counts_to_offsets(group_offsets[:])
+    draw_commands := offsets_to_render_commands(group_offsets[:], len(culled_lgs), rs^, sr)
+    defer free_render_groups(draw_commands)
 
-    // generate command queues
-    for g_off, idx in group_offsets {
-        next_off := idx == len(group_offsets) - 1 ? len(sorted_transforms) : group_offsets[idx + 1]
-        count := u32(next_off - g_off)
-        if count == 0 do continue
-        shape := SHAPE(idx % len(SHAPE))
-        render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(SHAPE))))
-        sd := sr[shape] 
-        command: gl.DrawElementsIndirectCommand = {
-            u32(len(sd.indices)),
-            count,
-            rs.index_offsets[shape],
-            rs.vertex_offsets[shape],
-            u32(g_off)
-        }
-        append(&lg_render_groups[render_type], command)
+    z_widths := make([]f32, num_culled_lgs); defer delete(z_widths)
+    for i in 0..<num_culled_lgs {
+        z_widths[i] = 20
     }
 
-    // sort and distribute level geometry attributes 
-    slice.sort_by(sorted_rd[:], proc(a: Lg_Render_Data, b: Lg_Render_Data) -> bool { return a.render_group < b.render_group })
-    for rd, idx in sorted_rd {
-        sorted_transforms[idx] = rd.transform_mat
-        sorted_z_widths[idx] = rd.z_width
-        sorted_crack_times[idx] = rd.crack_time
-        sorted_break_data[idx] = rd.break_data
-        sorted_transparency[idx] = rd.transparency
+    transforms, angular_velocities,
+    shapes, colliders, render_types,
+    attributess, aabbs, crack_times,
+    break_datas, transparencies := soa_unzip(culled_lgs[:])
+
+    transform_mats := make([]glm.mat4, num_culled_lgs); defer delete(transform_mats)
+    for t, i in transforms {
+        transform_mats[i] = trans_to_mat4(t)
     }
 
-    // load level geometry attributes into buffers
     gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_transforms[0]) * len(sorted_transforms), raw_data(sorted_transforms), gl.DYNAMIC_DRAW)
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_z_widths[0]) * len(sorted_z_widths), raw_data(sorted_z_widths), gl.DYNAMIC_DRAW)
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.crack_time_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_crack_times[0]) * len(sorted_crack_times), raw_data(sorted_crack_times), gl.DYNAMIC_DRAW)
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.break_data_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_break_data[0]) * len(sorted_break_data), raw_data(sorted_break_data), gl.DYNAMIC_DRAW)
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transparencies_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(sorted_transparency[0]) * len(sorted_transparency), raw_data(sorted_transparency), gl.DYNAMIC_DRAW)
+    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(glm.mat4) * num_culled_lgs, &transform_mats[0])
 
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
+    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(f32) * num_culled_lgs, &z_widths[0])
+
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.crack_time_ssbo)
+    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(f32) * num_culled_lgs, &crack_times[0])
+
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.break_data_ssbo)
+    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(Break_Data) * num_culled_lgs, &break_datas[0])
+
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transparencies_ssbo)
+    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(f32) * num_culled_lgs, &transparencies[0])
 
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.transforms_ssbo)
     gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
@@ -124,15 +99,22 @@ draw :: proc(
         inner_amt = INNER_TESSELLATION_AMT,
         outer_amt = OUTER_TESSELLATION_AMT
     }
+
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.common_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Common_Ubo), &common_ubo)
+
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.dash_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Dash_Ubo), &dash_ubo)
+
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.ppos_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(glm.vec3), &i_ppos[0])
+
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.tess_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Tess_Ubo), &tess_ubo)
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transforms_ubo)
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(glm.mat4) * num_culled_lgs, &transform_mats[0])
 
     // get axes for text and particle quad alignment
     camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
@@ -148,7 +130,7 @@ draw :: proc(
 
     if EDIT {
         // draw edit mode UI/level geometry
-        draw_editor(rs, shs, es, is, lgs^, lg_render_groups, proj_mat)
+        //draw_editor(rs, shs, es, is, lgs^, lg_render_groups, proj_mat)
 
     } else if PLAYER_DRAW {
         // -- see player draw func below
@@ -187,7 +169,7 @@ draw :: proc(
         end_slide_t := clamp(((pls.slide_state.slide_total - slide_off) - (slide_middle)) / slide_middle, 0, 1) * 0.5
         slide_t := start_slide_t + end_slide_t
         set_float_uniform(shs, "slide_t", slide_t)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
+        draw_indirect_render_queue(rs^, draw_commands[.Standard][:], gl.PATCHES)
 
         gl.BindVertexArray(rs.standard_vao)
         use_shader(shs, rs, .Bouncy)
@@ -200,14 +182,14 @@ draw :: proc(
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
         set_float_uniform(shs, "slide_t", slide_t)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Bouncy][:], gl.PATCHES)
+        draw_indirect_render_queue(rs^, draw_commands[.Bouncy][:], gl.PATCHES)
 
         use_shader(shs, rs, .Wireframe)
         gl.Enable(gl.BLEND)
         wireframe_color := [3]f32{0.000, 0.300, 0.600}
         set_vec3_uniform(shs, "color", 1, &wireframe_color)
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Wireframe][:], gl.LINES)
+        draw_indirect_render_queue(rs^, draw_commands[.Wireframe][:], gl.LINES)
         gl.Disable(gl.BLEND)
 
 
@@ -217,7 +199,7 @@ draw :: proc(
         set_matrix_uniform(shs, "inverse_view", &inverse_view)
         set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Dash_Barrier][:], gl.PATCHES)
+        draw_indirect_render_queue(rs^, draw_commands[.Dash_Barrier][:], gl.PATCHES)
         gl.Disable(gl.BLEND)
 
         // draw background
@@ -241,10 +223,10 @@ draw :: proc(
         gl.BindVertexArray(rs.standard_vao)
         outline_color := [3]f32{0.75, 0.75, 0.75}
         set_vec3_uniform(shs, "color", 1, &outline_color)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Standard][:], gl.PATCHES)
+        draw_indirect_render_queue(rs^, draw_commands[.Standard][:], gl.PATCHES)
         barrier_outline_color := [3]f32{1.0, 0, 0}
         set_vec3_uniform(shs, "color", 1, &barrier_outline_color)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Dash_Barrier][:], gl.PATCHES)
+        draw_indirect_render_queue(rs^, draw_commands[.Dash_Barrier][:], gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
 
@@ -255,7 +237,7 @@ draw :: proc(
         gl.BindVertexArray(rs.standard_vao)
         use_shader(shs, rs, .Slide_Zone)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
-        draw_indirect_render_queue(rs^, lg_render_groups[.Slide_Zone][:], gl.TRIANGLES)
+        draw_indirect_render_queue(rs^, draw_commands[.Slide_Zone][:], gl.TRIANGLES)
         gl.Disable(gl.BLEND)
 
         gl.Disable(gl.CULL_FACE)
@@ -263,7 +245,7 @@ draw :: proc(
         use_shader(shs, rs, .Level_Geometry_Outline)
         slide_zone_outline_color := [3]f32{0, 0, 1.0}
         set_vec3_uniform(shs, "color", 1, &slide_zone_outline_color)
-        draw_indirect_render_queue(rs^, lg_render_groups[.Slide_Zone][:], gl.PATCHES)
+        draw_indirect_render_queue(rs^, draw_commands[.Slide_Zone][:], gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
 

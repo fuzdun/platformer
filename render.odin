@@ -1,5 +1,6 @@
 package main
 
+import "core:sort"
 import "core:math"
 import "core:slice"
 import "core:fmt"
@@ -25,6 +26,17 @@ SHAPE :: enum {
     BOUNCY,
     CHAIR
 }
+
+Level_Geometry_Render_Type :: enum {
+    Standard,
+    Dither_Test,
+    Dash_Barrier,
+    Wireframe,
+    Slide_Zone,
+    Bouncy
+}
+
+NUM_RENDER_GROUPS :: len(SHAPE) * len(Level_Geometry_Render_Type) 
 
 SHAPE_FILENAME := [SHAPE]string {
     .CUBE = "basic_cube",
@@ -111,19 +123,20 @@ Render_State :: struct {
     dash_ubo: u32,
     ppos_ubo: u32,
     tess_ubo: u32,
+    transforms_ubo: u32,
 
     dither_tex: u32,
 
-    player_draw_command: [1]gl.DrawElementsIndirectCommand,
-
-    player_particle_poss: [dynamic]glm.vec3,
-    player_particles: [PLAYER_PARTICLE_COUNT][4]f32,
     player_geometry: Shape_Data,
     player_outline_indices: []u32,
     player_fill_indices: []u32,
 
+    // can remove this later i think
     vertex_offsets: Vertex_Offsets,
     index_offsets: Index_Offsets,
+
+    //render_group_counts: [NUM_RENDER_GROUPS]int
+    //draw_commands: Render_Groups
 }
 
 Char_Tex :: struct {
@@ -179,15 +192,6 @@ Lg_Render_Data :: struct {
     transparency: f32
 }
 
-Level_Geometry_Render_Type :: enum {
-    Standard,
-    Dither_Test,
-    Dash_Barrier,
-    Wireframe,
-    Slide_Zone,
-    Bouncy
-}
-
 Common_Ubo :: struct {
     projection: glm.mat4,
     time: f32
@@ -196,7 +200,6 @@ Common_Ubo :: struct {
 Dash_Ubo :: struct {
     dash_time: f32,
     dash_total: f32,
-    // dash_end_time: f32,
     constrain_dir: glm.vec3,
 }
 
@@ -206,6 +209,12 @@ Tess_Ubo :: struct {
 }
 
 Render_Groups :: [Level_Geometry_Render_Type][dynamic]gl.DrawElementsIndirectCommand 
+
+free_render_groups :: proc(rgs: Render_Groups) {
+    for rg in rgs {
+        delete(rg)
+    }
+}
 
 free_render_state :: proc(rs: ^Render_State) {
     ft.done_face(rs.face)
@@ -217,6 +226,74 @@ free_render_state :: proc(rs: ^Render_State) {
     delete(rs.player_outline_indices)
 }
 
+lg_render_group :: proc(lg: Level_Geometry) -> int {
+    return int(lg.render_type) * len(SHAPE) + int(lg.shape)
+}
+
+editor_sort_lgs :: proc(lgs: ^#soa[dynamic]Level_Geometry, current_selection: int = 0) -> (new_selection: int = 0) {
+    sorted_lgs := make([]Level_Geometry, len(lgs))
+    defer delete(sorted_lgs)
+    group_counts: [NUM_RENDER_GROUPS]int
+    for lg, idx in lgs {
+        group_counts[lg_render_group(lg)] += 1
+    }
+    counts_to_offsets(group_counts[:])
+    for lg, idx in lgs {
+        render_group := lg_render_group(lg) 
+        insert_idx := group_counts[render_group]
+        group_counts[render_group] += 1
+        sorted_lgs[insert_idx] = lg
+        if idx == current_selection {
+            new_selection = insert_idx
+        }
+    }
+    clear(lgs)
+    for lg in sorted_lgs {
+        append(lgs, lg)
+    }
+    return
+}
+
+sort_lgs :: proc(lgs: []Level_Geometry) -> Level_Geometry_State {
+    lg_count := len(lgs)
+    sorted_lgs := make(#soa[]Level_Geometry, lg_count)
+    group_counts: [NUM_RENDER_GROUPS]int
+    for lg, idx in lgs {
+        group_counts[lg_render_group(lg)] += 1
+    }
+    counts_to_offsets(group_counts[:])
+    for lg, idx in lgs {
+        render_group := lg_render_group(lg) 
+        insert_idx := group_counts[render_group]
+        group_counts[render_group] += 1
+        sorted_lgs[insert_idx] = lg
+    }
+    return sorted_lgs
+}
+
+offsets_to_render_commands :: proc(offsets: []int, lg_count: int, rs: Render_State, sr: Shape_Resources) -> Render_Groups {
+    render_groups: Render_Groups
+    for &rg in render_groups {
+        rg = make([dynamic]gl.DrawElementsIndirectCommand)
+    } 
+    for g_off, idx in offsets {
+        next_off := idx == len(offsets) - 1 ? lg_count : offsets[idx + 1]
+        count := u32(next_off - g_off)
+        if count == 0 do continue
+        shape := SHAPE(idx % len(SHAPE))
+        render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(SHAPE))))
+        sd := sr[shape] 
+        command: gl.DrawElementsIndirectCommand = {
+            u32(len(sd.indices)),
+            count,
+            rs.index_offsets[shape],
+            rs.vertex_offsets[shape],
+            u32(g_off)
+        }
+        append(&render_groups[render_type], command)
+    }
+    return render_groups
+}
 
 render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
     x: f32 = 0

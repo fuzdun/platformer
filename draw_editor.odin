@@ -49,7 +49,7 @@ draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, is:
     }
 
     if is.lctrl_pressed {
-        for lg, lg_idx in lgs.entities {
+        for lg, lg_idx in lgs {
             buf: [4]byte
             idx_string := strconv.itoa(buf[:], lg_idx)
             render_screen_text(shs, rs, idx_string, lg.transform.position, proj_mat, 0.3)

@@ -212,7 +212,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_velocity,
         pls.dash_state.dashing,
         pls.slide_state.sliding,
-        lgs.entities[:],
+        lgs^,
         phs.level_colliders,
         phs.static_collider_vertices,
         elapsed_time,
@@ -229,7 +229,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         collision_adjusted_velocity,
         collision_adjusted_contact_state.contact_ray,
         collision_ids,
-        lgs.entities
+        lgs^
     )
 
     new_pls.velocity = collision_adjusted_velocity
@@ -241,7 +241,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_ts.time_mult = apply_bounce_to_time_mult(
         new_ts.time_mult,
         collision_ids,
-        lgs.entities)
+        lgs^
+    )
 
     new_pls.dash_state = updated_dash_state(
         pls.dash_state,
@@ -266,7 +267,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         cts.ground_x,
         cts.ground_z,
         collision_ids,
-        lgs.entities[:],
+        lgs^,
         szs.intersected,
         elapsed_time,
         delta_time
@@ -277,7 +278,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         pls.dash_state.dashing,
         pls.slide_state.sliding,
         collision_ids,
-        lgs.entities,
+        lgs^,
         elapsed_time
     )
 
@@ -285,11 +286,11 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         pls.broke_t,
         pls.dash_state.dashing,
         collision_ids,
-        lgs.entities,
+        lgs^,
         elapsed_time
     )
 
-    new_lgs := dynamic_soa_copy(lgs.entities)
+    new_lgs := soa_copy(lgs^)
 
     new_lgs = apply_restart_to_lgs(is, new_lgs)
 
@@ -300,7 +301,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         // contact_ids,
         elapsed_time
     )
-
+    
     new_lgs = apply_collisions_to_lgs(
         new_lgs,
         pls.dash_state.dashing,
@@ -316,7 +317,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     // set_swap(&szs.last_intersected, szs.intersected)
     delete(szs.intersected)
-    szs.intersected = get_slide_zone_intersections(pls.position, szs^, lgs.entities)
+    szs.intersected = get_slide_zone_intersections(pls.position, szs^, lgs^)
 
     new_szs := dynamic_soa_copy(szs.entities)
     new_szs = apply_transparency_to_szs(new_szs, szs.intersected, delta_time)
@@ -324,7 +325,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // ====================================
     // ASSIGN NEW LGS, CAMERA, PLAYER STATE
     // ====================================
-    dynamic_soa_swap(&lgs.entities, new_lgs)
+    soa_swap(lgs, new_lgs)
     dynamic_soa_swap(&szs.entities, new_szs)
 
     cs^ = updated_camera_state(cs^, new_position)

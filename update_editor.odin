@@ -1,14 +1,16 @@
 package main
 
 import "core:math"
+import "core:fmt"
 import la "core:math/linalg"
 
-editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
+editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, sr: Shape_Resources, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
+    need_sort := false
     // get selected geometry distances
     clear(&es.connections)
-    selected_geometry := lgs.entities[es.selected_entity]
+    selected_geometry := lgs[es.selected_entity]
     if is.c_pressed {
-        for lg, idx in lgs.entities {
+        for lg, idx in lgs {
             if idx == es.selected_entity {
                 continue
             } 
@@ -24,14 +26,14 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
     // move camera
     rot_mat := la.matrix4_from_euler_angles(es.x_rot, es.y_rot, 0, .YXZ)
     selfie_stick := rot_mat * [4]f32{0, 0, es.zoom, 1}
-    lg := lgs.entities[es.selected_entity]
+    lg := lgs[es.selected_entity]
     cs.target = lg.transform.position.xyz
     es.pos = lg.transform.position.xyz
     tgt := lg.transform.position + selfie_stick.xyz
     cs.position = math.lerp(cs.position, tgt, f32(0.075))
 
     // update selected object
-    selected_obj := &lgs.entities[es.selected_entity]
+    selected_obj := &lgs[es.selected_entity]
     rotating := is.r_pressed
     scaling := is.e_pressed
 
@@ -45,7 +47,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
     fwd_move_vec := is.alt_pressed ? camera_fwd_vec : [3]f32{0, 0, -1}
     right_move_vec := is.alt_pressed ? camera_right_vec : [3]f32{1, 0, 0}
     up_move_vec := is.alt_pressed ? camera_up_vec : [3]f32{0, 1, 0}
-    
+
     rot_x, rot_y, rot_z := la.euler_angles_xyz_from_quaternion(selected_obj.transform.rotation)
     if is.q_pressed && es.can_add {
         cur_shape := selected_obj.shape
@@ -56,7 +58,10 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         // new_lg.shaders = {.Level_Geometry_Fill}
         new_lg.render_type = .Standard
         new_lg.attributes = { .Collider }
-        add_geometry(lgs, sr, phs, rs, es, new_lg)
+        
+        es.selected_entity = len(lgs)
+        append(lgs, lg)
+        need_sort = true 
     }
     es.can_add = !is.q_pressed
 
@@ -71,16 +76,18 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         new_lg := selected_obj^
         new_lg.shape = SHAPE(nxt_shape)
         new_lg.collider = SHAPE(nxt_shape)
-        ordered_remove_soa(&lgs.entities, es.selected_entity) 
-        append(&lgs.entities, new_lg)
-        es.selected_entity = len(lgs.entities) - 1
-        editor_reload_level_geometry(lgs, sr, phs, rs)
+        ordered_remove_soa(lgs, es.selected_entity) 
+        append(lgs, new_lg)
+        es.selected_entity = len(lgs) - 1
+        need_sort = true
     }
     es.can_swap = !(is.lt_pressed || is.gt_pressed)
 
     if is.bck_pressed && es.can_delete {
-        remove_geometry(lgs, sr, phs, rs, es)
+        ordered_remove_soa(lgs, es.selected_entity) 
+        es.selected_entity = max(0, min(len(lgs) - 1, es.selected_entity - 1))
     }
+
     es.can_delete = !is.bck_pressed
 
     if is.spc_pressed {
@@ -92,7 +99,6 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else if scaling {
             selected_obj.transform.scale = {20, 20, 20}
         }
-        append(&lgs.dirty_entities, es.selected_entity)
     }
     if is.up_pressed {
         if rotating {
@@ -103,7 +109,6 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else {
             selected_obj.transform.position +=  OBJ_MOVE_SPD * fwd_move_vec * delta_time
         }
-        append(&lgs.dirty_entities, es.selected_entity)
     }
     if is.down_pressed {
         if rotating {
@@ -114,7 +119,6 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else {
             selected_obj.transform.position -=  OBJ_MOVE_SPD * fwd_move_vec * delta_time
         }
-        append(&lgs.dirty_entities, es.selected_entity)
     }
     if is.left_pressed {
         if rotating {
@@ -125,7 +129,6 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else {
             selected_obj.transform.position -= OBJ_MOVE_SPD * right_move_vec * delta_time
         }
-        append(&lgs.dirty_entities, es.selected_entity)
     }
     if is.right_pressed {
         if rotating {
@@ -136,7 +139,6 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else {
             selected_obj.transform.position += OBJ_MOVE_SPD * right_move_vec * delta_time
         }
-        append(&lgs.dirty_entities, es.selected_entity)
     }
     if is.pg_up_pressed {
         if rotating {
@@ -147,7 +149,6 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else {
             selected_obj.transform.position +=  OBJ_MOVE_SPD * up_move_vec * delta_time
         }
-        append(&lgs.dirty_entities, es.selected_entity)
     }
     if is.pg_down_pressed {
         if rotating {
@@ -158,7 +159,6 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
         } else {
             selected_obj.transform.position -=  OBJ_MOVE_SPD * up_move_vec * delta_time
         }
-        append(&lgs.dirty_entities, es.selected_entity)
     }
     if is.a_pressed {
         es.x_rot -= CAM_ROT_SPD
@@ -181,18 +181,22 @@ editor_update :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, es: ^Edit
     if is.tab_pressed && es.can_switch {
         if is.lshift_pressed {
             nxt_selected_entity := es.selected_entity - 1
-            es.selected_entity = nxt_selected_entity < 0 ? len(lgs.entities) - 1 : nxt_selected_entity
+            es.selected_entity = nxt_selected_entity < 0 ? len(lgs) - 1 : nxt_selected_entity
         } else {
-            es.selected_entity = (es.selected_entity + 1) % len(lgs.entities)
+            es.selected_entity = (es.selected_entity + 1) % len(lgs)
         }
     }
     if is.ent_pressed {
         if !es.saved {
-            encode_test_level_cbor(lgs)
+            //encode_test_level_cbor(lgs[:])
             es.saved = true
         }
     } else {
         es.saved = false
+    }
+
+    if need_sort {
+        es.selected_entity = editor_sort_lgs(lgs, es.selected_entity)
     }
 
     es.can_switch = !is.tab_pressed

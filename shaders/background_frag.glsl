@@ -90,7 +90,7 @@ void main() {
     // float t = i_time / 1000.0;
     vec2 center_uv = uv * 2.0 - 1.0;
 
-    vec2 floored_uv = round(center_uv * 10.0) / 10.0;
+    vec2 floored_uv = round(center_uv * 5.0) / 5.0;
     vec2 diff = center_uv - floored_uv;
     center_uv = center_uv + diff * diff * 60.;
 

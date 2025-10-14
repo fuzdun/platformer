@@ -1,5 +1,6 @@
 package main
 
+import "core:sort"
 import "core:encoding/xml/example"
 import "core:fmt"
 import "core:mem"
@@ -15,6 +16,8 @@ import imgui "shared:odin-imgui"
 import imsdl "shared:odin-imgui/imgui_impl_sdl2"
 import imgl "shared:odin-imgui/imgui_impl_opengl3"
 
+MAX_LEVEL_GEOMETRY_COUNT :: 2000
+
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
 PLAYER_DRAW :: #config(PLAYER_DRAW, false)
@@ -27,7 +30,7 @@ FULLSCREEN :: true
 // FULLSCREEN :: false
 TARGET_FRAME_RATE :: 60.0
 FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
-FORCE_EXTERNAL_MONITOR :: true
+FORCE_EXTERNAL_MONITOR :: false
 
 TITLE :: "platformer"
 
@@ -115,7 +118,7 @@ main :: proc () {
     gl.load_up_to(4, 6, SDL.gl_set_proc_address)
 
     // allocate / defer deallocate state structs
-    lgs: Level_Geometry_State; defer free_level_geometry_state(&lgs)
+    lgs: Level_Geometry_State; defer delete(lgs)
     ts:  Time_State;           defer free_time_state(&ts)
     is:  Input_State;          defer free_input_state(&is)
     cs:  Camera_State;         defer free_camera_state(&cs) 
@@ -128,30 +131,27 @@ main :: proc () {
     szs: Slide_Zone_State;     defer free_slide_zone_state(&szs)
 
     // init game state
-    lgs.entities = make(Level_Geometry_Soa)
-    lgs.dirty_entities = make([dynamic]int)
+
     szs.entities = make(#soa[dynamic]Obb)
+
     cs.position = {10, 60, 300}
+
     es.y_rot = -.25
     es.zoom = 400
     es.connections = make([dynamic]Connection)
+
     ts.time_mult = 1.0
 
-    // init physics state
     phs.debug_render_queue.vertices = make([dynamic]Vertex)
     phs.static_collider_vertices = make([dynamic][3]f32)
     for pn in ProgramName {
         phs.debug_render_queue.indices[pn] = make([dynamic]u16)
     }
 
-    // init shaders state
     shs.active_programs = make(map[ProgramName]Active_Program)
 
-    // init render state
-    rs.player_particle_poss = make([dynamic]glm.vec3)
     add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices)
 
-    // init player state
     pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
     pls.dash_state.can_dash = true
@@ -166,7 +166,6 @@ main :: proc () {
     pls.crunch_pts = make([dynamic][4]f32); defer delete(pls.crunch_pts)
     pls.hurt_t = -5000.0
     pls.broke_t = -5000.0
-
     ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
 
     // init level resources
@@ -220,7 +219,7 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        if char_load_err := ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render}); char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
@@ -295,6 +294,7 @@ main :: proc () {
     gl.GenBuffers(1, &rs.dash_ubo)
     gl.GenBuffers(1, &rs.ppos_ubo)
     gl.GenBuffers(1, &rs.tess_ubo)
+    gl.GenBuffers(1, &rs.transforms_ubo)
 
     gl.GenBuffers(1, &rs.particle_vbo)
     gl.GenBuffers(1, &rs.particle_pos_vbo)
@@ -411,23 +411,14 @@ main :: proc () {
             append(&indices, ..sd.indices)
             append(&vertices, ..sd.vertices)
         }
-        rs.player_draw_command = {{
-            u32(len(rs.player_geometry.indices)),
-            1,
-            u32(len(indices)),
-            u32(len(vertices)),
-            0
-        }}
         append(&indices, ..rs.player_geometry.indices)
         append(&vertices, ..rs.player_geometry.vertices)
         pv := rs.player_geometry.vertices 
-        //fmt.println(pv)
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
         gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices[0]) * len(vertices), raw_data(vertices), gl.STATIC_DRAW) 
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
         gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
 
-        //if PLAYER_DRAW {
         pfi := rs.player_fill_indices
         poi := rs.player_outline_indices
         gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
@@ -441,9 +432,43 @@ main :: proc () {
     gl.LineWidth(5)
 
     // load level data
-    load_level_geometry(&lgs, sr, &phs, &rs, &szs, "test_level")
+    loaded_level_geometry := load_level_geometry(sr, &phs, &rs, &szs, "test_level")
+    defer delete(loaded_level_geometry)
+    num_entities := len(loaded_level_geometry) 
+
+    // sort level data
+    lgs = sort_lgs(loaded_level_geometry)
+    add_geometry_to_physics(&phs, &szs, lgs)
+
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(glm.mat4) * num_entities, nil, gl.DYNAMIC_DRAW)
+
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * num_entities, nil, gl.DYNAMIC_DRAW)
+
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.crack_time_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * num_entities, nil, gl.DYNAMIC_DRAW)
+
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.break_data_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * 7 * num_entities, nil, gl.DYNAMIC_DRAW)
+
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transparencies_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * num_entities, nil, gl.DYNAMIC_DRAW)
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transforms_ubo)
+    gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 4, rs.transforms_ubo, 0, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT)
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
+
+    dynamic_lgs := make(#soa[dynamic]Level_Geometry)
+    defer delete(dynamic_lgs)
 
     if EDIT {
+        for lg in lgs {
+            append(&dynamic_lgs, lg)
+        }
+
         // imgui init
         imgui.create_context()
         imgui.style_colors_dark()
@@ -525,7 +550,7 @@ main :: proc () {
         for accumulator >= target_frame_clocks {
             // Fixed update
             if EDIT {
-                editor_update(&lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
+                editor_update(&dynamic_lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
                 game_update(&lgs, is, &pls, phs, &cs, &ts, &szs, f32(elapsed_time), FIXED_DELTA_TIME * ts.time_mult)
             }
@@ -533,7 +558,7 @@ main :: proc () {
         }
 
         // Render
-        draw(&lgs, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
+        draw(lgs[:], sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
         if EDIT {
             imgl.new_frame()
             imsdl.new_frame()
@@ -543,7 +568,7 @@ main :: proc () {
             imgui.text("Level Geometry")
             imgui.begin_child("Scrolling")
             {
-                for lg, lg_idx in lgs.entities {
+                for lg, lg_idx in dynamic_lgs {
                     color: imgui.Vec4 = es.selected_entity == lg_idx ? {1, 0, 0, 1} : {1, 1, 1, 1}
                     buf: [4]byte
                     num_string := strconv.itoa(buf[:], lg_idx)

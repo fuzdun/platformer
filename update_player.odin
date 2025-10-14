@@ -34,7 +34,7 @@ updated_wall_detach_held_t :: proc(wall_detach_held_t: f32, state: Player_States
             wall_detach_held_t = 0
         } else {
             wall_detach_held_t += delta_time * 1000.0
-            fmt.println(wall_detach_held_t)
+            //fmt.println(wall_detach_held_t)
         }
     } else {
         wall_detach_held_t = 0
@@ -188,7 +188,7 @@ updated_crunch_pts :: proc(crunch_pts: [][4]f32, crunch_time: f32, did_bunny_hop
     return
 }
 
-updated_hurt_t :: proc(hurt_t: f32, dashing: bool, sliding: bool, collisions: map[int]struct{}, lgs: Level_Geometry_Soa, elapsed_time: f32) -> f32 {
+updated_hurt_t :: proc(hurt_t: f32, dashing: bool, sliding: bool, collisions: map[int]struct{}, lgs: #soa[]Level_Geometry, elapsed_time: f32) -> f32 {
     if !dashing {
         for id in collisions {
             attr := lgs[id].attributes
@@ -202,7 +202,7 @@ updated_hurt_t :: proc(hurt_t: f32, dashing: bool, sliding: bool, collisions: ma
 }
 
 
-updated_broke_t :: proc(broke_t: f32, dashing: bool, collisions: map[int]struct{}, lgs: Level_Geometry_Soa, elapsed_time: f32) -> f32 {
+updated_broke_t :: proc(broke_t: f32, dashing: bool, collisions: map[int]struct{}, lgs: #soa[]Level_Geometry, elapsed_time: f32) -> f32 {
     if dashing {
         for id in collisions {
             if .Hazardous in lgs[id].attributes {

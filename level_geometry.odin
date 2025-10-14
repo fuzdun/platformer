@@ -4,16 +4,13 @@ import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 
 
-Level_Geometry_State :: struct {
-    entities: Level_Geometry_Soa,
-    dirty_entities: [dynamic]int,
-}
+Level_Geometry_State :: #soa[]Level_Geometry
+//Level_Geometry_State :: #soa[]Level_Geometry
 
-free_level_geometry_state :: proc(lgs: ^Level_Geometry_State) {
-    delete(lgs.entities)
-}
+free_level_geometry_state :: proc(lgs: ^Level_Geometry_State) {}
 
-Level_Geometry_Soa :: #soa[dynamic]Level_Geometry
+//Level_Geometry_Soa :: #soa[dynamic]Level_Geometry
+//Level_Geometry_Soa :: #soa[]Level_Geometry
 
 Level_Geometry :: struct {
     transform: Transform,
@@ -24,9 +21,7 @@ Level_Geometry :: struct {
     attributes: Level_Geometry_Attributes,
     aabb: Aabb,
     crack_time: f32,
-    break_time: f32,
-    break_dir: [3]f32,
-    break_pos: [3]f32,
+    break_data: Break_Data,
     transparency: f32
 }
 

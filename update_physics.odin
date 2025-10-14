@@ -183,7 +183,7 @@ get_collisions :: proc(
     filter: Level_Geometry_Attributes = { .Collider }
     for lg, id in entities {
         coll := level_colliders[lg.collider] 
-        if (lg.crack_time == 0 || et < lg.crack_time + BREAK_DELAY) && lg.break_time == 0 {
+        if (lg.crack_time == 0 || et < lg.crack_time + BREAK_DELAY) && lg.break_data.time == 0 {
             if filter <= lg.attributes {
                 if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
                     vertices := transformed_coll_vertices[tv_offset:tv_offset + len(coll.vertices)] 
@@ -412,13 +412,13 @@ apply_velocity :: proc(
 }
 
 
-apply_bounce_to_velocity :: proc(velocity: [3]f32, contact_ray: [3]f32, collision_ids: map[int]struct{}, lgs: Level_Geometry_Soa) -> [3]f32 {
+apply_bounce_to_velocity :: proc(velocity: [3]f32, contact_ray: [3]f32, collision_ids: map[int]struct{}, lgs: #soa[]Level_Geometry) -> [3]f32 {
     velocity := velocity
     for id in collision_ids {
         if .Bouncy in lgs[id].attributes {
-            fmt.println("before:", velocity)
+            //fmt.println("before:", velocity)
             velocity = (la.normalize(velocity) - la.normalize(contact_ray)) * BOUNCE_VELOCITY
-            fmt.println("after:", velocity)
+            //fmt.println("after:", velocity)
             return velocity
         }
     }
@@ -447,7 +447,7 @@ apply_bounce_to_velocity :: proc(velocity: [3]f32, contact_ray: [3]f32, collisio
 //     return position
 // }
 
-get_slide_zone_intersections :: proc(position: [3]f32, szs: Slide_Zone_State, lgs: Level_Geometry_Soa) -> (out: map[int]struct{}) {
+get_slide_zone_intersections :: proc(position: [3]f32, szs: Slide_Zone_State, lgs: #soa[]Level_Geometry) -> (out: map[int]struct{}) {
     for sz in szs.entities {
         // fmt.println(sz)
         if lgs[sz.id].crack_time != 0 {

@@ -85,7 +85,7 @@ get_geometry_dist :: proc(ps: Physics_State, lga: Level_Geometry, lgb: Level_Geo
 editor_save_changes :: proc(lgs:^Level_Geometry_State, is: Input_State, es: ^Editor_State) {
     if is.ent_pressed {
         if !es.saved {
-            encode_test_level_cbor(lgs)
+            encode_test_level_cbor(lgs^)
             es.saved = true
         }
     } else {
@@ -93,16 +93,16 @@ editor_save_changes :: proc(lgs:^Level_Geometry_State, is: Input_State, es: ^Edi
     }
 }
 
-remove_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State, es: ^Editor_State) {
-    ordered_remove_soa(&lgs.entities, es.selected_entity) 
-    es.selected_entity = max(0, min(len(lgs.entities) - 1, es.selected_entity - 1))
-    editor_reload_level_geometry(lgs, sr, ps, rs)
-}
+//remove_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State, es: ^Editor_State) {
+//    ordered_remove_soa(lgs, es.selected_entity) 
+//    es.selected_entity = max(0, min(len(lgs) - 1, es.selected_entity - 1))
+//    //editor_reload_level_geometry(lgs, sr, ps, rs)
+//}
 
-add_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State, es: ^Editor_State, lg_in: Level_Geometry) {
-    lg := lg_in
-    es.selected_entity = len(lgs.entities)
-    append(&lgs.entities, lg)
-    editor_reload_level_geometry(lgs, sr, ps, rs)
-}
+//add_geometry :: proc(lgs: ^Level_Geometry_State, lg_in: Level_Geometry) {
+//    lg := lg_in
+//    es.selected_entity = len(lgs)
+//    append(lgs, lg)
+//    //editor_reload_level_geometry(lgs, sr, ps, rs)
+//}
 
