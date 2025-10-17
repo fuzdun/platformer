@@ -9,9 +9,11 @@ import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 import tim "core:time"
 
+FWD_Z_CULL :: 600
+BCK_Z_CULL :: 100
+
 draw :: proc(
     lgs: #soa[]Level_Geometry, 
-    //sorted_lgs: #soa[]Level_Geometry,
     sr: Shape_Resources,
     pls: Player_State,
     rs: ^Render_State,
@@ -33,8 +35,10 @@ draw :: proc(
     defer delete(culled_lgs)
     reserve_soa(&culled_lgs, len(lgs))
     
+    min_z_cull := pls.position.z - FWD_Z_CULL
+    max_z_cull := pls.position.z + BCK_Z_CULL
     for lg, idx in lgs {
-        if true {
+        if lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull {
             append(&culled_lgs, lg)
             group_offsets[lg_render_group(lg)] += 1
         }
@@ -46,41 +50,26 @@ draw :: proc(
     draw_commands := offsets_to_render_commands(group_offsets[:], len(culled_lgs), rs^, sr)
     defer free_render_groups(draw_commands)
 
-    z_widths := make([]f32, num_culled_lgs); defer delete(z_widths)
+    z_widths := make([]Z_Width_Ubo, num_culled_lgs); defer delete(z_widths)
     for i in 0..<num_culled_lgs {
-        z_widths[i] = 20
+        z_widths[i] = { 20 }
     }
 
     transforms, angular_velocities,
     shapes, colliders, render_types,
-    attributess, aabbs, crack_times,
-    break_datas, transparencies := soa_unzip(culled_lgs[:])
+    attributess, aabbs, shatter_datas,
+    transparencies := soa_unzip(culled_lgs[:])
+
+    transparency_ubos := make([]Transparency_Ubo, num_culled_lgs); defer delete(transparency_ubos)
+
+    for t, i in transparencies {
+        transparency_ubos[i] = { t }
+    }
 
     transform_mats := make([]glm.mat4, num_culled_lgs); defer delete(transform_mats)
     for t, i in transforms {
         transform_mats[i] = trans_to_mat4(t)
     }
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
-    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(glm.mat4) * num_culled_lgs, &transform_mats[0])
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
-    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(f32) * num_culled_lgs, &z_widths[0])
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.crack_time_ssbo)
-    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(f32) * num_culled_lgs, &crack_times[0])
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.break_data_ssbo)
-    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(Break_Data) * num_culled_lgs, &break_datas[0])
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transparencies_ssbo)
-    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(f32) * num_culled_lgs, &transparencies[0])
-
-    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 0, rs.transforms_ssbo)
-    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 1, rs.z_widths_ssbo)
-    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 2, rs.crack_time_ssbo)
-    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 3, rs.break_data_ssbo)
-    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 4, rs.transparencies_ssbo)
 
     // get projection matrix
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))
@@ -115,6 +104,15 @@ draw :: proc(
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transforms_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(glm.mat4) * num_culled_lgs, &transform_mats[0])
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.z_widths_ubo)
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(glm.vec4) * num_culled_lgs, &z_widths[0])
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.shatter_ubo)
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Shatter_Ubo) * num_culled_lgs, &shatter_datas[0])
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transparencies_ubo)
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Transparency_Ubo) * num_culled_lgs, &transparency_ubos[0])
 
     // get axes for text and particle quad alignment
     camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}

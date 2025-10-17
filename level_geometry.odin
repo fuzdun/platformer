@@ -20,8 +20,8 @@ Level_Geometry :: struct {
     render_type: Level_Geometry_Render_Type,
     attributes: Level_Geometry_Attributes,
     aabb: Aabb,
-    crack_time: f32,
-    break_data: Break_Data,
+    // crack_time: f32,
+    shatter_data: Shatter_Ubo,
     transparency: f32
 }
 

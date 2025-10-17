@@ -18,8 +18,9 @@ patch in vec3 normal_frag;
 patch in vec4 obj_pos;
 patch in float player_dist;
 patch in float plane_dist;
-patch in float crack_time;
-patch in float break_data[7];
+// patch in float crack_time;
+patch in vec4 break_time_pos;
+patch in vec4 crack_time_break_dir;
 
 out TE_OUT {
     vec2 uv;
@@ -27,8 +28,9 @@ out TE_OUT {
     vec4 obj_pos;
     float player_dist;
     float plane_dist;
-    float crack_time;
-    float break_data[7];
+    // float crack_time;
+    vec4 break_time_pos;
+    vec4 crack_time_break_dir;
 
     vec3 t0_pos;
 
@@ -36,12 +38,12 @@ out TE_OUT {
     vec2 t1_uv;
     vec2 t2_uv;
 
-    out vec3 v0;
-    out vec3 v1;
-    out float d00;
-    out float d01;
-    out float d11;
-    out float denom;
+    vec3 v0;
+    vec3 v1;
+    float d00;
+    float d01;
+    float d11;
+    float denom;
 } te_out;
 
 void main() {
@@ -60,8 +62,9 @@ void main() {
     te_out.obj_pos = obj_pos;
     te_out.player_dist = player_dist;
     te_out.plane_dist = plane_dist;
-    te_out.crack_time = crack_time;
-    te_out.break_data = break_data;
+    // te_out.crack_time = crack_time;
+    te_out.break_time_pos = break_time_pos;
+    te_out.crack_time_break_dir = crack_time_break_dir;
 
     te_out.t0_pos = gl_in[0].gl_Position.xyz;
 

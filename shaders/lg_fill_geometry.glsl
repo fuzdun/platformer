@@ -19,8 +19,9 @@ in TE_OUT {
     vec4 obj_pos;
     float player_dist;
     float plane_dist;
-    float crack_time;
-    float break_data[7];
+    // float crack_time;
+    vec4 break_time_pos;
+    vec4 crack_time_break_dir;
 
     vec3 t0_pos;
 
@@ -108,10 +109,12 @@ float random2 (vec2 st) {
 }
 
 void main() {
-    float[7] break_data = te_out[0].break_data;
-    float break_time = break_data[0];
-    vec3 break_pos = vec3(break_data[1], break_data[2], break_data[3]);
-    vec3 break_dir = vec3(break_data[4], break_data[5], break_data[6]);
+    vec4 break_time_pos = te_out[0].break_time_pos;
+    vec4 crack_time_break_dir = te_out[0].crack_time_break_dir;
+    float break_time = break_time_pos.x;
+    vec3 break_pos = break_time_pos.yzw;
+    float crack_time = crack_time_break_dir.x;
+    vec3 break_dir = crack_time_break_dir.yzw;
     bool broken = break_time != 0;
     float seed_val_1 = random2(te_out[0].uv + te_out[1].uv + te_out[2].uv) * 0.5 + .5;
     float seed_val_2 = fract(seed_val_1 * 43758.5453123);
@@ -154,7 +157,6 @@ void main() {
     normal_frag = te_out[0].normal_frag;
 
     float dist = te_out[0].player_dist;
-    float crack_time = te_out[0].crack_time;
     vec3 rot_vec = vec3(random(seed_val_1), random(seed_val_2), random(seed_val_3));
     mat4 rot_mat = rotation3d(rot_vec, (seed_val_2 - 0.5) * CRACK_ROT_AMT);
     float shatter_time = crack_time + shatter_delay;

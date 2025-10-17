@@ -278,35 +278,36 @@ main :: proc () {
     }
     gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 
-    gl.GenBuffers(1, &rs.standard_vbo)
-    gl.GenBuffers(1, &rs.player_vbo)
     gl.GenBuffers(1, &rs.standard_ebo)
     gl.GenBuffers(1, &rs.player_fill_ebo)
     gl.GenBuffers(1, &rs.player_outline_ebo)
-    gl.GenBuffers(1, &rs.indirect_buffer)
-    gl.GenBuffers(1, &rs.transforms_ssbo)
 
-    gl.GenBuffers(1, &rs.z_widths_ssbo)
-    gl.GenBuffers(1, &rs.crack_time_ssbo)
-    gl.GenBuffers(1, &rs.break_data_ssbo)
-    gl.GenBuffers(1, &rs.transparencies_ssbo)
+    gl.GenBuffers(1, &rs.indirect_buffer)
+    
     gl.GenBuffers(1, &rs.common_ubo)
     gl.GenBuffers(1, &rs.dash_ubo)
     gl.GenBuffers(1, &rs.ppos_ubo)
     gl.GenBuffers(1, &rs.tess_ubo)
     gl.GenBuffers(1, &rs.transforms_ubo)
+    gl.GenBuffers(1, &rs.z_widths_ubo)
+    gl.GenBuffers(1, &rs.shatter_ubo)
+    gl.GenBuffers(1, &rs.transparencies_ubo)
 
+    gl.GenBuffers(1, &rs.standard_vbo)
+    gl.GenBuffers(1, &rs.player_vbo)
     gl.GenBuffers(1, &rs.particle_vbo)
     gl.GenBuffers(1, &rs.particle_pos_vbo)
     gl.GenBuffers(1, &rs.background_vbo)
     gl.GenBuffers(1, &rs.text_vbo)
     gl.GenBuffers(1, &rs.editor_lines_vbo)
+
     gl.GenVertexArrays(1, &rs.standard_vao)
     gl.GenVertexArrays(1, &rs.particle_vao)
     gl.GenVertexArrays(1, &rs.background_vao)
     gl.GenVertexArrays(1, &rs.lines_vao)
     gl.GenVertexArrays(1, &rs.player_vao)
     gl.GenVertexArrays(1, &rs.text_vao)
+
     gl.GenTextures(1, &rs.dither_tex)
 
     gl.BindVertexArray(rs.standard_vao)
@@ -389,6 +390,22 @@ main :: proc () {
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Tess_Ubo), nil, gl.STATIC_DRAW)
     gl.BindBufferRange(gl.UNIFORM_BUFFER, 3, rs.tess_ubo, 0, size_of(Tess_Ubo))
 
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transforms_ubo)
+    gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 4, rs.transforms_ubo, 0, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT)
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.z_widths_ubo)
+    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Z_Width_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 5, rs.z_widths_ubo, 0, size_of(Z_Width_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.shatter_ubo)
+    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Shatter_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 6, rs.shatter_ubo, 0, size_of(Shatter_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transparencies_ubo)
+    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 7, rs.transparencies_ubo, 0, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
+
     gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 
     if dither_bin, read_success := os.read_entire_file("textures/blue_noise_64.png"); read_success {
@@ -439,27 +456,6 @@ main :: proc () {
     // sort level data
     lgs = sort_lgs(loaded_level_geometry)
     add_geometry_to_physics(&phs, &szs, lgs)
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transforms_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.z_widths_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.crack_time_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.break_data_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * 7 * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
-
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, rs.transparencies_ssbo)
-    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transforms_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 4, rs.transforms_ubo, 0, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT)
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 
     dynamic_lgs := make(#soa[dynamic]Level_Geometry)
     defer delete(dynamic_lgs)

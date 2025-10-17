@@ -183,7 +183,7 @@ get_collisions :: proc(
     filter: Level_Geometry_Attributes = { .Collider }
     for lg, id in entities {
         coll := level_colliders[lg.collider] 
-        if (lg.crack_time == 0 || et < lg.crack_time + BREAK_DELAY) && lg.break_data.time == 0 {
+        if (lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
             if filter <= lg.attributes {
                 if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
                     vertices := transformed_coll_vertices[tv_offset:tv_offset + len(coll.vertices)] 
@@ -450,7 +450,7 @@ apply_bounce_to_velocity :: proc(velocity: [3]f32, contact_ray: [3]f32, collisio
 get_slide_zone_intersections :: proc(position: [3]f32, szs: Slide_Zone_State, lgs: #soa[]Level_Geometry) -> (out: map[int]struct{}) {
     for sz in szs.entities {
         // fmt.println(sz)
-        if lgs[sz.id].crack_time != 0 {
+        if lgs[sz.id].shatter_data.crack_time != 0 {
             continue
         }
         if hit, _ := sphere_obb_intersection(sz, position, PLAYER_SPHERE_RADIUS); hit {

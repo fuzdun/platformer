@@ -113,17 +113,15 @@ Render_State :: struct {
 
     indirect_buffer: u32,
 
-    transforms_ssbo: u32,
-    z_widths_ssbo: u32,
-    crack_time_ssbo: u32,
-    break_data_ssbo: u32,
-    transparencies_ssbo: u32,
-
     common_ubo: u32,
     dash_ubo: u32,
     ppos_ubo: u32,
     tess_ubo: u32,
     transforms_ubo: u32,
+    z_widths_ubo: u32,
+    shatter_ubo: u32,
+    crack_time_ubo: u32,
+    transparencies_ubo: u32,
 
     dither_tex: u32,
 
@@ -131,12 +129,8 @@ Render_State :: struct {
     player_outline_indices: []u32,
     player_fill_indices: []u32,
 
-    // can remove this later i think
     vertex_offsets: Vertex_Offsets,
     index_offsets: Index_Offsets,
-
-    //render_group_counts: [NUM_RENDER_GROUPS]int
-    //draw_commands: Render_Groups
 }
 
 Char_Tex :: struct {
@@ -168,7 +162,7 @@ Line_Vertex :: struct {
     color: glm.vec3
 }
 
-Shape_Data :: struct{
+Shape_Data :: struct {
     vertices: []Vertex,
     indices: []u32
 }
@@ -203,9 +197,24 @@ Dash_Ubo :: struct {
     constrain_dir: glm.vec3,
 }
 
-Tess_Ubo :: struct {
+Tess_Ubo :: struct #align(16){
     inner_amt: f32,
     outer_amt: f32
+}
+
+Shatter_Ubo :: struct #packed {
+    smash_time: f32,
+    smash_pos: [3]f32, 
+    crack_time: f32,
+    smash_dir: [3]f32,
+}
+
+Z_Width_Ubo :: struct #align(16) {
+    z_width: f32
+}
+
+Transparency_Ubo :: struct #align(16) {
+    transparency: f32
 }
 
 Render_Groups :: [Level_Geometry_Render_Type][dynamic]gl.DrawElementsIndirectCommand 
