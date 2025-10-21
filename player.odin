@@ -137,8 +137,8 @@ Player_State :: struct {
     broke_t: f32,
 
     crunch_pt: [3]f32,
-    crunch_pts: [dynamic][4]f32,
-    screen_crunch_pt: [2]f32,
+    screen_splashes: [dynamic][4]f32,
+    screen_ripple_pt: [2]f32,
     crunch_time: f32,
 
     position: [3]f32,

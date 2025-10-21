@@ -163,7 +163,7 @@ main :: proc () {
     pls.contact_state.touch_time = -1000.0
     pls.spike_compression = 1.0
     pls.crunch_time = -10000.0;
-    pls.crunch_pts = make([dynamic][4]f32); defer delete(pls.crunch_pts)
+    pls.screen_splashes = make([dynamic][4]f32); defer delete(pls.screen_splashes)
     pls.hurt_t = -5000.0
     pls.broke_t = -5000.0
     ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})

@@ -204,11 +204,11 @@ draw :: proc(
         gl.Enable(gl.BLEND)
         gl.Disable(gl.DEPTH_TEST)
         use_shader(shs, rs, .Background)
-        if len(pls.crunch_pts) > 0 {
-            cpts := pls.crunch_pts[:]
-            set_vec4_uniform(shs, "crunch_pts", i32(len(pls.crunch_pts)), &cpts[0])
+        if len(pls.screen_splashes) > 0 {
+            splashes := pls.screen_splashes[:]
+            set_vec4_uniform(shs, "crunch_pts", i32(len(pls.screen_splashes)), &splashes[0])
         }
-        set_int_uniform(shs, "crunch_pt_count", i32(len(pls.crunch_pts)))
+        set_int_uniform(shs, "crunch_pt_count", i32(len(pls.screen_splashes)))
         gl.BindVertexArray(rs.background_vao)
         gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
         gl.Disable(gl.BLEND)
@@ -254,10 +254,10 @@ draw :: proc(
         gl.Clear(gl.COLOR_BUFFER_BIT)
 
         use_shader(shs, rs, .Postprocessing)
-        screen_crunch_pt := pls.screen_crunch_pt
+        screen_ripple_pt := pls.screen_ripple_pt
         set_float_uniform(shs, "time", f32(time))
         set_float_uniform(shs, "crunch_time", f32(pls.crunch_time))
-        set_vec2_uniform(shs, "ppos", 1, &screen_crunch_pt)
+        set_vec2_uniform(shs, "ppos", 1, &screen_ripple_pt)
         gl.BindVertexArray(rs.background_vao)
         gl.BindTexture(gl.TEXTURE_2D, rs.postprocessing_tcb)
         gl.Disable(gl.DEPTH_TEST)
