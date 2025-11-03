@@ -9,7 +9,7 @@ import glm "core:math/linalg/glsl"
 import str "core:strings"
 import SDL "vendor:sdl2"
 import TTF "vendor:sdl2/ttf"
-import  "core:strconv"
+import "core:strconv"
 import gl "vendor:OpenGL"
 import ft "shared:freetype"
 import imgui "shared:odin-imgui"
@@ -24,13 +24,13 @@ PLAYER_DRAW :: #config(PLAYER_DRAW, false)
 
 WIDTH :: 1920.0
 HEIGHT :: 1080.0
-FULLSCREEN :: true
+FULLSCREEN :: false
 // WIDTH :: 900
 // HEIGHT :: 900
 // FULLSCREEN :: false
 TARGET_FRAME_RATE :: 60.0
 FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
-FORCE_EXTERNAL_MONITOR :: false
+FORCE_EXTERNAL_MONITOR :: true
 
 TITLE :: "platformer"
 
@@ -59,7 +59,7 @@ main :: proc () {
             mem.tracking_allocator_destroy(&track)
         }
     }
-    
+
     //create SDL window
     if SDL.Init({.VIDEO, .GAMECONTROLLER}) < 0 {
         fmt.println("SDL could not initialize")
@@ -86,8 +86,10 @@ main :: proc () {
             TITLE,
             external_display_rect.x,
             external_display_rect.y,
-            external_display_rect.w,
-            external_display_rect.h,
+            1920,
+            1080,
+            // external_display_rect.w,
+            // external_display_rect.h,
             {.OPENGL}
         )
 

@@ -218,16 +218,3 @@ apply_velocity :: proc(
     return
 }
 
-get_slide_zone_intersections :: proc(position: [3]f32, szs: Slide_Zone_State, lgs: #soa[]Level_Geometry) -> (out: map[int]struct{}) {
-    for sz in szs.entities {
-        // fmt.println(sz)
-        if lgs[sz.id].shatter_data.crack_time != 0 {
-            continue
-        }
-        if hit, _ := sphere_obb_intersection(sz, position, PLAYER_SPHERE_RADIUS); hit {
-            out[sz.id] = {}
-        }
-    }
-    return
-}
-

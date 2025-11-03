@@ -25,7 +25,6 @@ dynamic_soa_copy :: proc(a: #soa[dynamic]$T) -> #soa[dynamic]T{
 }
 
 soa_swap :: proc(a: ^#soa[]$T, b: #soa[]T)  {
-    //clear_soa(a)   
     for val, i in b {
         a[i] = val
     }

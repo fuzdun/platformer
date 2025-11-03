@@ -12,7 +12,19 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // ==========================
     // EXTRAPOLATE STATE TRIGGERS
     // ==========================
-    input_dir := input_dir(is)
+
+    // get directional input data
+    input_x: f32 = 0.0
+    input_z: f32 = 0.0
+    if is.left_pressed do input_x -= 1
+    if is.right_pressed do input_x += 1
+    if is.up_pressed do input_z -= 1
+    if is.down_pressed do input_z += 1
+    input_dir := la.normalize0([2]f32{input_x, input_z})
+    if is.hor_axis !=0 || is.vert_axis != 0 {
+        input_dir = la.normalize0([2]f32{is.hor_axis, -is.vert_axis})
+    }
+
     got_dir_input := is.up_pressed || is.down_pressed || is.left_pressed || is.right_pressed || is.hor_axis != 0 || is.vert_axis != 0
     on_surface := cts.state == .ON_GROUND || cts.state == .ON_SLOPE || cts.state == .ON_WALL
     normalized_contact_ray := la.normalize(cts.contact_ray) 
@@ -313,40 +325,10 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         }
     }
 
-    // update level geometry
-    new_lgs := soa_copy(lgs^)
-
-    new_lgs = apply_restart_to_lgs(is, new_lgs)
-
-    new_lgs = apply_bunny_hop_to_lgs(
-        new_lgs,
-        bunny_hopped,
-        collision_adjusted_contact_state.last_touched,
-        // contact_ids,
-        elapsed_time
-    )
-    
-    new_lgs = apply_collisions_to_lgs(
-        new_lgs,
-        pls.dash_state.dashing,
-        pls.slide_state.sliding,
-        pls.position,
-        pls.velocity,
-        collision_ids,
-        elapsed_time
-    ) 
-
-    new_lgs = apply_transparency_to_lgs(new_lgs, szs.entities[:], elapsed_time)
-
-    // update slide zone state
-    delete(szs.intersected)
-    szs.intersected = get_slide_zone_intersections(pls.position, szs^, lgs^)
-
-    new_szs := dynamic_soa_copy(szs.entities)
-    new_szs = apply_transparency_to_szs(new_szs, szs.intersected, delta_time)
-
+    // update crunch_time
     new_crunch_time := bunny_hopped ? elapsed_time : pls.crunch_time
 
+    // update screen_splashes
     new_screen_splashes := make([dynamic][4]f32)
     for splash in pls.screen_splashes {
         append(&new_screen_splashes, splash)
@@ -456,8 +438,63 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // ASSIGN NEW LGS, CAMERA, PLAYER STATE
     // ====================================
     delete(pls.screen_splashes)
+
+    // update level geometry
+    new_lgs := soa_copy(lgs^)
+    if is.r_pressed {
+        for &lg in new_lgs {
+            lg.shatter_data.crack_time = 0
+            lg.shatter_data.smash_time = 0
+        }
+    }
+
+    if bunny_hopped {
+        last_touched := collision_adjusted_contact_state.last_touched
+        new_lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
+    }
+
+    for id in collision_ids {
+        lg := &new_lgs[id]
+        if .Dash_Breakable in lg.attributes && new_dash_state.dashing {
+            lg.shatter_data.smash_time = lg.shatter_data.smash_time == 0.0 ? elapsed_time : lg.shatter_data.smash_time 
+            lg.shatter_data.smash_dir = la.normalize(collision_adjusted_velocity)
+            lg.shatter_data.smash_pos = new_position
+        } else if .Slide_Zone in lg.attributes && new_slide_state.sliding {
+            // do nothing
+        } else if .Breakable in lg.attributes {
+            lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.shatter_data.crack_time
+        } else if .Crackable in lg.attributes {
+            lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.shatter_data.crack_time
+        }
+    }
+
+    // update slide zones state
+    new_szs_intersected := make(map[int]struct{})
+    for sz in szs.entities {
+        if lgs[sz.id].shatter_data.crack_time != 0 {
+            continue
+        }
+        if hit, _ := sphere_obb_intersection(sz, new_position, PLAYER_SPHERE_RADIUS); hit {
+            new_szs_intersected[sz.id] = {}
+        }
+    }
+
+    new_szs_entities := dynamic_soa_copy(szs.entities)
+    for &sz in new_szs_entities {
+        if sz.id in new_szs_intersected {
+            sz.transparency_t = clamp(sz.transparency_t - 5.0 * delta_time, 0.1, 0.5)
+        } else {
+            sz.transparency_t = clamp(sz.transparency_t + 5.0 * delta_time, 0.1, 0.5)
+        }
+    }
+
+    for &sz in szs.entities {
+        new_lgs[sz.id].transparency = sz.transparency_t
+    }
+
     soa_swap(lgs, new_lgs)
-    dynamic_soa_swap(&szs.entities, new_szs)
+    dynamic_soa_swap(&szs.entities, new_szs_entities)
+    set_swap(&szs.intersected, new_szs_intersected)
 
     cs^ = updated_camera_state(cs^, new_position)
     pls^ = new_pls

@@ -82,7 +82,7 @@ vec3 tonemap(vec3 x)
 void main() {
     // float shade = pattern(round(uv * 100) / 100.0);
     float shade = pattern(uv * 1.0);
-    vec3 pattern_col = vec3(colormap(shade).rgb) * .8;
+    vec3 pattern_col = vec3(colormap(shade).rgb) * .4;
     fragColor = vec4(0);
     vec4 col = vec4(pattern_col, 0.5);
     // vec4 col = vec4(pattern_col * 0.0, 0.3);
