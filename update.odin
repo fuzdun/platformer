@@ -6,7 +6,6 @@ import "core:fmt"
 
 
 game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: Physics_State, cs: ^Camera_State, ts: ^Time_State, szs: ^Slide_Zone_State, elapsed_time: f32, delta_time: f32) {
-    new_ts := ts^
     cts := pls.contact_state
 
     // ==========================
@@ -216,7 +215,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         }
     }
 
-    // add bunny hop and bounce to time mult
     new_time_mult := math.lerp(ts.time_mult, f32(1.0), f32(0.05))
     if bunny_hopped {
         new_time_mult = 1.75
@@ -264,7 +262,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         }
     }
 
-    new_pls := pls^
+    // new_pls := pls^
 
     // update slide state
     new_slide_state := pls.slide_state
@@ -370,53 +368,54 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_particle_displacement := la.lerp(pls.particle_displacement, new_tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
 
     // ==========================
-    // NEW STUFF PUSHED TO BOTTOM
+    // MUTATE PLAYER STATE 
     // ==========================
-    new_pls.velocity = collision_adjusted_velocity
-    new_pls.prev_position = pls.position
-    new_pls.position = new_position
-    new_pls.contact_state = collision_adjusted_contact_state
+    pls.velocity = collision_adjusted_velocity
+    pls.prev_position = pls.position
+    pls.position = new_position
+    pls.contact_state = collision_adjusted_contact_state
 
-    new_pls.jump_held = is.z_pressed
-    new_pls.jump_pressed_time = new_jump_pressed_time
-    new_pls.wall_detach_held_t = new_wall_detach_held_t
-    new_pls.can_press_jump = jumped ? false :
+    pls.jump_held = is.z_pressed
+    pls.jump_pressed_time = new_jump_pressed_time
+    pls.wall_detach_held_t = new_wall_detach_held_t
+    pls.can_press_jump = jumped ? false :
         pls.can_press_jump || !is.z_pressed && on_surface 
 
     if bunny_hopped {
-        new_pls.dash_hop_debounce_t = elapsed_time
+        pls.dash_hop_debounce_t = elapsed_time
     }
 
-    new_pls.prev_trail_sample = pls.trail_sample
+    pls.prev_trail_sample = pls.trail_sample
 
-    new_pls.trail_sample = {
+    pls.trail_sample = {
         ring_buffer_at(pls.trail, -4),
         ring_buffer_at(pls.trail, -8),
         ring_buffer_at(pls.trail, -12),
     }
 
-    new_pls.trail = ring_buffer_copy(pls.trail)
-    ring_buffer_push(&new_pls.trail, [3]f32 {
+    pls.trail = ring_buffer_copy(pls.trail)
+    ring_buffer_push(&pls.trail, [3]f32 {
         pls.position.x,
         pls.position.y,
         pls.position.z
     })
 
     if cts.state == .ON_GROUND {
-        new_pls.spike_compression = math.lerp(new_pls.spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
+        pls.spike_compression = math.lerp(pls.spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
     } else {
-        new_pls.spike_compression = math.lerp(new_pls.spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
+        pls.spike_compression = math.lerp(pls.spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
     }
 
-    new_pls.crunch_time = new_crunch_time
-    new_pls.screen_splashes = new_screen_splashes
-    new_pls.crunch_pt = new_crunch_pt
+    pls.crunch_time = new_crunch_time
+    delete(pls.screen_splashes)
+    pls.screen_splashes = new_screen_splashes
+    pls.crunch_pt = new_crunch_pt
 
-    new_pls.dash_state = new_dash_state
-    new_pls.slide_state = new_slide_state
+    pls.dash_state = new_dash_state
+    pls.slide_state = new_slide_state
 
-    new_pls.hurt_t = new_hurt_t
-    new_pls.broke_t = new_broke_t
+    pls.hurt_t = new_hurt_t
+    pls.broke_t = new_broke_t
 
     if bunny_hopped {
         proj_mat := construct_camera_matrix(cs^)
@@ -426,23 +425,18 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
             new_crunch_pt.z,
             1
         })
-        new_pls.screen_ripple_pt = ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
+        pls.screen_ripple_pt = ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
     }
 
-    new_pls.tgt_particle_displacement = new_tgt_particle_displacement
-    new_pls.particle_displacement = new_particle_displacement
+    pls.tgt_particle_displacement = new_tgt_particle_displacement
+    pls.particle_displacement = new_particle_displacement
 
-    new_ts.time_mult = new_time_mult 
 
-    // ====================================
-    // ASSIGN NEW LGS, CAMERA, PLAYER STATE
-    // ====================================
-    delete(pls.screen_splashes)
-
-    // update level geometry
-    new_lgs := soa_copy(lgs^)
+    //===========
+    // MUTATE LGS
+    //===========
     if is.r_pressed {
-        for &lg in new_lgs {
+        for &lg in lgs {
             lg.shatter_data.crack_time = 0
             lg.shatter_data.smash_time = 0
         }
@@ -450,11 +444,11 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     if bunny_hopped {
         last_touched := collision_adjusted_contact_state.last_touched
-        new_lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
+        lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
     }
 
     for id in collision_ids {
-        lg := &new_lgs[id]
+        lg := &lgs[id]
         if .Dash_Breakable in lg.attributes && new_dash_state.dashing {
             lg.shatter_data.smash_time = lg.shatter_data.smash_time == 0.0 ? elapsed_time : lg.shatter_data.smash_time 
             lg.shatter_data.smash_dir = la.normalize(collision_adjusted_velocity)
@@ -468,36 +462,37 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         }
     }
 
-    // update slide zones state
-    new_szs_intersected := make(map[int]struct{})
+    for &sz in szs.entities {
+        lgs[sz.id].transparency = sz.transparency_t
+    }
+
+    // ==================
+    // MUTATE SLIDE ZONES
+    // ==================
+    clear(&szs.intersected)
     for sz in szs.entities {
         if lgs[sz.id].shatter_data.crack_time != 0 {
             continue
         }
         if hit, _ := sphere_obb_intersection(sz, new_position, PLAYER_SPHERE_RADIUS); hit {
-            new_szs_intersected[sz.id] = {}
+            szs.intersected[sz.id] = {}
         }
     }
 
-    new_szs_entities := dynamic_soa_copy(szs.entities)
-    for &sz in new_szs_entities {
-        if sz.id in new_szs_intersected {
+    // new_szs_entities := dynamic_soa_copy(szs.entities)
+    for &sz in szs.entities {
+        if sz.id in szs.intersected {
             sz.transparency_t = clamp(sz.transparency_t - 5.0 * delta_time, 0.1, 0.5)
         } else {
             sz.transparency_t = clamp(sz.transparency_t + 5.0 * delta_time, 0.1, 0.5)
         }
     }
 
-    for &sz in szs.entities {
-        new_lgs[sz.id].transparency = sz.transparency_t
-    }
-
-    soa_swap(lgs, new_lgs)
-    dynamic_soa_swap(&szs.entities, new_szs_entities)
-    set_swap(&szs.intersected, new_szs_intersected)
+    // =================
+    // MUTATE TIME STATE
+    // =================
+    ts.time_mult = new_time_mult 
 
     cs^ = updated_camera_state(cs^, new_position)
-    pls^ = new_pls
-    ts^ = new_ts
 }
 
