@@ -4,6 +4,7 @@ import "core:sort"
 import "core:fmt"
 import "core:slice"
 import "core:math"
+import vmem "core:mem/virtual"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
@@ -31,14 +32,14 @@ draw :: proc(
     // =====================
     group_offsets: [NUM_RENDER_GROUPS]int
     
-    culled_lgs := make(#soa[dynamic]Level_Geometry)
-    defer delete(culled_lgs)
+    culled_lgs := make(#soa[dynamic]Level_Geometry, context.temp_allocator)
+
     reserve_soa(&culled_lgs, len(lgs))
     
-    min_z_cull := pls.position.z - FWD_Z_CULL
-    max_z_cull := pls.position.z + BCK_Z_CULL
+    min_z_cull := cs.position.z - FWD_Z_CULL
+    max_z_cull := cs.position.z + BCK_Z_CULL
     for lg, idx in lgs {
-        if lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull {
+        if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
             append(&culled_lgs, lg)
             group_offsets[lg_render_group(lg)] += 1
         }
@@ -48,9 +49,9 @@ draw :: proc(
 
     counts_to_offsets(group_offsets[:])
     draw_commands := offsets_to_render_commands(group_offsets[:], len(culled_lgs), rs^, sr)
-    defer free_render_groups(draw_commands)
 
-    z_widths := make([]Z_Width_Ubo, num_culled_lgs); defer delete(z_widths)
+    z_widths := make([]Z_Width_Ubo, num_culled_lgs, context.temp_allocator)
+
     for i in 0..<num_culled_lgs {
         z_widths[i] = { 20 }
     }
@@ -58,15 +59,14 @@ draw :: proc(
     transforms, angular_velocities,
     shapes, colliders, render_types,
     attributess, aabbs, shatter_datas,
-    transparencies := soa_unzip(culled_lgs[:])
+    transparencies, _physics_idx := soa_unzip(culled_lgs[:])
 
-    transparency_ubos := make([]Transparency_Ubo, num_culled_lgs); defer delete(transparency_ubos)
-
+    transparency_ubos := make([]Transparency_Ubo, num_culled_lgs, context.temp_allocator)
     for t, i in transparencies {
         transparency_ubos[i] = { t }
     }
 
-    transform_mats := make([]glm.mat4, num_culled_lgs); defer delete(transform_mats)
+    transform_mats := make([]glm.mat4, num_culled_lgs, context.temp_allocator)
     for t, i in transforms {
         transform_mats[i] = trans_to_mat4(t)
     }
@@ -123,28 +123,18 @@ draw :: proc(
     // ====================
     //  EXECUTE DRAW CALLS
     // ====================
-
     gl.Viewport(0, 0, WIDTH, HEIGHT)
+    gl.Enable(gl.CULL_FACE)
+    gl.Enable(gl.DEPTH_TEST)
 
     if EDIT {
         // draw edit mode UI/level geometry
         draw_editor(rs, shs, es, is, lgs, draw_commands, proj_mat)
-
-    } else if PLAYER_DRAW {
-        // -- see player draw func below
-        draw_player(rs, pls, shs, f32(time), f32(interp_t))
-      
     } else {
         // bind intermediate framebuffer
         gl.BindFramebuffer(gl.FRAMEBUFFER, rs.postprocessing_fbo)
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-
-        gl.Disable(gl.DEPTH_TEST)
-        gl.Disable(gl.CULL_FACE)
-
-        gl.Enable(gl.CULL_FACE)
-        gl.Enable(gl.DEPTH_TEST)
 
         // draw level geometry
         gl.BindVertexArray(rs.standard_vao)
@@ -189,7 +179,6 @@ draw :: proc(
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         draw_indirect_render_queue(rs^, draw_commands[.Wireframe][:], gl.LINES)
         gl.Disable(gl.BLEND)
-
 
         use_shader(shs, rs, .Barrier)
         gl.Enable(gl.BLEND)
@@ -246,7 +235,6 @@ draw :: proc(
         draw_indirect_render_queue(rs^, draw_commands[.Slide_Zone][:], gl.PATCHES)
         gl.Enable(gl.CULL_FACE)
         gl.Enable(gl.DEPTH_TEST)
-
 
         // draw to main framebuffer with postprocessing effects
         gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 

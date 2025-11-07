@@ -6,34 +6,15 @@ import la "core:math/linalg"
 
 
 Physics_State :: struct{
-    //collisions: [dynamic]typ.Collision,
-    debug_render_queue: struct {
-        vertices: [dynamic]Vertex,
-        indices: [ProgramName][dynamic]u16
-    },
     level_colliders: [SHAPE]Collider_Data,
     static_collider_vertices: [dynamic][3]f32,
 }
 
-clear_physics_state :: proc(ps: ^Physics_State) {
-    //clear(&ps.collisions)
-    clear(&ps.debug_render_queue.vertices)
-    for &iq in ps.debug_render_queue.indices {
-        clear(&iq)
-    }
-}
-
 free_physics_state :: proc(ps: ^Physics_State) {
-    //delete(ps.collisions)
-    delete(ps.debug_render_queue.vertices)
-    for &iq in ps.debug_render_queue.indices {
-        delete(iq)
-    }
     for coll in ps.level_colliders {
         delete(coll.indices) 
         delete(coll.vertices)
     }
-    //delete(ps.level_colliders)
     delete(ps.static_collider_vertices)
 }
 
@@ -49,8 +30,7 @@ Collider_Data :: struct{
     indices: []u16
 }
 
-player_lg_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f32, v: [3]f32, v_l: f32, v_n: [3]f32, c1: [3]f32, cr: [3]f32, gr: f32
-) -> (collided: bool = false, collision_t: f32, collision_n: [3]f32, contact: bool = false) {
+player_triangle_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f32, v: [3]f32, v_l: f32, v_n: [3]f32, c1: [3]f32, cr: [3]f32, gr: f32) -> (collided: bool = false, collision_t: f32, collision_n: [3]f32, contact: bool = false) {
     p_normal, p_dist := triangle_plane(t0, t1, t2)
     collision_n = p_normal
     if la.dot(p_normal, v_n) <= 0 {
@@ -65,7 +45,7 @@ player_lg_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f
         }
         if did_intercept {
             if pt_inside_triangle(t0, t1, t2, intercept_pt) {
-                // collision with triangle face
+                // collision with face
                 collided = true
                 collision_t = intercept_t
             } else {
@@ -77,7 +57,7 @@ player_lg_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f
                     }
                 }
                 if lowest_edge_t <= 1 {
-                    // collision with triangle edge
+                    // collision with edge
                     collided = true
                     collision_t = lowest_edge_t
                 } else {
@@ -89,7 +69,7 @@ player_lg_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f
                         }
                     }
                     if lowest_vertex_t <= 1 {
-                        // collision with triangle edge
+                        // collision with vertex 
                         collided = true
                         collision_t = lowest_vertex_t
                     }
@@ -123,9 +103,9 @@ sphere_plane_intersection :: proc(c: [3]f32, r: f32, plane_norm: [3]f32, plane_d
 }
 
 ray_plane_intersection :: proc(start: [3]f32, offset: [3]f32, plane_n: [3]f32, plane_d: f32) -> (t: f32, q: [3]f32, ok: bool) {
-  t = (plane_d - la.dot(plane_n, start)) / la.dot(plane_n, offset) 
-  if t >= 0 && t <= 1 {
-    q = start + t * offset
+    t = (plane_d - la.dot(plane_n, start)) / la.dot(plane_n, offset) 
+    if t >= 0 && t <= 1 {
+        q = start + t * offset
         ok = true
         return
     }

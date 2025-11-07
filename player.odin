@@ -55,10 +55,9 @@ SLIDE_COOLDOWN: f32: 600
 SLIDE_ANIM_EASE_LEN: f32: 100
 
 // physics
-GROUND_RAY_LEN ::  2.0
-GROUNDED_RADIUS: f32: 0.01 
-GROUNDED_RADIUS2 :: GROUNDED_RADIUS * GROUNDED_RADIUS
-GROUND_OFFSET: f32 = 1.0 
+CONTACT_RAY_LEN ::  1.1
+CONTACT_RAY_LEN2 :: CONTACT_RAY_LEN * CONTACT_RAY_LEN
+GROUND_BUFFER: f32 = 0.1 
 
 // rendering
 PARTICLE_DISPLACEMENT_LERP :: 0.25
@@ -98,8 +97,8 @@ Contact_State :: struct {
     left_slope: f32,
     left_wall: f32,
     contact_ray: [3]f32,
-    ground_x: [3]f32,
-    ground_z: [3]f32,
+    // ground_x: [3]f32,
+    // ground_z: [3]f32,
     last_touched: int
 }
 
@@ -143,6 +142,9 @@ Player_State :: struct {
 
     position: [3]f32,
     velocity: [3]f32,
+
+    ground_x: [3]f32,
+    ground_z: [3]f32,
 
     can_press_jump: bool,
     jump_pressed_time: f32,

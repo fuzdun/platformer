@@ -4,6 +4,7 @@ import "core:sort"
 import "core:math"
 import "core:slice"
 import "core:fmt"
+import "base:runtime"
 import str "core:strings"
 import gl "vendor:OpenGL"
 import la "core:math/linalg"
@@ -219,12 +220,6 @@ Transparency_Ubo :: struct #align(16) {
 
 Render_Groups :: [Level_Geometry_Render_Type][dynamic]gl.DrawElementsIndirectCommand 
 
-free_render_groups :: proc(rgs: Render_Groups) {
-    for rg in rgs {
-        delete(rg)
-    }
-}
-
 free_render_state :: proc(rs: ^Render_State) {
     ft.done_face(rs.face)
     ft.done_free_type(rs.ft_lib)
@@ -263,8 +258,8 @@ editor_sort_lgs :: proc(lgs: ^#soa[dynamic]Level_Geometry, current_selection: in
     return
 }
 
-sort_lgs :: proc(lgs: []Level_Geometry) -> Level_Geometry_State {
-    sorted_lgs := make(#soa[]Level_Geometry, len(lgs))
+sort_lgs :: proc(lgs: []Level_Geometry, alloc: runtime.Allocator) -> Level_Geometry_State {
+    sorted_lgs := make(#soa[]Level_Geometry, len(lgs), alloc)
     group_counts: [NUM_RENDER_GROUPS]int
     for lg, idx in lgs {
         group_counts[lg_render_group(lg)] += 1
@@ -282,7 +277,7 @@ sort_lgs :: proc(lgs: []Level_Geometry) -> Level_Geometry_State {
 offsets_to_render_commands :: proc(offsets: []int, lg_count: int, rs: Render_State, sr: Shape_Resources) -> Render_Groups {
     render_groups: Render_Groups
     for &rg in render_groups {
-        rg = make([dynamic]gl.DrawElementsIndirectCommand)
+        rg = make([dynamic]gl.DrawElementsIndirectCommand, context.temp_allocator)
     } 
     for g_off, idx in offsets {
         next_off := idx == len(offsets) - 1 ? lg_count : offsets[idx + 1]

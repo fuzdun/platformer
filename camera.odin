@@ -3,24 +3,14 @@ package main
 import "core:math"
 import glm "core:math/linalg/glsl"
 
-
+INIT_CAMERA_POS: [3]f32: {10, 60, 300} 
+CAMERA_PLAYER_X_OFFSET :: 0 
 CAMERA_PLAYER_Y_OFFSET :: 30
 CAMERA_PLAYER_Z_OFFSET :: 55 
 CAMERA_POS_LERP :: 0.04
-// CAMERA_POS_LERP :: 0.004
 CAMERA_X_LERP :: 0.10
-//CAMERA_X_LERP :: 0.015
 CAMERA_Y_LERP :: 0.07
 CAMERA_Z_LERP :: 0.10
-
- //CAMERA_PLAYER_Y_OFFSET :: 3 
- //CAMERA_PLAYER_Z_OFFSET :: 6 
- //CAMERA_POS_LERP :: 1.00
- //CAMERA_X_LERP :: 1.00
- //CAMERA_Y_LERP :: 1.00
- //CAMERA_Z_LERP :: 1.00
-
-CAMERA_PLAYER_X_OFFSET :: 0 
 
 Camera_State :: struct {
     position: [3]f32,

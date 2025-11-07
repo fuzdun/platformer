@@ -12,7 +12,7 @@ draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, is:
 
     gl.BindVertexArray(rs.standard_vao)
 
-    // draw geometry
+    // draw geometry (w/ outlines)
     use_shader(shs, rs, .Editor_Geometry)
     draw_indirect_render_queue(rs^, rg[.Standard][:], gl.TRIANGLES)
     draw_indirect_render_queue(rs^, rg[.Dash_Barrier][:], gl.TRIANGLES)
@@ -20,11 +20,11 @@ draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, is:
     draw_indirect_render_queue(rs^, rg[.Slide_Zone][:], gl.TRIANGLES)
 
     // draw geometry outlines
-    use_shader(shs, rs, .Level_Geometry_Outline)
-    draw_indirect_render_queue(rs^, rg[.Standard][:], gl.TRIANGLES)
-    draw_indirect_render_queue(rs^, rg[.Dash_Barrier][:], gl.TRIANGLES)
-    draw_indirect_render_queue(rs^, rg[.Wireframe][:], gl.TRIANGLES)
-    draw_indirect_render_queue(rs^, rg[.Slide_Zone][:], gl.TRIANGLES)
+    // use_shader(shs, rs, .Level_Geometry_Outline)
+    // draw_indirect_render_queue(rs^, rg[.Standard][:], gl.TRIANGLES)
+    // draw_indirect_render_queue(rs^, rg[.Dash_Barrier][:], gl.TRIANGLES)
+    // draw_indirect_render_queue(rs^, rg[.Wireframe][:], gl.TRIANGLES)
+    // draw_indirect_render_queue(rs^, rg[.Slide_Zone][:], gl.TRIANGLES)
 
     // draw geometry connections
     lines := make([dynamic]Line_Vertex); defer delete(lines)

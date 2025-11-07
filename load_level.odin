@@ -5,6 +5,8 @@ import "core:encoding/cbor"
 import "core:os"
 import "core:math"
 import "core:fmt"
+import "base:runtime"
+import vmem "core:mem/virtual"
 import rnd "core:math/rand"
 import str "core:strings"
 import glm "core:math/linalg/glsl"
@@ -19,32 +21,25 @@ trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
 }
 
 encode_test_level_cbor :: proc(lgs: #soa[]Level_Geometry) {
-    aos_level_data := make([dynamic]Level_Geometry)
-    defer delete(aos_level_data)
-
+    aos_level_data := make([dynamic]Level_Geometry, context.temp_allocator)
     for &lg in lgs {
         lg.attributes = {.Collider, .Crackable}
         append(&aos_level_data, lg)
     }
-
-    bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC)
-    defer delete(bin)
+    bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
     os.write_entire_file("levels/test_level.bin", bin)
 }
 
-load_level_geometry :: proc(sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State, szs: ^Slide_Zone_State, filename: string) -> []Level_Geometry {
-    level_filename := str.concatenate({"levels/", filename, ".bin"})
-    defer delete(level_filename)
-    level_bin, read_err := os.read_entire_file(level_filename)
-    defer delete(level_bin)
-    decoded, decode_err := cbor.decode(string(level_bin))
-    defer cbor.destroy(decoded)
+load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Level_Geometry {
+    level_filename := str.concatenate({"levels/", filename, ".bin"}, context.temp_allocator)
+    level_bin, read_err := os.read_entire_file(level_filename, context.temp_allocator)
+    decoded, decode_err := cbor.decode(string(level_bin), nil, context.temp_allocator)
     decoded_arr := decoded.(^cbor.Array)
     loaded_level_geometry: []Level_Geometry
 
     if PERF_TEST {
         // perf test load======================
-        loaded_level_geometry = make([]Level_Geometry, 1000)
+        loaded_level_geometry = make([]Level_Geometry, 1000, arena)
         for i in 0..< 1000 {
             rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
             lg: Level_Geometry
@@ -58,26 +53,13 @@ load_level_geometry :: proc(sr: Shape_Resources, ps: ^Physics_State, rs: ^Render
             lg.attributes = { .Collider }
             loaded_level_geometry[i] = lg
         }
-        // =====================================
-    } else if PLAYER_DRAW {
-        //loaded_level_geometry = make([]Level_Geometry, 1)
-        rot := la.quaternion_from_euler_angles_f32(0, 0, 0, .XYZ)
-        shape: SHAPE = .CUBE
-        lg: Level_Geometry
-        lg.shape = shape
-        lg.collider = shape
-        lg.transform = {{0, -1000, 0},{1000, 1000, 1000}, rot}
-        lg.render_type = .Standard 
-        lg.attributes = { .Collider }
-        loaded_level_geometry[0] = lg
     } else {
         // standard load from level data=============
-        loaded_level_geometry = make([]Level_Geometry, len(decoded_arr))
+        loaded_level_geometry = make([]Level_Geometry, len(decoded_arr), arena)
         for entry, idx in decoded_arr {
             // decode level geometry struct
             lg: Level_Geometry
-            entry_bin, _ := cbor.encode(entry)
-            defer delete(entry_bin)
+            entry_bin, _ := cbor.encode(entry, cbor.ENCODE_SMALL, context.temp_allocator)
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
             lg.transparency = 1.0
@@ -98,33 +80,13 @@ load_level_geometry :: proc(sr: Shape_Resources, ps: ^Physics_State, rs: ^Render
         }
     }
     return loaded_level_geometry
-    //add_geometry_to_physics(ps, szs, loaded_level_geometry)
-    //add_geometry_to_renderer(lgs, rs, ps, loaded_level_geometry)
-}
-
-editor_reload_level_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State) {
-    //current_level_geometry := make([]Level_Geometry, len(lgs))
-    //defer delete(current_level_geometry)
-    //for lg, idx in lgs {
-    //    current_level_geometry[idx] = lg
-    //}
-    //clear(lgs)
-    //add_geometry_to_renderer(lgs, rs, ps, current_level_geometry[:])
-}
-
-lg_get_transformed_collider_vertices :: proc(lg: Level_Geometry, trans_mat: matrix[4, 4]f32, ps: Physics_State, out: [][3]f32) {
-    vertices := ps.level_colliders[lg.shape].vertices
-    for v, vi in vertices {
-        out[vi] = (trans_mat * [4]f32{v[0], v[1], v[2], 1.0}).xyz    
-    }
 }
 
 add_geometry_to_physics :: proc(ps: ^Physics_State, szs: ^Slide_Zone_State, lgs_in: #soa[]Level_Geometry) {
-    clear_physics_state(ps)
     for &lg, lg_idx in lgs_in {
         rot_mat := glm.mat4FromQuat(lg.transform.rotation)
         vertices_len := len(ps.level_colliders[lg.shape].vertices)
-        transformed_vertices := make([][3]f32, vertices_len);
+        transformed_vertices := make([][3]f32, vertices_len)
         defer delete(transformed_vertices)
         if lg.shape == .SLIDE_ZONE {
             sz: Obb
@@ -138,28 +100,26 @@ add_geometry_to_physics :: proc(ps: ^Physics_State, szs: ^Slide_Zone_State, lgs_
             append(&szs.entities, sz)
         }
         trans_mat := trans_to_mat4(lg.transform)
-        lg_get_transformed_collider_vertices(lg, trans_mat, ps^, transformed_vertices[:])
-
-        aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
-        aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
-        for v in transformed_vertices {
-            aabbx0 = min(v.x - 10, aabbx0)
-            aabby0 = min(v.y - 10, aabby0)
-            aabbz0 = min(v.z - 10, aabbz0)
-            aabbx1 = max(v.x + 10, aabbx1)
-            aabby1 = max(v.y + 10, aabby1)
-            aabbz1 = max(v.z + 10, aabbz1)
+        for v, vi in ps.level_colliders[lg.shape].vertices {
+            transformed_vertices[vi] = (trans_mat * [4]f32{v[0], v[1], v[2], 1.0}).xyz
         }
-        lg.aabb = {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
+        lg.aabb = vertices_to_aabb(transformed_vertices)
+        lg.physics_idx = len(ps.static_collider_vertices)
         append(&ps.static_collider_vertices, ..transformed_vertices)
     }
 }
 
-//add_geometry_to_renderer :: proc(lgs: ^Dynamic_Level_Geometry_State, rs: ^Render_State, ps: ^Physics_State, lgs_in: []Level_Geometry) {
-//    for &lg in lgs_in {
-////        //trans_mat := trans_to_mat4(lg.transform)
-////        //vertices_len := len(ps.level_colliders[lg.shape].vertices)
-//        append(lgs, lg)
-//    }
-//}
+vertices_to_aabb :: proc(vertices: [][3]f32) -> Aabb {
+    aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
+    aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
+    for v in vertices {
+        aabbx0 = min(v.x - 10, aabbx0)
+        aabby0 = min(v.y - 10, aabby0)
+        aabbz0 = min(v.z - 10, aabbz0)
+        aabbx1 = max(v.x + 10, aabbx1)
+        aabby1 = max(v.y + 10, aabby1)
+        aabbz1 = max(v.z + 10, aabbz1)
+    }
+    return {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
+}
 

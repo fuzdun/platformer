@@ -5,11 +5,12 @@ import "core:encoding/xml/example"
 import "core:fmt"
 import "core:mem"
 import "core:os"
+import "core:strconv"
+import vmem "core:mem/virtual"
 import glm "core:math/linalg/glsl"
 import str "core:strings"
 import SDL "vendor:sdl2"
 import TTF "vendor:sdl2/ttf"
-import "core:strconv"
 import gl "vendor:OpenGL"
 import ft "shared:freetype"
 import imgui "shared:odin-imgui"
@@ -20,25 +21,24 @@ MAX_LEVEL_GEOMETRY_COUNT :: 2000
 
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
-PLAYER_DRAW :: #config(PLAYER_DRAW, false)
 
 WIDTH :: 1920.0
 HEIGHT :: 1080.0
-FULLSCREEN :: false
-// WIDTH :: 900
-// HEIGHT :: 900
-// FULLSCREEN :: false
+FULLSCREEN :: true
 TARGET_FRAME_RATE :: 60.0
 FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
-FORCE_EXTERNAL_MONITOR :: true
+FORCE_EXTERNAL_MONITOR :: false
 
-TITLE :: "platformer"
+TITLE :: "Durian"
 
 quit_app := false
 
 main :: proc () {
-    controller : ^SDL.GameController
-    // debug mem leak detector
+
+    // #####################################################
+    // DEBUG MEMORY ALLOCATOR
+    // #####################################################
+
     when ODIN_DEBUG {
         track: mem.Tracking_Allocator
         mem.tracking_allocator_init(&track, context.allocator)
@@ -60,7 +60,18 @@ main :: proc () {
         }
     }
 
-    //create SDL window
+    // #####################################################
+    // INIT ARENA ALLOCATORS
+    // #####################################################
+
+    perm_arena: vmem.Arena
+    arena_err := vmem.arena_init_growing(&perm_arena); ensure(arena_err == nil)
+    perm_arena_alloc := vmem.arena_allocator(&perm_arena)
+
+    // #####################################################
+    // INIT SDL WINDOW
+    // #####################################################
+
     if SDL.Init({.VIDEO, .GAMECONTROLLER}) < 0 {
         fmt.println("SDL could not initialize")
     }
@@ -69,6 +80,8 @@ main :: proc () {
     if TTF.Init() == -1 {
         fmt.eprintln("failed to initialize TTF:", TTF.GetError())
     }
+
+    controller : ^SDL.GameController
 
     for i in 0..<SDL.NumJoysticks() {
         if (SDL.IsGameController(i)) {
@@ -86,10 +99,8 @@ main :: proc () {
             TITLE,
             external_display_rect.x,
             external_display_rect.y,
-            1920,
-            1080,
-            // external_display_rect.w,
-            // external_display_rect.h,
+            external_display_rect.w,
+            external_display_rect.h,
             {.OPENGL}
         )
 
@@ -112,47 +123,35 @@ main :: proc () {
         SDL.SetWindowFullscreen(window, SDL.WINDOW_FULLSCREEN)
     }
 
-    // hook up OpenGL
+    // #####################################################
+    // INIT OPENGL
+    // #####################################################
+
     SDL.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 4)
     SDL.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 6)
     gl_context := SDL.GL_CreateContext(window)
     SDL.GL_MakeCurrent(window, gl_context)
     gl.load_up_to(4, 6, SDL.gl_set_proc_address)
 
-    // allocate / defer deallocate state structs
-    lgs: Level_Geometry_State; defer delete(lgs)
-    ts:  Time_State;           defer free_time_state(&ts)
-    is:  Input_State;          defer free_input_state(&is)
-    cs:  Camera_State;         defer free_camera_state(&cs) 
-    es:  Editor_State;         defer free_editor_state(&es)
-    phs: Physics_State;        defer free_physics_state(&phs)
-    shs: Shader_State;         defer free_shader_state(&shs)
-    rs:  Render_State;         defer free_render_state(&rs)
-    pls: Player_State;         defer free_player_state(&pls)
-    sr:  Shape_Resources;      defer free_level_resources(&sr)
-    szs: Slide_Zone_State;     defer free_slide_zone_state(&szs)
+    // #####################################################
+    // ALLOCATE STATE STRUCTS
+    // #####################################################
 
-    // init game state
+    lgs: Level_Geometry_State;
+    ts:  Time_State;
+    is:  Input_State;
+    cs:  Camera_State;
+    es:  Editor_State;
+    phs: Physics_State;
+    shs: Shader_State;
+    rs:  Render_State;
+    pls: Player_State;
+    sr:  Shape_Resources;
+    szs: Slide_Zone_State;
 
-    szs.entities = make(#soa[dynamic]Obb)
-
-    cs.position = {10, 60, 300}
-
-    es.y_rot = -.25
-    es.zoom = 400
-    es.connections = make([dynamic]Connection)
-
-    ts.time_mult = 1.0
-
-    phs.debug_render_queue.vertices = make([dynamic]Vertex)
-    phs.static_collider_vertices = make([dynamic][3]f32)
-    for pn in ProgramName {
-        phs.debug_render_queue.indices[pn] = make([dynamic]u16)
-    }
-
-    shs.active_programs = make(map[ProgramName]Active_Program)
-
-    add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices)
+    // #####################################################
+    // INIT PLAYER STATE
+    // #####################################################
 
     pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
@@ -160,35 +159,81 @@ main :: proc () {
     pls.slide_state.slide_end_time = -SLIDE_COOLDOWN
     pls.slide_state.can_slide = true
     pls.can_press_jump = false
-    pls.contact_state.ground_x = {1, 0, 0}
-    pls.contact_state.ground_z = {0, 0, -1}
+    pls.ground_x = {1, 0, 0}
+    pls.ground_z = {0, 0, -1}
     pls.contact_state.touch_time = -1000.0
     pls.spike_compression = 1.0
     pls.crunch_time = -10000.0;
-    pls.screen_splashes = make([dynamic][4]f32); defer delete(pls.screen_splashes)
+    pls.screen_splashes = make([dynamic][4]f32, perm_arena_alloc)
     pls.hurt_t = -5000.0
     pls.broke_t = -5000.0
     ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
 
-    // init level resources
+    // #####################################################
+    // INIT MISC STATE
+    // #####################################################
+
+    // camera-------------------------------
+    cs.position = INIT_CAMERA_POS 
+
+    // editor-------------------------------
+    es.y_rot = INIT_EDITOR_ROTATION 
+    es.zoom = INIT_EDITOR_ZOOM
+
+    // slize zones-------------------------
+    szs.entities = make(#soa[dynamic]Obb, perm_arena_alloc)
+    szs.intersected = make(map[int]struct{}, perm_arena_alloc)
+
+    // time---------------------------------
+    ts.time_mult = 1.0
+
+    // player icosphere mesh----------------
+    add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices, perm_arena_alloc)
+
+    // #####################################################
+    // LOAD BLENDER RESOURCES 
+    // #####################################################
+
     for shape in SHAPE {
-        if ok := load_glb_model(shape, &sr, &phs); ok {
+        if ok := load_glb_model(shape, &sr, &phs, perm_arena_alloc); ok {
             fmt.println("loaded", shape) 
         }
     }
 
-    // init shader programs
+    // #####################################################
+    // LOAD AND SORT LEVEL GEOMETRY
+    // #####################################################
+
+    // load from level file ----------------
+    loaded_level_geometry := load_level_geometry("test_level", perm_arena_alloc)
+    num_entities := len(loaded_level_geometry) 
+
+    // sort into render groups -------------
+    lgs = sort_lgs(loaded_level_geometry, perm_arena_alloc)
+
+    // add to physics ----------------------
+    phs.static_collider_vertices = make([dynamic][3]f32, perm_arena_alloc)
+    add_geometry_to_physics(&phs, &szs, lgs)
+
+    // dynamic_lgs (used for editor) -------
+    dynamic_lgs := make(#soa[dynamic]Level_Geometry, perm_arena_alloc)
+    for lg in lgs {
+        append(&dynamic_lgs, lg)
+    }
+
+    // #####################################################
+    // COMPILE SHADERS 
+    // #####################################################
+
+    shs.active_programs = make(map[ProgramName]Active_Program, perm_arena_alloc)
     dir := "shaders/"
     ext := ".glsl"
     for config, program in PROGRAM_CONFIGS {
-        shaders := make([]u32, len(config.pipeline))
-        defer delete(shaders)
+        shaders := make([]u32, len(config.pipeline), context.temp_allocator)
         for filename, shader_i in config.pipeline {
             type := config.shader_types[shader_i]
-            filename := str.concatenate({dir, filename, ext})
-            defer delete(filename)
-            shader_string, shader_ok := os.read_entire_file(filename)
-            defer delete(shader_string)
+            filename := str.concatenate({dir, filename, ext}, context.temp_allocator)
+            shader_string, shader_ok := os.read_entire_file(filename, context.temp_allocator)
             if !shader_ok {
                 fmt.eprintln("failed to read shader file:", shader_string)
             }
@@ -202,21 +247,24 @@ main :: proc () {
         program_id, program_ok := gl.create_and_link_program(shaders)
         if !program_ok {
             fmt.eprintln("program link failed:", program)
-            //return false
         }
         shs.active_programs[program] = {program_id, make(map[string]i32)}
         prog := shs.active_programs[program]
+        prog.locations = make(map[string]i32, perm_arena_alloc)
         for uniform in config.uniforms {
-            cstr_name := str.clone_to_cstring(uniform); defer delete(cstr_name)
+            cstr_name := str.clone_to_cstring(uniform, context.temp_allocator)
             prog.locations[uniform] = gl.GetUniformLocation(program_id, cstr_name)
             shs.active_programs[program] = prog
         }
     }
 
-    // init text rendering
+    // #####################################################
+    // INIT TEXT RENDERING
+    // #####################################################
+
     ft.init_free_type(&rs.ft_lib)
     ft.new_face(rs.ft_lib, "fonts/0xProtoNerdFont-Bold.ttf", 0, &rs.face)
-    rs.char_tex_map = make(map[rune]Char_Tex)
+    rs.char_tex_map = make(map[rune]Char_Tex, perm_arena_alloc)
     ft.set_pixel_sizes(rs.face, 0, 256)
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
@@ -248,17 +296,14 @@ main :: proc () {
             bearing = {i32(rs.face.glyph.bitmap_left), i32(rs.face.glyph.bitmap_top)},
             next = u32(rs.face.glyph.advance.x)
         }
-        // fmt.println(ct)
         rs.char_tex_map[rune(c)] = ct
     } 
 
-    //if !init_shaders(ss) {
-    //    fmt.eprintln("shader init failed")
-    //    return false
-    //}
+    // #####################################################
+    // INIT MESH RENDERING
+    // #####################################################
 
-    // init mesh rendering
-    
+    // init buffers / VAOs ----------------
     gl.GenFramebuffers(1, &rs.postprocessing_fbo)
     gl.GenTextures(1, &rs.postprocessing_tcb)
     gl.GenRenderbuffers(1, &rs.postprocessing_rbo)
@@ -410,8 +455,8 @@ main :: proc () {
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 
-    if dither_bin, read_success := os.read_entire_file("textures/blue_noise_64.png"); read_success {
-        defer delete(dither_bin)
+    // load blue noise dither texture -----
+    if dither_bin, read_success := os.read_entire_file("textures/blue_noise_64.png", perm_arena_alloc); read_success {
         gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
@@ -420,67 +465,48 @@ main :: proc () {
         gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 64, 64, 0, gl.RGBA, gl.UNSIGNED_BYTE, &dither_bin[0])
     }
 
-    {
-        vertices := make([dynamic]Vertex); defer delete(vertices)
-        indices := make([dynamic]u32); defer delete(indices)
-        for shape in SHAPE {
-            sd := sr[shape]
-            rs.vertex_offsets[int(shape)] = u32(len(vertices))
-            rs.index_offsets[int(shape)] = u32(len(indices))
-            append(&indices, ..sd.indices)
-            append(&vertices, ..sd.vertices)
-        }
-        append(&indices, ..rs.player_geometry.indices)
-        append(&vertices, ..rs.player_geometry.vertices)
-        pv := rs.player_geometry.vertices 
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices[0]) * len(vertices), raw_data(vertices), gl.STATIC_DRAW) 
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
-        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices[0]) * len(indices), raw_data(indices), gl.STATIC_DRAW)
-
-        pfi := rs.player_fill_indices
-        poi := rs.player_outline_indices
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
-        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(poi[0]) * len(poi), raw_data(poi), gl.STATIC_DRAW)
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
-        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(pfi[0]) * len(pfi), raw_data(pfi), gl.STATIC_DRAW)
+    // load resource vertices/indices buffers
+    element_array_vertices := make([dynamic]Vertex, context.temp_allocator)
+    element_array_indices := make([dynamic]u32, context.temp_allocator)
+    for shape in SHAPE {
+        sd := sr[shape]
+        rs.vertex_offsets[int(shape)] = u32(len(element_array_vertices))
+        rs.index_offsets[int(shape)] = u32(len(element_array_indices))
+        append(&element_array_indices, ..sd.indices)
+        append(&element_array_vertices, ..sd.vertices)
     }
+    append(&element_array_indices, ..rs.player_geometry.indices)
+    append(&element_array_vertices, ..rs.player_geometry.vertices)
+    pv := rs.player_geometry.vertices 
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(element_array_vertices[0]) * len(element_array_vertices), raw_data(element_array_vertices), gl.STATIC_DRAW) 
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
+    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(element_array_indices[0]) * len(element_array_indices), raw_data(element_array_indices), gl.STATIC_DRAW)
 
-    gl.Enable(gl.CULL_FACE)
-    gl.Enable(gl.DEPTH_TEST)
-    gl.LineWidth(5)
+    pfi := rs.player_fill_indices
+    poi := rs.player_outline_indices
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
+    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(poi[0]) * len(poi), raw_data(poi), gl.STATIC_DRAW)
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
+    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(pfi[0]) * len(pfi), raw_data(pfi), gl.STATIC_DRAW)
 
-    // load level data
-    loaded_level_geometry := load_level_geometry(sr, &phs, &rs, &szs, "test_level")
-    defer delete(loaded_level_geometry)
-    num_entities := len(loaded_level_geometry) 
-
-    // sort level data
-    lgs = sort_lgs(loaded_level_geometry)
-    add_geometry_to_physics(&phs, &szs, lgs)
-
-    dynamic_lgs := make(#soa[dynamic]Level_Geometry)
-    defer delete(dynamic_lgs)
+    // #####################################################
+    // INIT IMGUI
+    // #####################################################
 
     if EDIT {
-        for lg in lgs {
-            append(&dynamic_lgs, lg)
-        }
-
-        // imgui init
         imgui.create_context()
         imgui.style_colors_dark()
         io := imgui.get_io()
-        // io.config_flags |= {imgui.Config_Flag.Nav_Enable_Keyboard}
-        // io.config_flags |= {imgui.Config_Flag.Nav_Enable_Gamepad}
         io.config_flags |= {imgui.Config_Flag.Docking_Enable}
-
         imsdl.init_for_open_gl(window, gl_context)
         imgl.init()
     }
     
-    
-    // start frame loop
+    // #####################################################
+    // FRAME LOOP 
+    // #####################################################
+
     clocks_per_second := i64(SDL.GetPerformanceFrequency())
     target_frame_clocks := clocks_per_second / TARGET_FRAME_RATE
     max_deviation := clocks_per_second / 5000
@@ -506,7 +532,6 @@ main :: proc () {
         if quit_app do break
 
         elapsed_time := f64(SDL.GetTicks())
-        // elapsed_time := f64(SDL.GetTicks()) * 0.1
 
         current_time = i64(SDL.GetPerformanceCounter())
         delta_time = current_time - previous_time
@@ -515,7 +540,6 @@ main :: proc () {
         if delta_time > target_frame_clocks * 8 {
             delta_time = target_frame_clocks
         }
-        delta_time = max(0, delta_time)
 
         for val in snap_vals {
             if abs(delta_time - val) < max_deviation {
@@ -542,53 +566,28 @@ main :: proc () {
             resync = false;
         }
 
-        // Handle input
+        // handle input--------------------
         process_input(&is, quit_handler)
 
         for accumulator >= target_frame_clocks {
-            // Fixed update
+            // fixed update----------------
             if EDIT {
                 editor_update(&dynamic_lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
-                game_update(&lgs, is, &pls, phs, &cs, &ts, &szs, f32(elapsed_time), FIXED_DELTA_TIME * ts.time_mult)
+                game_update(&lgs, is, &pls, &phs, &cs, &ts, &szs, f32(elapsed_time), FIXED_DELTA_TIME * ts.time_mult)
             }
             accumulator -= target_frame_clocks 
         }
 
-        // Render
+        // render--------------------------
+        // fmt.println(len(dynamic_lgs))
         draw_slice := EDIT ? dynamic_lgs[:] : lgs[:]
         draw(draw_slice, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
         if EDIT {
-            imgl.new_frame()
-            imsdl.new_frame()
-            imgui.new_frame()
-
-            imgui.begin("Level Editor")
-            imgui.text("Level Geometry")
-            imgui.begin_child("Scrolling")
-            {
-                for lg, lg_idx in dynamic_lgs {
-                    color: imgui.Vec4 = es.selected_entity == lg_idx ? {1, 0, 0, 1} : {1, 1, 1, 1}
-                    buf: [4]byte
-                    num_string := strconv.itoa(buf[:], lg_idx)
-                    shape_string := SHAPE_NAME[lg.shape]
-                    display_name := str.concatenate({num_string, ": ", shape_string})
-                    imgui.text_colored(color, str.unsafe_string_to_cstring(display_name))
-                    if imgui.is_item_clicked(imgui.Mouse_Button.Left) {
-                        es.selected_entity = lg_idx 
-                    }
-                }
-            }
-            imgui.end_child()
-            imgui.end()
-
-            // imgui.show_demo_window()
-            imgui.render()
-            imgl.render_draw_data(imgui.get_draw_data())
-        } else {
+            update_imgui(&es, dynamic_lgs)
         }
-
         SDL.GL_SwapWindow(window)
+        free_all(context.temp_allocator)
     }
 
     if EDIT {
@@ -596,5 +595,8 @@ main :: proc () {
         imsdl.shutdown()
         imgui.destroy_context()
     }
+    ft.done_face(rs.face)
+    ft.done_free_type(rs.ft_lib)
+    vmem.arena_destroy(&perm_arena)
 }
 

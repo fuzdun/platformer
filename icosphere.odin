@@ -1,16 +1,17 @@
 package main
 
 import "core:math"
+import "base:runtime"
 import la "core:math/linalg"
 
 ICO_H_ANGLE :: math.PI / 180 * 72
 ICO_V_ANGLE := math.atan(0.5)
 
-add_player_sphere_data :: proc(vertices: ^[]Vertex, fill_indices: ^[]u32, outline_indices: ^[]u32) {
-    temp_vertices := make([dynamic]Vertex); defer delete(temp_vertices) 
+add_player_sphere_data :: proc(vertices: ^[]Vertex, fill_indices: ^[]u32, outline_indices: ^[]u32, arena: runtime.Allocator) {
+    temp_vertices := make([dynamic]Vertex, context.temp_allocator) 
 
     hedron_tmp_vertices: [12][3]f32
-    hedron_tmp_indices := make([dynamic]int); defer delete(hedron_tmp_indices)
+    hedron_tmp_indices := make([dynamic]int, context.temp_allocator)
 
     h_angle_1 := f32(-math.PI / 2 - ICO_H_ANGLE / 2)
     h_angle_2 := f32(-math.PI / 2)
@@ -46,7 +47,7 @@ add_player_sphere_data :: proc(vertices: ^[]Vertex, fill_indices: ^[]u32, outlin
     }
 
 
-    new_vs := make([dynamic]([4]f32)); defer delete(new_vs) // 4th float is for marking spikes
+    new_vs := make([dynamic]([4]f32), context.temp_allocator) // 4th float is for marking spikes
     for i := 0; i < len(hedron_tmp_indices); i += 3 {
         clear(&new_vs)
         v1 := hedron_tmp_vertices[hedron_tmp_indices[i]] 
@@ -109,8 +110,8 @@ add_player_sphere_data :: proc(vertices: ^[]Vertex, fill_indices: ^[]u32, outlin
         }
     }
 
-    fill_indices^ = make([]u32, len(temp_vertices))
-    outline_indices^ = make([]u32, len(temp_vertices) * 2)
+    fill_indices^ = make([]u32, len(temp_vertices), arena)
+    outline_indices^ = make([]u32, len(temp_vertices) * 2, arena)
 
     for i in 0..<len(temp_vertices) {
         fill_indices[i] = u32(i)
@@ -124,7 +125,7 @@ add_player_sphere_data :: proc(vertices: ^[]Vertex, fill_indices: ^[]u32, outlin
         outline_indices[i * 2 + 5] = u32(i)
     }
 
-    vertices^ = make([]Vertex, len(temp_vertices))
+    vertices^ = make([]Vertex, len(temp_vertices), arena)
     copy(vertices^, temp_vertices[:])
 }
 

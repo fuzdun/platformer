@@ -6,8 +6,9 @@ import la "core:math/linalg"
 
 editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, sr: Shape_Resources, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
     need_sort := false
-    // get selected geometry distances
-    clear(&es.connections)
+
+    // get selected geometry connections
+    es.connections = make([dynamic]Connection, context.temp_allocator)
     selected_geometry := lgs[es.selected_entity]
     if is.c_pressed {
         for lg, idx in lgs {
@@ -188,7 +189,7 @@ editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, sr: Shape_Resources, es
     }
     if is.ent_pressed {
         if !es.saved {
-            //encode_test_level_cbor(lgs[:])
+            encode_test_level_cbor(lgs[:])
             es.saved = true
         }
     } else {

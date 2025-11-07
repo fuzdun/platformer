@@ -1,7 +1,10 @@
 package main
 
 import "core:math"
+import "core:fmt"
 
+INIT_EDITOR_ZOOM :: 400
+INIT_EDITOR_ROTATION :: -0.25
 
 OBJ_MOVE_SPD :: 100.0
 OBJ_ROT_SPD :: 2.0
@@ -49,27 +52,30 @@ get_geometry_dist :: proc(ps: Physics_State, lga: Level_Geometry, lgb: Level_Geo
     shape_data_b := ps.level_colliders[lgb.shape]
     mat_a := trans_to_mat4(lga.transform)
     mat_b := trans_to_mat4(lgb.transform)
-    vertices_a := make([][3]f32, len(shape_data_a.vertices))
-    defer delete(vertices_a)
-    vertices_b := make([][3]f32, len(shape_data_b.vertices))
-    defer delete(vertices_b)
-    lg_get_transformed_collider_vertices(lga, mat_a, ps, vertices_a)
-    lg_get_transformed_collider_vertices(lgb, mat_b, ps, vertices_b)
-
+    transformed_vertices_a := make([][3]f32, len(shape_data_a.vertices))
+    defer delete(transformed_vertices_a)
+    for v, vi in ps.level_colliders[lga.shape].vertices {
+        transformed_vertices_a[vi] = (mat_a * [4]f32{v[0], v[1], v[2], 1.0}).xyz
+    }
+    transformed_vertices_b := make([][3]f32, len(shape_data_b.vertices))
+    defer delete(transformed_vertices_b)
+    for v, vi in ps.level_colliders[lgb.shape].vertices {
+        transformed_vertices_b[vi] = (mat_b * [4]f32{v[0], v[1], v[2], 1.0}).xyz
+    }
     indices_a := shape_data_a.indices
     indices_b := shape_data_b.indices
     len_a := len(shape_data_a.indices)
     len_b := len(shape_data_b.indices)
     for i := 0; i <= len_a - 3; i += 3 {
         tri_a := indices_a[i:i+3]
-        tri_a_v0 := vertices_a[tri_a[0]]
-        tri_a_v1 := vertices_a[tri_a[1]]
-        tri_a_v2 := vertices_a[tri_a[2]]
+        tri_a_v0 := transformed_vertices_a[tri_a[0]]
+        tri_a_v1 := transformed_vertices_a[tri_a[1]]
+        tri_a_v2 := transformed_vertices_a[tri_a[2]]
         for j := 0; j <= len_b - 3; j += 3 {
             tri_b := indices_b[j:j+3]
-            tri_b_v0 := vertices_b[tri_b[0]]
-            tri_b_v1 := vertices_b[tri_b[1]]
-            tri_b_v2 := vertices_b[tri_b[2]]
+            tri_b_v0 := transformed_vertices_b[tri_b[0]]
+            tri_b_v1 := transformed_vertices_b[tri_b[1]]
+            tri_b_v2 := transformed_vertices_b[tri_b[2]]
             c0, c1, dist := closest_triangle_connection(tri_a_v0, tri_a_v1, tri_a_v2, tri_b_v0, tri_b_v1, tri_b_v2)
             if dist < shortest_dist {
                 shortest_dist = dist
@@ -92,17 +98,4 @@ editor_save_changes :: proc(lgs:^Level_Geometry_State, is: Input_State, es: ^Edi
         es.saved = false
     }
 }
-
-//remove_geometry :: proc(lgs: ^Level_Geometry_State, sr: Shape_Resources, ps: ^Physics_State, rs: ^Render_State, es: ^Editor_State) {
-//    ordered_remove_soa(lgs, es.selected_entity) 
-//    es.selected_entity = max(0, min(len(lgs) - 1, es.selected_entity - 1))
-//    //editor_reload_level_geometry(lgs, sr, ps, rs)
-//}
-
-//add_geometry :: proc(lgs: ^Level_Geometry_State, lg_in: Level_Geometry) {
-//    lg := lg_in
-//    es.selected_entity = len(lgs)
-//    append(lgs, lg)
-//    //editor_reload_level_geometry(lgs, sr, ps, rs)
-//}
 

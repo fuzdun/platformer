@@ -1,6 +1,8 @@
 package main
 
 import str "core:strings"
+import vmem "core:mem/virtual"
+import "base:runtime"
 import "core:os"
 import "core:fmt"
 import "core:encoding/json"
@@ -23,31 +25,15 @@ model_json_struct :: struct {
     }
 }
 
-free_model_json_struct :: proc(js: model_json_struct) {
-    for m in js.meshes {
-        for p in m.primitives {
-            for k, _ in p.attributes {
-                delete(k)
-            }
-            delete(p.attributes)
-        } 
-        delete(m.primitives)
-    }
-    for s in js.scenes {
-        delete(s.nodes)
-    }
-    delete(js.scenes)
-    delete(js.bufferViews)
-    delete(js.meshes)
-}
+load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, ps: ^Physics_State, perm_arena: runtime.Allocator) -> bool {
+    temp_arena: vmem.Arena
+    arena_err := vmem.arena_init_growing(&temp_arena); ensure(arena_err == nil)
+    temp_arena_alloc := vmem.arena_allocator(&temp_arena) 
 
-load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, ps: ^Physics_State) -> bool {
     // read binary data
     filename := SHAPE_FILENAME[shape]
-    binary_filename := str.concatenate({"models/", filename, ".glb"})
-    defer delete(binary_filename)
-    data, ok := os.read_entire_file_from_filename(binary_filename)
-    defer delete(data)
+    binary_filename := str.concatenate({"models/", filename, ".glb"}, temp_arena_alloc)
+    data, ok := os.read_entire_file_from_filename(binary_filename, temp_arena_alloc)
     if !ok {
         fmt.eprintln("failed to read file")
         return false
@@ -69,8 +55,7 @@ load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, ps: ^Physics_State) -
     bytes.buffer_seek(&buf, 4, .Current)
     // read up to json length and parse json
     json_data := bytes.buffer_next(&buf, int(json_len))
-    parsed_json, parse_err := json.parse(json_data)
-    defer json.destroy_value(parsed_json)
+    parsed_json, parse_err := json.parse(json_data, json.DEFAULT_SPECIFICATION, false, temp_arena_alloc)
     if parse_err != .None {
         fmt.eprintln("failed to parse JSON")
         return false
@@ -88,18 +73,19 @@ load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, ps: ^Physics_State) -
     bin_data := bytes.buffer_next(&buf, int(bin_len))
     // get byte offsets/lengths of mesh attributes from json
     js: model_json_struct
-    json.unmarshal(json_data, &js)
-    defer free_model_json_struct(js) 
+    json.unmarshal(json_data, &js, json.DEFAULT_SPECIFICATION, temp_arena_alloc)
 
     collider_mesh_idx := len(js.scenes[0].nodes) == 2 ? 1 : 0
-    sr[shape] = read_mesh_data_from_binary(js, bin_data, 0, false).(Shape_Data)
-    ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true).(Collider_Data)
+    sr[shape] = read_mesh_data_from_binary(js, bin_data, 0, false, perm_arena).(Shape_Data)
+    ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true, perm_arena).(Collider_Data)
+
+    vmem.arena_destroy(&temp_arena)
     return true
 }
 
 Model_Data :: union{Shape_Data, Collider_Data}
 
-read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: []u8, i: int, collider: bool) -> Model_Data {
+read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: []u8, i: int, collider: bool, perm_arena: runtime.Allocator) -> Model_Data {
     pos_idx := model_data.meshes[i].primitives[0].attributes["POSITION"]
     pos_offset := model_data.bufferViews[pos_idx].byteOffset
     pos_len := model_data.bufferViews[pos_idx].byteLength
@@ -130,8 +116,8 @@ read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: [
         uv_data := (cast([^][2]f32)uv_start_ptr)[:uv_bytes_len]
 
         sd: Shape_Data
-        sd.vertices = make([]Vertex, len(pos_data))
-        sd.indices = make([]u32, len(indices_data))
+        sd.vertices = make([]Vertex, len(pos_data), perm_arena)
+        sd.indices = make([]u32, len(indices_data), perm_arena)
         for pos, pi in pos_data {
             sd.vertices[pi] = {{pos[0], pos[1], pos[2]}, uv_data[pi], norm_data[pi]}
         }
@@ -141,8 +127,8 @@ read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: [
         return sd
     }
     coll: Collider_Data
-    coll.vertices = make([][3]f32, len(pos_data)) 
-    coll.indices = make([]u16, len(indices_data))
+    coll.vertices = make([][3]f32, len(pos_data), perm_arena) 
+    coll.indices = make([]u16, len(indices_data), perm_arena)
     for pos, pi in pos_data {
         coll.vertices[pi] = {pos[0], pos[1], pos[2]}
     }
