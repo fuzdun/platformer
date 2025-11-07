@@ -9,8 +9,6 @@ import rnd "core:math/rand"
 
 Level_Geometry_State :: #soa[]Level_Geometry
 
-free_level_geometry_state :: proc(lgs: ^Level_Geometry_State) {}
-
 Level_Geometry :: struct {
     transform: Transform,
     angular_velocity: la.Vector3f32,

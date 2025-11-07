@@ -10,13 +10,6 @@ Shader_State :: struct {
     loaded_program_name: ProgramName
 }
 
-free_shader_state :: proc(shst: ^Shader_State) {
-    for _, ap in shst.active_programs {
-        delete(ap.locations)
-    }
-    delete(shst.active_programs)
-}
-
 Program :: struct {
     pipeline: []string,
     uniforms: []string,

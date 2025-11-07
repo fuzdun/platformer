@@ -38,10 +38,6 @@ Editor_State :: struct {
     pos: [3]f32
 }
 
-free_editor_state :: proc(es: ^Editor_State) {
-    delete(es.connections)
-}
-
 Connection :: struct {
     poss: [2][3]f32,
     dist: int

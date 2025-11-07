@@ -395,14 +395,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_screen_ripple_pt = ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
     }
 
-    // update screen_splashes
-    // -------------------------------------------
-    // new_screen_splashes := make([dynamic][4]f32)
-    // for splash in pls.screen_splashes {
-    //     append(&new_screen_splashes, splash)
-    // }
-
-
     // update particle displacement
     // -------------------------------------------
     new_tgt_particle_displacement := pls.tgt_particle_displacement
@@ -473,6 +465,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     pls.ground_x                  = new_ground_x
     pls.ground_z                  = new_ground_z
 
+    // screen splashes---------------------
     idx := 0
     for _ in 0 ..<len(pls.screen_splashes) {
         splash := pls.screen_splashes[idx]
@@ -491,9 +484,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
             new_crunch_time
         })
     }
-
-    // delete(pls.screen_splashes)
-    // pls.screen_splashes           = new_screen_splashes
 
     // #####################################################
     // MUTATE LEVEL GEOMETRY

@@ -10,15 +10,6 @@ Physics_State :: struct{
     static_collider_vertices: [dynamic][3]f32,
 }
 
-free_physics_state :: proc(ps: ^Physics_State) {
-    for coll in ps.level_colliders {
-        delete(coll.indices) 
-        delete(coll.vertices)
-    }
-    delete(ps.static_collider_vertices)
-}
-
-
 Collision :: struct{
     id: int,
     normal: [3]f32,

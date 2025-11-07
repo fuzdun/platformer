@@ -99,8 +99,6 @@ Contact_State :: struct {
     left_slope: f32,
     left_wall: f32,
     contact_ray: [3]f32,
-    // ground_x: [3]f32,
-    // ground_z: [3]f32,
     last_touched: int
 }
 

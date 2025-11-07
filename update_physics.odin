@@ -129,17 +129,6 @@ get_collisions_and_update_contact_state :: proc(
         new_contact_ray = -best_plane_normal * CONTACT_RAY_LEN
     }
 
-    // // update ground_move_dirs
-    // new_ground_x := cs.ground_x
-    // new_ground_z := cs.ground_z
-    // on_slope_or_ground := new_surface_contact_state == .ON_GROUND || new_surface_contact_state == .ON_SLOPE
-    // if !ignore_contact && best_plane_normal.y < 100 && on_slope_or_ground {
-    //     x := [3]f32{1, 0, 0}
-    //     z := [3]f32{0, 0, -1}
-    //     new_ground_x = la.normalize0(x - la.dot(x, best_plane_normal) * best_plane_normal)
-    //     new_ground_z = la.normalize0(z - la.dot(z, best_plane_normal) * best_plane_normal)
-    // }
-
     new_cs = cs
     new_cs.state = new_surface_contact_state
     new_cs.touch_time = new_touch_time
@@ -147,8 +136,6 @@ get_collisions_and_update_contact_state :: proc(
     new_cs.left_slope = new_left_slope
     new_cs.left_wall = new_left_wall
     new_cs.contact_ray = new_contact_ray
-    // new_cs.ground_x = new_ground_x
-    // new_cs.ground_z = new_ground_z
     new_cs.last_touched = cs.last_touched
     return
 }
@@ -202,12 +189,9 @@ apply_velocity :: proc(
             new_position += (remaining_vel * (collision.t) - GROUND_BUFFER) * velocity_normal
             remaining_vel *= 1.0 - collision.t
             if .Dash_Breakable in entities[collision.id].attributes && dashing {
-               // remaining_vel = BREAK_BOOST_VELOCITY 
-            // } else if .Bouncy in entities[collision.id].attributes {
-                // remaining_vel = BOUNCE_VELOCITY
-                // velocity_normal += la.dot(velocity_normal, collision.normal) * collision.normal
+                // pass
             } else if .Slide_Zone in entities[collision.id].attributes && sliding{
-            //    remaining_vel = BREAK_BOOST_VELOCITY 
+                // pass
             } else if .Hazardous in entities[collision.id].attributes {
                 remaining_vel = DAMAGE_VELOCITY
                 velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal * 1.25 
