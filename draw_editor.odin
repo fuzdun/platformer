@@ -9,6 +9,7 @@ draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, is:
     gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
     gl.ClearColor(0, 0, 0, 1)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+    gl.Enable(gl.DEPTH_TEST)
 
     gl.BindVertexArray(rs.standard_vao)
 

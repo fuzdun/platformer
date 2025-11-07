@@ -2,6 +2,7 @@ package main
 
 import "core:math"
 import glm "core:math/linalg/glsl"
+import la "core:math/linalg"
 
 
 // init
@@ -51,11 +52,12 @@ DASH_DIST: f32: 15.0
 // slide
 SLIDE_LEN: f32: 350.0 
 SLIDE_SPD: f32: 120
+// SLIDE_SPD: f32: 20
 SLIDE_COOLDOWN: f32: 600
 SLIDE_ANIM_EASE_LEN: f32: 100
 
 // physics
-CONTACT_RAY_LEN ::  1.1
+CONTACT_RAY_LEN ::  2.0
 CONTACT_RAY_LEN2 :: CONTACT_RAY_LEN * CONTACT_RAY_LEN
 GROUND_BUFFER: f32 = 0.1 
 
@@ -188,3 +190,71 @@ interpolated_player_matrix :: proc(ps: Player_State, t: f32) -> matrix[4, 4]f32 
     return rot * offset
 }
 
+animate_player_vertices_sliding :: proc(vertices: []Vertex, contact_ray: [3]f32, slide_total: f32, slide_off: f32, time: f32) {
+    up := la.normalize(contact_ray)
+    spin_mat := la.matrix4_rotate_f32(f32(time) / 150, up)
+    slide_t := slide_total
+    end_slide_t := (slide_total - slide_off) - (SLIDE_LEN - SLIDE_ANIM_EASE_LEN)
+    compression_t := clamp(slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0) - clamp(end_slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0)
+    for &v, idx in vertices {
+        vertical_fact := la.dot(up, v.pos)
+        v.pos -= up * vertical_fact * easeout_cubic(compression_t) * abs(vertical_fact) * 1.2
+        if v.uv.x == 1.0 {
+            v.pos *= (1.0 + (compression_t) * 4.0)
+        }
+        v.pos = la.matrix_mul_vector(spin_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 0.0}).xyz
+        v.pos *= 1.2
+    }
+}
+
+animate_player_vertices_rolling :: proc(vertices: []Vertex, state: Player_States, velocity: [3]f32, spike_compression: f32, time: f32) {
+    right_vec := la.cross([3]f32{0, 1, 0}, la.normalize0(velocity)) 
+    stretch_dir := la.normalize(-la.normalize(velocity) - {0, 0.5, 0})
+    for &v, idx in vertices {
+        if v.uv.x == 1.0 {
+            norm_pos := la.normalize(v.pos - (la.dot(v.pos, right_vec) * right_vec * 0.5))
+            down_alignment := max(0.25, min(0.75, la.dot(norm_pos, [3]f32{0, -1, 0})))
+            down_alignment = (down_alignment - 0.25) / 0.5
+
+            stretch_alignment := max(0.5, min(1.0, la.dot(norm_pos, stretch_dir)))
+            stretch_alignment = (stretch_alignment - 0.5) / 0.5
+            stretch_amt := stretch_alignment * stretch_alignment * la.length(velocity) / 40.0
+
+            v.pos *= (1.0 - down_alignment * 0.5)
+            v.pos *= 1.0 + stretch_amt
+        } else {
+            v.pos *= f32(spike_compression)
+        }
+        v.pos *= 1.2
+    }
+}
+
+animate_player_vertices_jumping :: proc(vertices: []Vertex) {
+    for &v, idx in vertices {
+        if v.uv.x == 1.0 {
+            v.pos *= 1.25
+        }
+    }
+}
+
+apply_player_vertices_physics_displacement :: proc(vertices: []Vertex, particle_displacement: [3]f32, sliding: bool) {
+    displacement_dir := la.normalize0(particle_displacement)
+    for &v, idx in vertices {
+        displacement_fact := la.dot(displacement_dir, la.normalize0(v.pos))
+        if displacement_fact > 0.25 {
+            displacement_fact *= 0.5
+        }
+        if !sliding {
+            v.pos = la.clamp_length(v.pos + particle_displacement * displacement_fact * 0.030, 3.0)
+            v.pos += particle_displacement * displacement_fact * 0.030
+        }
+    }
+}
+
+apply_player_vertices_roll_rotation :: proc(vertices: []Vertex, velocity: [3]f32, time: f32) {
+    for &v, idx in vertices {
+        vel_dir: [3]f32 = velocity.xz == 0 ? {0, 0, -1} : la.normalize0(velocity)
+        rot_mat := la.matrix4_rotate_f32(f32(time) / 100, la.cross([3]f32{0, 1, 0}, vel_dir))
+        v.pos = la.matrix_mul_vector(rot_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 0.0}).xyz
+    }
+}

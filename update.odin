@@ -159,6 +159,24 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_velocity -= la.dot(new_velocity, normalized_contact_ray) * normalized_contact_ray
     } 
 
+    // apply dash to velocity
+    // -------------------------------------------
+    if pls.dash_state.dashing {
+        new_velocity = pls.dash_state.dash_dir * DASH_SPD
+    }
+
+    // apply slide to velocity
+    // -------------------------------------------
+    if pls.slide_state.sliding {
+        new_velocity = pls.slide_state.slide_dir * (len(szs.intersected) > 0 ? SLIDE_SPD * 2 : SLIDE_SPD) 
+    }
+
+    // apply slope to velocity
+    // -------------------------------------------
+    if cts.state == .ON_GROUND || cts.state == .ON_SLOPE {
+        new_velocity -= la.dot(new_velocity, normalized_contact_ray) * normalized_contact_ray
+    }
+
     // apply jump to velocity
     // -------------------------------------------
     if ground_jumped {
@@ -177,17 +195,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_velocity.xz += la.normalize0(new_velocity.xz) * GROUND_BUNNY_H_SPEED
     }
 
-    // apply dash to velocity
-    // -------------------------------------------
-    if pls.dash_state.dashing {
-        new_velocity = pls.dash_state.dash_dir * DASH_SPD
-    }
-
-    // apply slide to velocity
-    // -------------------------------------------
-    if pls.slide_state.sliding {
-        new_velocity = pls.slide_state.slide_dir * (len(szs.intersected) > 0 ? SLIDE_SPD * 2 : SLIDE_SPD) 
-    }
 
     // apply restart to velocity
     // -------------------------------------------
@@ -195,20 +202,20 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_velocity = 0
     }
 
-    new_contact_state := pls.contact_state
+    new_cts := pls.contact_state
 
     // apply jump to player state
     // -------------------------------------------
     if !pls.slide_state.sliding && jumped {
-        new_contact_state.state = .IN_AIR
+        new_cts.state = .IN_AIR
     }
 
     // #####################################################
     // APPLY PLAYER VELOCITY, HANDLE COLLISIONS
     // #####################################################
 
-    collision_adjusted_contact_state, new_position, collision_adjusted_velocity, collision_ids, contact_ids := apply_velocity(
-        new_contact_state,
+    collision_adjusted_cts, new_position, collision_adjusted_velocity, collision_ids, contact_ids := apply_velocity(
+        new_cts,
         pls.position,
         new_velocity,
         pls.dash_state.dashing,
@@ -220,30 +227,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         delta_time
     );
 
-    // //test move lgs
-    // // -------------------------------------------
-    // for &lg, lg_idx in lgs {
-    //     if lg_idx == 13 {
-    //         lg.transform.position.x += 0.10
-    //         lg.transform.position.y += 0.10
-    //         vertices_len := len(phs.level_colliders[lg.shape].vertices)
-    //         trans_mat := trans_to_mat4(lg.transform)
-    //         for v, vi in phs.level_colliders[lg.shape].vertices {
-    //             phs.static_collider_vertices[lg.physics_idx + vi] = (trans_mat * [4]f32{v[0], v[1], v[2], 1.0}).xyz
-    //         }
-    //         lg.aabb = vertices_to_aabb(phs.static_collider_vertices[lg.physics_idx:lg.physics_idx + vertices_len])
-    //     }
-    // }
-    //
-    // for lg, lg_idx in lgs {
-    //     if lg_idx == 13 {
-    //         if collision_adjusted_contact_state.state != .IN_AIR && lg_idx == collision_adjusted_contact_state.last_touched {
-    //             new_position.x += 0.10
-    //             new_position.y += 0.10
-    //         }
-    //     }
-    // }
-
     // handle restart player position
     // -------------------------------------------
     if is.r_pressed {
@@ -254,13 +237,26 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // UPDATE COLLISION-DEPENDENT STATE
     // #####################################################
 
+    // update ground movement vectors
+    // -------------------------------------------
+    new_ground_x := pls.ground_x
+    new_ground_z := pls.ground_z
+    if collision_adjusted_cts.state == .ON_GROUND || collision_adjusted_cts.state == .ON_SLOPE {
+        contact_ray := collision_adjusted_cts.contact_ray
+        x := [3]f32{1, 0, 0}
+        z := [3]f32{0, 0, -1}
+        new_ground_x = la.normalize0(x + la.dot(x, contact_ray) * contact_ray)
+        new_ground_z = la.normalize0(z + la.dot(z, contact_ray) * contact_ray)
+    }
+
     // apply bounce to velocity
     // -------------------------------------------
     for id in collision_ids {
         if .Bouncy in lgs[id].attributes {
-            new_normalized_contact_ray := la.normalize(collision_adjusted_contact_state.contact_ray)
+            new_normalized_contact_ray := la.normalize(collision_adjusted_cts.contact_ray)
             bounced_velocity_dir := la.normalize(collision_adjusted_velocity) - new_normalized_contact_ray
             collision_adjusted_velocity = bounced_velocity_dir * BOUNCE_VELOCITY
+            collision_adjusted_cts.state = .IN_AIR
         }
     }
 
@@ -306,22 +302,10 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
             new_dash_state.dash_total = 0
         }         
         if !pls.dash_state.can_dash {
-            state := new_contact_state.state
+            state := collision_adjusted_cts.state
             touched_ground:= state == .ON_GROUND || state == .ON_SLOPE || bunny_hopped
             new_dash_state.can_dash = !pls.dash_state.dashing && touched_ground
         }
-    }
-
-    // update ground movement vectors
-    // -------------------------------------------
-    new_ground_x := pls.ground_x
-    new_ground_z := pls.ground_z
-    if collision_adjusted_contact_state.state == .ON_GROUND || collision_adjusted_contact_state.state == .ON_SLOPE {
-        contact_ray := collision_adjusted_contact_state.contact_ray
-        x := [3]f32{1, 0, 0}
-        z := [3]f32{0, 0, -1}
-        new_ground_x = la.normalize0(x + la.dot(x, contact_ray) * contact_ray)
-        new_ground_z = la.normalize0(z + la.dot(z, contact_ray) * contact_ray)
     }
 
     // update slide state
@@ -337,7 +321,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         if slide_input == 0 {
             slide_input = la.normalize0(collision_adjusted_velocity)
         }
-        new_slide_dir := la.normalize0(slide_input - la.dot(slide_input, surface_normal) * surface_normal)
+        new_slide_dir := la.normalize0(slide_input + la.dot(slide_input, surface_normal) * surface_normal)
 
         new_slide_state.sliding = true
         new_slide_state.can_slide = false
@@ -425,7 +409,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     if jumped {
         new_tgt_particle_displacement = new_velocity
     }
-    if new_contact_state.state != .ON_GROUND {
+    if collision_adjusted_cts.state != .ON_GROUND {
         new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, new_velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
     } else {
         new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, [3]f32{0, 0, 0}, TGT_PARTICLE_DISPLACEMENT_LERP)
@@ -439,6 +423,14 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_spike_compression = math.lerp(pls.spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
     } else {
         new_spike_compression = math.lerp(pls.spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
+    }
+
+    when MOVE {
+        // test moving geometry
+        // ---------------------------------------
+        for _, lg_idx in lgs {
+            move_geometry(lgs, phs, &new_position, collision_adjusted_cts, lg_idx)
+        }
     }
 
     // #####################################################
@@ -462,7 +454,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     pls.velocity                  = collision_adjusted_velocity
     pls.position                  = new_position
-    pls.contact_state             = collision_adjusted_contact_state
+    pls.contact_state             = collision_adjusted_cts
     pls.jump_pressed_time         = new_jump_pressed_time
     pls.wall_detach_held_t        = new_wall_detach_held_t
     pls.crunch_time               = new_crunch_time
@@ -515,7 +507,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     }
 
     if bunny_hopped {
-        last_touched := collision_adjusted_contact_state.last_touched
+        last_touched := collision_adjusted_cts.last_touched
         lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
     }
 
@@ -566,6 +558,15 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     ts.time_mult = new_time_mult 
 
-    cs^ = updated_camera_state(cs^, new_position)
+    cs.prev_position = cs.position
+    cs.prev_target = cs.target
+    tgt_y := new_position.y + CAMERA_PLAYER_Y_OFFSET
+    tgt_z := new_position.z + CAMERA_PLAYER_Z_OFFSET
+    tgt_x := new_position.x + CAMERA_PLAYER_X_OFFSET
+    tgt : [3]f32 = {tgt_x, tgt_y, tgt_z}
+    cs.position = math.lerp(cs.position, tgt, f32(CAMERA_POS_LERP))
+    cs.target.x = math.lerp(cs.target.x, new_position.x, f32(CAMERA_X_LERP))
+    cs.target.y = math.lerp(cs.target.y, new_position.y, f32(CAMERA_Y_LERP))
+    cs.target.z = math.lerp(cs.target.z, new_position.z, f32(CAMERA_Z_LERP))
 }
 

@@ -27,13 +27,14 @@ float rand(float n){return mod(sin(n) * 43758.5453123, 360);}
 
 void main() {
 
+    dash_time_frag = dash_total;
+    i_time_frag = i_time;
+
     vec4 step = (gl_in[1].gl_Position - gl_in[0].gl_Position) / resolution;
 
     for(int i=0; i < 3; i++) {
         gl_Position = projection * gl_in[0].gl_Position + step * i;
         t = float(i) / resolution - 1;
-        dash_time_frag = dash_total;
-        i_time_frag = i_time;
         EmitVertex();
     }
 
@@ -48,23 +49,14 @@ void main() {
 
         gl_Position = projection * interp_pos;
         t = float(i) / resolution - 1;
-        dash_time_frag = dash_total;
-        i_time_frag = i_time;
         EmitVertex();
     }
 
     for(int i=int(resolution - 3); i < resolution; i++) {
         gl_Position = projection * gl_in[1].gl_Position - (resolution - i) * step;
         t = float(i) / resolution - 1;
-        dash_time_frag = dash_total;
-        i_time_frag = i_time;
         EmitVertex();
     }
-
-    // gl_Position = projection * gl_in[1].gl_Position;
-    // t = 1;
-    // dash_time_frag = dash_time;
-    // EmitVertex();
 
     EndPrimitive();
 }

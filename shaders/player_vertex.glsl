@@ -42,7 +42,6 @@ void main() {
     constrained_pos *= constrain_amt;
     constrained_pos += constrain_proj;
     constrained_pos += constrain_proj * (1.0 - constrain_amt) * 2.5 + constrain_dir * 2.5 * (1.0 - constrain_amt);
-    // gl_Position = projection * offset_mat * transform * vec4(constrained_pos, aPos.w);
     gl_Position = projection * transform * vec4(constrained_pos, aPos.w);
     uv = vertexUV;
     time = i_time;

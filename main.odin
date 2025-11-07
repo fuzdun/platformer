@@ -9,6 +9,7 @@ import "core:strconv"
 import vmem "core:mem/virtual"
 import glm "core:math/linalg/glsl"
 import str "core:strings"
+import rnd "core:math/rand"
 import SDL "vendor:sdl2"
 import TTF "vendor:sdl2/ttf"
 import gl "vendor:OpenGL"
@@ -21,6 +22,7 @@ MAX_LEVEL_GEOMETRY_COUNT :: 2000
 
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
+MOVE :: #config(MOVE, false)
 
 WIDTH :: 1920.0
 HEIGHT :: 1080.0
@@ -30,6 +32,8 @@ FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
 FORCE_EXTERNAL_MONITOR :: false
 
 TITLE :: "Durian"
+
+SEED := rnd.float32() * 1000
 
 quit_app := false
 
@@ -489,6 +493,8 @@ main :: proc () {
     gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(poi[0]) * len(poi), raw_data(poi), gl.STATIC_DRAW)
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
     gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(pfi[0]) * len(pfi), raw_data(pfi), gl.STATIC_DRAW)
+
+    gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
     // #####################################################
     // INIT IMGUI
