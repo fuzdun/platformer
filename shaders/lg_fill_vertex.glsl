@@ -47,7 +47,6 @@ out VS_OUT {
     vec4 obj_pos;
     float player_dist;
     float plane_dist;
-    // float crack_time;
     vec4 break_time_pos;
     vec4 crack_time_break_dir;
     float outer_tess_amt;

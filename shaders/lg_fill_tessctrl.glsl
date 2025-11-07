@@ -6,11 +6,8 @@ in VS_OUT {
     vec2 uv;
     vec3 normal_frag;
     vec4 obj_pos;
-    // vec4 proj_pos;
     float player_dist;
     float plane_dist;
-    // vec3 pos;
-    // float crack_time;
     vec4 break_time_pos;
     vec4 crack_time_break_dir;
     float outer_tess_amt;
@@ -28,7 +25,6 @@ patch out vec3 normal_frag;
 patch out vec4 obj_pos;
 patch out float player_dist;
 patch out float plane_dist;
-// patch out float crack_time;
 patch out vec4 break_time_pos;
 patch out vec4 crack_time_break_dir;
 
@@ -41,7 +37,6 @@ void main() {
     obj_pos = vs_out[gl_InvocationID].obj_pos;
     player_dist = vs_out[gl_InvocationID].player_dist;
     plane_dist = vs_out[gl_InvocationID].plane_dist;
-    // crack_time = vs_out[gl_InvocationID].crack_time;
     break_time_pos = vs_out[gl_InvocationID].break_time_pos;
     crack_time_break_dir = vs_out[gl_InvocationID].crack_time_break_dir;
     tc_out[gl_InvocationID].uv = vs_out[gl_InvocationID].uv;
@@ -52,7 +47,6 @@ void main() {
     d01 = dot(v0, v1);
     d11 = dot(v1, v1);
     denom =  d00 * d11 - d01 * d01;
-    // tc_out[gl_InvocationID].pos = vs_out[gl_InvocationID].pos;
   
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 

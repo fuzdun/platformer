@@ -19,7 +19,6 @@ in TE_OUT {
     vec4 obj_pos;
     float player_dist;
     float plane_dist;
-    // float crack_time;
     vec4 break_time_pos;
     vec4 crack_time_break_dir;
 
@@ -49,10 +48,6 @@ out vec3 t0_pos;
 out vec2 t0_uv;
 out vec2 t1_uv;
 out vec2 t2_uv;
-
-// out vec3 b0_pos;
-// out vec3 b1_pos;
-// out vec3 b2_pos;
 
 out vec3 b_poss[3];
 
@@ -147,10 +142,6 @@ void main() {
     t0_uv = te_out[0].t0_uv;
     t1_uv = te_out[0].t1_uv;
     t2_uv = te_out[0].t2_uv;
-
-    // b0_pos = gl_in[0].gl_Position.xyz;
-    // b1_pos = gl_in[1].gl_Position.xyz;
-    // b2_pos = gl_in[2].gl_Position.xyz;
 
     plane_dist = te_out[0].plane_dist; 
     displacement = dist_fact;

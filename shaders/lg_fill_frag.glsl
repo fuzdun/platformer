@@ -58,24 +58,23 @@ vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
 	return vec2(length( pa - ba*h ), h);
 }
 
-float hash(vec2 p) {
+float hash2(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
 
-vec3 hash2(vec3 p){
+vec3 hash3(vec3 p){
 	p = vec3( dot(p,vec3(127.1,311.7, 74.7)),
 			  dot(p,vec3(269.5,183.3,246.1)),
 			  dot(p,vec3(113.5,271.9,124.6)));
 	return -1.0 + 2.0*fract(sin(p)*43758.5453123);
 }
 
-//vec noise function
 float noise(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
-               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+    return mix(mix(hash2(i + vec2(0.0, 0.0)), hash2(i + vec2(1.0, 0.0)), u.x),
+               mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), u.x),
                u.y);
 }
 
@@ -90,30 +89,20 @@ float reshapeUniformToTriangle(float v) {
     return v + 0.5;
 }
 
-const float BAYER16[16] = float[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
-
-float GetBayerDither(float grayscale, vec2 uv) {    
-    ivec2 pixelCoord = ivec2(uv * (SAMPLE_RES));
-    int pixelIndex16 = (pixelCoord.x % 4) + (pixelCoord.y % 4) * 4;
-    return grayscale > (float(BAYER16[pixelIndex16]) + 0.5) / 16.0 ? 1.0 : 0.0;
-}
-
-
-
 vec4 noised(vec3 x){
     vec3 p = floor(x);
     vec3 w = fract(x);
     vec3 u = w*w*w*(w*(w*6.0-15.0)+10.0);
     vec3 du = 30.0*w*w*(w*(w-2.0)+1.0);
     
-    vec3 ga = hash2( p+vec3(0.0,0.0,0.0) );
-    vec3 gb = hash2( p+vec3(1.0,0.0,0.0) );
-    vec3 gc = hash2( p+vec3(0.0,1.0,0.0) );
-    vec3 gd = hash2( p+vec3(1.0,1.0,0.0) );
-    vec3 ge = hash2( p+vec3(0.0,0.0,1.0) );
-	vec3 gf = hash2( p+vec3(1.0,0.0,1.0) );
-    vec3 gg = hash2( p+vec3(0.0,1.0,1.0) );
-    vec3 gh = hash2( p+vec3(1.0,1.0,1.0) );
+    vec3 ga = hash3( p+vec3(0.0,0.0,0.0) );
+    vec3 gb = hash3( p+vec3(1.0,0.0,0.0) );
+    vec3 gc = hash3( p+vec3(0.0,1.0,0.0) );
+    vec3 gd = hash3( p+vec3(1.0,1.0,0.0) );
+    vec3 ge = hash3( p+vec3(0.0,0.0,1.0) );
+	vec3 gf = hash3( p+vec3(1.0,0.0,1.0) );
+    vec3 gg = hash3( p+vec3(0.0,1.0,1.0) );
+    vec3 gh = hash3( p+vec3(1.0,1.0,1.0) );
     
     float va = dot( ga, w-vec3(0.0,0.0,0.0) );
     float vb = dot( gb, w-vec3(1.0,0.0,0.0) );
@@ -145,14 +134,11 @@ float udTriangle( in vec3 v1, in vec3 v2, in vec3 v3, in vec3 p )
         dot2(v13*clamp(dot(v13,p3)/dot2(v13),0.0,1.0)-p3)));
 }
 
-
-
-
-
 void main()
 {
     vec4 glassColor = mix(vec4(0.08, 0.08, 0.100, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
 
+    // if geometry not fully assembled, use "glass" color
     if (displacement > 0.00) {
         fragColor = glassColor;
         return;
@@ -163,24 +149,29 @@ void main()
     // get floored uv
     float screen_width = 1920.0;
     float screen_height = 1080.0;
-
     vec2 screen_uv = gl_FragCoord.xy;
     screen_uv.x /= screen_width;
     screen_uv.y /= screen_width;
     screen_uv = floor(screen_uv * SAMPLE_RES) / SAMPLE_RES;
 
+    // get normalized device coordinates
     vec2 rounded_frag = screen_uv * screen_width;
     vec3 ndc = vec3(
         (rounded_frag.x / screen_width - 0.5) * 2.0,
         (rounded_frag.y / screen_height - 0.5) * 2.0,
         1.0
     );
+
+    // get reprojection ray
     vec4 ray_clip = vec4(ndc.xy, -1.0, 1.0);
     vec4 ray_eye = inverse_projection * ray_clip;
     vec3 ray_wor = normalize((inverse_view * vec4(ray_eye.xy, -1.0, 0.0)).xyz);
+
+    // intersect ray with triangle plane
     vec3 intersection = (plane_dist + dot(-camera_pos, normal_frag)) / dot(-normal_frag, ray_wor) * ray_wor - camera_pos;
     intersection *= -1;
 
+    // get uv of reprojected fragment using barycentric coordinates
     vec3 v2 = intersection - t0_pos;
     float d20 = dot(v2, v0);
     float d21 = dot(v2, v1);
@@ -189,42 +180,44 @@ void main()
     float bary_0 = 1.0 - bary_1 - bary_2;
     vec2 uv = t0_uv * bary_0 + t1_uv * bary_1 + t2_uv * bary_2;
 
-    float plane_off = dot(normal_frag, global_pos);
-    float dist = (dot(normal_frag, player_pos) - plane_off) - 1.5;
-    vec3 proj_pt = player_pos - dist * normal_frag;
-
-    vec3 diff = global_pos - player_pos;
-    vec3 t_diff = intersection - player_pos;
-    vec3 planar_diff = proj_pt - global_pos;
+    // get indicator ring color
     vec3 up = normal_frag.y == 1.0 ? vec3(1, 0, 0) : vec3(1.0, 0, 0);
+    float plane_player_dist = (dot(normal_frag, player_pos) - dot(normal_frag, global_pos)) - 1.5;
+    vec3 proj_player_pos = player_pos - plane_player_dist * normal_frag;
+    vec3 proj_player_diff = proj_player_pos - global_pos;
     vec3 plane_x = normalize(cross(up, normal_frag));
     vec3 plane_y = normalize(cross(normal_frag, plane_x));
-    float uvx = dot(plane_x, planar_diff);
-    float uvy = dot(plane_y, planar_diff);
-    float a = atan(uvx / uvy) * 25;
-    float uvd = length(planar_diff);
+    float ring_uvx = dot(plane_x, proj_player_diff);
+    float ring_uvy = dot(plane_y, proj_player_diff);
+    float ring_a = atan(ring_uvx / ring_uvy) * 25;
+    float uvd = length(proj_player_diff);
     float slide_ring_size = (1.0 - (abs(slide_t - 0.5) / 0.5)) * SLIDE_RADIUS;
-    // float slide_ring_size = (1.0 - slide_t) * SLIDE_RADIUS;
-    float d1 = dist + slide_ring_size + noise(vec2(a + time * 20, time * 10)) * 1.5;
-    float absd = abs(uvd - d1);
-    float noise_border = smoothstep(-0.03, 0.0, absd) - smoothstep(0.30, 0.33, absd);
-    // if (dist < .25) {
-    //     noise_border = 0;
-    // }
+    float noise_offset = noise(vec2(ring_a + time * 20, time * 10)) * 1.5;
+    float ring_factor = abs(uvd - (plane_player_dist + slide_ring_size + noise_offset));
+    float noise_border = smoothstep(-0.03, 0.0, ring_factor) - smoothstep(0.30, 0.33, ring_factor);
+
     vec3 trail_col = vec3(0.0, 0, 0);
-    vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);
-    vec2 res2 = distanceToSegment(player_trail[0], player_trail[1], global_pos);
-    vec2 res3 = distanceToSegment(player_trail[1], player_trail[2], global_pos);
-    float d = min(res1[0], min(res2[0], res3[0]));
-    float t = (d == res1[0] ? res1[1] : (d == res2[0] ? 1.0 + res2[1] : 2.0 + res3[1])) / 3.0;
-    d += t * 0.69;
+    vec2 seg_1_dist = distanceToSegment(player_pos, player_trail[0], global_pos);
+    vec2 seg_2_dist = distanceToSegment(player_trail[0], player_trail[1], global_pos);
+    vec2 seg_3_dist = distanceToSegment(player_trail[1], player_trail[2], global_pos);
+    float smallest_seg_dist = min(seg_1_dist[0], min(seg_2_dist[0], seg_3_dist[0]));
+    float trail_t = 0;
+    if (smallest_seg_dist == seg_1_dist[0]) {
+        trail_t = seg_1_dist[1];
+    } else if (smallest_seg_dist == seg_2_dist[0]) {
+        trail_t = 1.0 + seg_2_dist[1];
+    } else {
+        trail_t = 2.0 + seg_3_dist[1];
+    }
+    trail_t /= 3.0;
+    smallest_seg_dist += trail_t * 0.69;
     float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
-    float freq = 2.0 * line_len;
-    float width =  sin(-time * 70.0 + t * TWOPI * freq) * 3.0 + 35.0;
+    float freq = 0.5 * line_len;
+    float width =  sin(-time * 70.0 + trail_t * TWOPI * freq) * 3.0 + 35.0;
     float border_d = 0.050 * width;
-    vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.6, 0.0, 0.15), t);
+    vec3 intColor = mix(vec3(1.0, .5, 0.25), vec3(0.6, 0.0, 0.15), trail_t);
     if (dot(normal_frag, vec3(0, 1, 0)) < 0.85) {
-        trail_col = res1[1] > 0.1 ?  mix(trail_col, intColor, 1.0-smoothstep(border_d - .004,border_d, d) ) : trail_col;
+        trail_col = seg_1_dist[1] > 0.1 ?  mix(trail_col, intColor, 1.0 - smoothstep(border_d - .004,border_d, smallest_seg_dist) ) : trail_col;
     }
 
     vec3 impact_col = vec3(0.0);
@@ -239,47 +232,24 @@ void main()
         impact_col = vec3(1.0, 0.0, 0.5) * ripple_border;
     }
 
-
-
     vec4 grad_noise_val = noised(vec3(uv.xy * 2.0 + i_time / 1000, 0));
     vec3 grad_normal = normalize(grad_noise_val.yzw);
     float lighting_amt = dot(vec3(0, -1, 0), grad_normal);
     float lighting2_amt = dot(normalize(vec3(1, 1, 1)), grad_normal);
     vec3 pattern_col =  (lighting_amt * 0.3 + 0.7) * vec3(0.0, 0.8, 1.0) + (lighting2_amt * 0.3 + 0.7) * vec3(0.25, 0.0, 0.25);
 
-
-    // vec3 pattern_col = vec3(0, 0.8, 1.0);
-
-
-
-    
-    // vec3 circle_col = vec3(1.0, 0.0, 0.0) * (smoothstep(0.35, 0.4, length(uv - 0.5)) - smoothstep(0.4, 0.45, length(uv - 0.5)));
     float sd = (udTriangle(b_poss[0], b_poss[1], b_poss[2], global_pos));
     float border_t = did_shatter == 1.0 ? smoothstep(0.0, LINE_W, sd) : 1.0;
 
     vec3 col = pattern_col + trail_col + impact_col;
 
-    // BAYER
-    // float mask = GetBayerDither(ceil(length(t_diff) / 1.5) / 30.0 - 0.2, screen_uv);
-
-    // BAYER + BLUE NOISE
-    // float mask = GetBayerDither(ceil(length(t_diff) / 3.0) / 8.0 - 1.0 + texture(ditherTexture, screen_uv * (SAMPLE_RES / 64.0)).r, screen_uv);
-
-    // BAYER + BLUE NOISE 2
-    // float mask = GetBayerDither(ceil(length(t_diff) / 1.0) / 30.0 - 0.2, screen_uv);
-    // float mask2 = texture(ditherTexture, screen_uv * (SAMPLE_RES / 64.0)).r;
-    // mask2 = reshapeUniformToTriangle(mask2);
-    // mask2 = min(1.0, floor(mask2 + length(t_diff) / 2.0) / 60.0); 
-    // mask += mask2;
-
     // BLUE NOISE
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 300.0) * (SAMPLE_RES / 64.0)).r;
     mask = reshapeUniformToTriangle(mask);
-    mask = min(1.0, max(floor(mask + length(t_diff) / 8.0) / 4.0, 0.25)); 
+    mask = min(1.0, max(floor(mask + length(intersection - player_pos) / 8.0) / 4.0, 0.25)); 
 
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor = mix(fragColor, vec4(1.0, 1.0, 1.0, 1.0), noise_border);
-    // vec3 proximity_outline_col = vec3(1.0, 0.5, 0.5) * noise_border;
 
     fragColor = mix(vec4(1.0, 1.0, 1.0, 1.0), fragColor, border_t);
     fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;

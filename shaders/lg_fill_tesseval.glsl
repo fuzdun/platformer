@@ -4,7 +4,6 @@ layout(triangles, equal_spacing, ccw) in;
 
 in TC_OUT {
     vec2 uv;
-    // vec3 pos;
 } tc_out[];
 
 patch in vec3 v0;
@@ -18,7 +17,6 @@ patch in vec3 normal_frag;
 patch in vec4 obj_pos;
 patch in float player_dist;
 patch in float plane_dist;
-// patch in float crack_time;
 patch in vec4 break_time_pos;
 patch in vec4 crack_time_break_dir;
 
@@ -28,7 +26,6 @@ out TE_OUT {
     vec4 obj_pos;
     float player_dist;
     float plane_dist;
-    // float crack_time;
     vec4 break_time_pos;
     vec4 crack_time_break_dir;
 
@@ -62,7 +59,6 @@ void main() {
     te_out.obj_pos = obj_pos;
     te_out.player_dist = player_dist;
     te_out.plane_dist = plane_dist;
-    // te_out.crack_time = crack_time;
     te_out.break_time_pos = break_time_pos;
     te_out.crack_time_break_dir = crack_time_break_dir;
 
