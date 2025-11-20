@@ -496,10 +496,10 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         }
     }
 
-    if bunny_hopped {
-        last_touched := collision_adjusted_cts.last_touched
-        lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
-    }
+    //if bunny_hopped {
+    //    last_touched := collision_adjusted_cts.last_touched
+    //    lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
+    //}
 
     for id in collision_ids {
         lg := &lgs[id]
@@ -510,9 +510,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         } else if .Slide_Zone in lg.attributes && new_slide_state.sliding {
             // do nothing
         } else if .Breakable in lg.attributes {
-            lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.shatter_data.crack_time
+            //lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.shatter_data.crack_time
         } else if .Crackable in lg.attributes {
-            lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.shatter_data.crack_time
+            //lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.shatter_data.crack_time
         }
     }
 

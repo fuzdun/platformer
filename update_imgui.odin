@@ -7,7 +7,6 @@ import imsdl "shared:odin-imgui/imgui_impl_sdl2"
 import imgl "shared:odin-imgui/imgui_impl_opengl3"
 
 update_imgui :: proc(es: ^Editor_State, dynamic_lgs: #soa[dynamic]Level_Geometry) {
-
     imgl.new_frame()
     imsdl.new_frame()
     imgui.new_frame()
@@ -32,7 +31,6 @@ update_imgui :: proc(es: ^Editor_State, dynamic_lgs: #soa[dynamic]Level_Geometry
     imgui.end_child()
     imgui.end()
 
-    // imgui.show_demo_window()
     imgui.render()
     imgl.render_draw_data(imgui.get_draw_data())
 }

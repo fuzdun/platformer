@@ -273,7 +273,13 @@ main :: proc () {
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
-        if char_load_err := ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render}); char_load_err != nil {
+        char_load_err: ft.Error
+        when ODIN_OS == .Windows {
+            char_load_err = ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render})
+        } else {
+            char_load_err = ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render})
+        }
+        if char_load_err != nil {
             fmt.eprintln(char_load_err)
         }
         new_tex: u32 
@@ -500,13 +506,15 @@ main :: proc () {
     // INIT IMGUI
     // #####################################################
 
-    if EDIT {
-        imgui.create_context()
-        imgui.style_colors_dark()
-        io := imgui.get_io()
-        io.config_flags |= {imgui.Config_Flag.Docking_Enable}
-        imsdl.init_for_open_gl(window, gl_context)
-        imgl.init()
+    when ODIN_OS != .Windows {
+        if EDIT {
+            imgui.create_context()
+            imgui.style_colors_dark()
+            io := imgui.get_io()
+            io.config_flags |= {imgui.Config_Flag.Docking_Enable}
+            imsdl.init_for_open_gl(window, gl_context)
+            imgl.init()
+        }
     }
     
     // #####################################################
@@ -589,17 +597,21 @@ main :: proc () {
         // fmt.println(len(dynamic_lgs))
         draw_slice := EDIT ? dynamic_lgs[:] : lgs[:]
         draw(draw_slice, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
-        if EDIT {
-            update_imgui(&es, dynamic_lgs)
+        when ODIN_OS != .Windows {
+            if EDIT {
+                update_imgui(&es, dynamic_lgs)
+            }
         }
         SDL.GL_SwapWindow(window)
         free_all(context.temp_allocator)
     }
 
-    if EDIT {
-        imgl.shutdown()
-        imsdl.shutdown()
-        imgui.destroy_context()
+    when ODIN_OS != .Windows {
+        if EDIT {
+            imgl.shutdown()
+            imsdl.shutdown()
+            imgui.destroy_context()
+        }
     }
     ft.done_face(rs.face)
     ft.done_free_type(rs.ft_lib)

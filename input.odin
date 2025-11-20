@@ -1,7 +1,7 @@
 package main
 
 import SDL "vendor:sdl2"
-import imsdl "shared:odin-imgui/imgui_impl_sdl2"
+//import imsdl "shared:odin-imgui/imgui_impl_sdl2"
 
 Input_State :: struct {
     a_pressed: bool,
@@ -40,8 +40,10 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
         case .QUIT:
             quit_handler()
         }
-        if EDIT {
-            imsdl.process_event(&event)
+        when ODIN_OS != .Windows {
+            if EDIT {
+                imsdl.process_event(&event)
+            }
         }
         #partial switch event.type {
         case .CONTROLLERAXISMOTION:

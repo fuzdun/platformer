@@ -132,6 +132,8 @@ Render_State :: struct {
 
     vertex_offsets: Vertex_Offsets,
     index_offsets: Index_Offsets,
+
+    player_spin_particles: [PLAYER_SPIN_PARTICLE_COUNT][4]f32
 }
 
 Char_Tex :: struct {

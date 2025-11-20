@@ -67,6 +67,9 @@ TGT_PARTICLE_DISPLACEMENT_LERP :: 0.4
 PLAYER_PARTICLE_STACK_COUNT :: 8 
 PLAYER_PARTICLE_SECTOR_COUNT :: 16
 PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT + 2
+PLAYER_SPIN_PARTICLE_ARM_COUNT :: 20 
+PLAYER_SPIN_PARTICLE_ARM_LEN :: 10
+PLAYER_SPIN_PARTICLE_COUNT :: PLAYER_SPIN_PARTICLE_ARM_COUNT * PLAYER_SPIN_PARTICLE_ARM_LEN
 
 // trail history
 TRAIL_SIZE :: 50 
@@ -123,10 +126,17 @@ Slide_State :: struct {
     can_slide: bool
 }
 
+Spin_State :: struct {
+    spinning: bool,
+    spin_time: f32,
+    spin_dir: [2]f32
+}
+
 Player_State :: struct {
     contact_state: Contact_State,
     dash_state: Dash_State,
     slide_state: Slide_State,
+    spin_state: Spin_State, 
 
     touch_pt: [3]f32,
     bunny_hop_y: f32,
