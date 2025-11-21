@@ -8,15 +8,15 @@ flat in int id;
 out vec4 fragColor;
 
 const vec3 COLOR1 = vec3(0.9, 0.35, 0.9);
-const vec3 COLOR2 = vec3(0.2, 0.2, 0.0);
+const vec3 COLOR2 = vec3(0.2, 0.2, 0.8);
 
 float distance_from_sphere(vec3 p, vec3 c, float r) {
     return length(p - c) - r;
 }
 
 float map_world(vec3 p) {
-    float t = i_time_frag / 400 + id * 100.0;
-    float displacment = sin(2.0 * p.x + t) * sin(2.0 * p.y + t) * sin(2.0 * p.z + t) * .30;
+    float t = i_time_frag / 400 + id * 1000.0;
+    float displacment = sin(3.0 * p.x + t) * sin(2.0 * p.y + t) * sin(1.0 * p.z + t) * .40;
     return distance_from_sphere(p, vec3(0.0, 0.0, 0.0), f_radius) + displacment;
 }
 
@@ -54,7 +54,8 @@ vec4 ray_march(vec3 ro, vec3 rd) {
         }
         total_distance_traveled += distance_to_closest;
     }
-    return vec4(0.0);
+    discard;
+    // return vec4(0.0);
 }
 
 void main() {

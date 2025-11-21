@@ -10,7 +10,6 @@ import gl "vendor:OpenGL"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import ft "shared:freetype"
-import rand "core:math/rand"
 
 OUTER_TESSELLATION_AMT :: 8.0
 INNER_TESSELLATION_AMT :: 8.0
@@ -133,7 +132,9 @@ Render_State :: struct {
     vertex_offsets: Vertex_Offsets,
     index_offsets: Index_Offsets,
 
-    player_spin_particles: [PLAYER_SPIN_PARTICLE_COUNT][4]f32
+    // player_spin_particles: [PLAYER_SPIN_PARTICLE_COUNT][4]f32
+    player_spin_particles: RingBuffer(PLAYER_SPIN_PARTICLE_COUNT, Spin_Particle),
+    player_spin_particle_info: RingBuffer(PLAYER_SPIN_PARTICLE_COUNT, Spin_Particle_Info)
 }
 
 Char_Tex :: struct {

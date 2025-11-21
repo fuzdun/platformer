@@ -2,11 +2,14 @@ package main
 
 
 RingBuffer :: struct($N: int, $T: typeid) {
-    insert_at : int,
-    values : [N]T
+    len: int,
+    cap: int,
+    insert_at: int,
+    values: [N]T
 }
 
 ring_buffer_init :: proc(buffer: ^RingBuffer($N, $T), default: T) {
+    buffer.cap = N
     for &v in buffer.values {
         v = default
     }
@@ -14,6 +17,7 @@ ring_buffer_init :: proc(buffer: ^RingBuffer($N, $T), default: T) {
 
 ring_buffer_push :: proc(buffer: ^RingBuffer($N, $T), value: T) {
     buffer.values[buffer.insert_at] = value
+    buffer.len = max(buffer.len, buffer.insert_at + 1)
     buffer.insert_at = (buffer.insert_at + 1) % N
 }
 

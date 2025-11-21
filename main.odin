@@ -194,6 +194,10 @@ main :: proc () {
     // player icosphere mesh----------------
     add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices, perm_arena_alloc)
 
+    // player spin particles----------------
+    ring_buffer_init(&rs.player_spin_particles, Spin_Particle{})
+    ring_buffer_init(&rs.player_spin_particle_info, Spin_Particle_Info{})
+
     // #####################################################
     // LOAD BLENDER RESOURCES 
     // #####################################################
@@ -401,6 +405,12 @@ main :: proc () {
     gl.VertexAttribDivisor(0, 0)
     gl.VertexAttribDivisor(1, 0)
     gl.VertexAttribDivisor(2, 1)
+    particle_vertices := PARTICLE_VERTICES
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(particle_vertices[0]) * len(particle_vertices), &particle_vertices[0], gl.STATIC_DRAW) 
+    particles := rs.player_spin_particles
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(particles.values[0]) * PLAYER_SPIN_PARTICLE_COUNT, &particles.values[0], gl.STATIC_DRAW) 
 
     bv := BACKGROUND_VERTICES
     gl.BindVertexArray(rs.background_vao)

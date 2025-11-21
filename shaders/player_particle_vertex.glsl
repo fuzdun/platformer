@@ -37,24 +37,27 @@ float easeout(float n) {
 }
 
 void main() {
-    // vec4 adjusted_offset = offset + vec4(player_pos, 0.0) * 2.0;
-    vec3 constrain_proj = constrain_dir * dot(constrain_dir, offset.xyz);
-    vec3 constrained_pos = offset.xyz - constrain_proj;
-    float dash_pos_t = length(constrain_dir - constrain_proj) / 2.0;
-    // float constrain_start_t = dash_time + 50.0 * dash_pos_t;
-    float constrain_start_t = 50.0 * dash_pos_t;
-    float constrain_amt = 1.0 - easeout(clamp((dash_total - constrain_start_t) / 300.0, 0.0, 1.0));
-    // if (i_time - dash_time > 200) {
-    if (dash_total > 200) {
-        constrain_amt = 1.0;
-    }
-    f_radius = radius * constrain_amt;
-
-    vec3 stretched_offset = offset.xyz + constrain_proj * (1.0 - constrain_amt) * 2.5 + constrain_dir * 2.5 * (1.0 - constrain_amt);
-
+    vec4 adjusted_offset = vec4(offset.xyz, 0.0);// + vec4(player_pos, 0.0);
+    // vec3 constrain_proj = constrain_dir * dot(constrain_dir, offset.xyz);
+    // vec3 constrained_pos = offset.xyz - constrain_proj;
+    // float dash_pos_t = length(constrain_dir - constrain_proj) / 2.0;
+    // // float constrain_start_t = dash_time + 50.0 * dash_pos_t;
+    // float constrain_start_t = 50.0 * dash_pos_t;
+    // float constrain_amt = 1.0 - easeout(clamp((dash_total - constrain_start_t) / 300.0, 0.0, 1.0));
+    // // if (i_time - dash_time > 200) {
+    // if (dash_total > 200) {
+    //     constrain_amt = 1.0;
+    // }
+    // f_radius = radius * constrain_amt;
+    //
+    // vec3 stretched_offset = offset.xyz + constrain_proj * (1.0 - constrain_amt) * 2.5 + constrain_dir * 2.5 * (1.0 - constrain_amt);
+    //
     id = int(offset.a);
     uv = uv_in;
     i_time_frag = i_time;
-    gl_Position = projection * (aPos + vec4(stretched_offset.xyz, 1.0) + vec4(player_pos, 0.0) * 2.0);
+    f_radius = radius * offset.w;
+    // f_radius = radius;
+    gl_Position = projection * (aPos + adjusted_offset);
+    // gl_Position = projection * (aPos + vec4(stretched_offset.xyz, 1.0) + vec4(player_pos, 0.0) * 2.0);
 }
 

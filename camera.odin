@@ -27,7 +27,7 @@ interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {
     c_right := glm.normalize(glm.cross(up, c_dir))
     c_up := glm.normalize(glm.cross(c_dir, c_right))
     view := glm.mat4LookAt(c_pos, tgt, up)
-    proj := glm.mat4Perspective(1.0, WIDTH / HEIGHT, 1.0, 10000)
+    proj := glm.mat4Perspective(1.0, WIDTH / HEIGHT, 1.0, 1000)
     return proj * view
 }
 
@@ -39,12 +39,12 @@ construct_camera_matrix :: proc(cs: Camera_State) -> glm.mat4 {
     c_right := glm.normalize(glm.cross(up, c_dir))
     c_up := glm.normalize(glm.cross(c_dir, c_right))
     view := glm.mat4LookAt(c_pos, tgt, up)
-    proj := glm.mat4Perspective(1.5, WIDTH / HEIGHT, 1.0, 10000)
+    proj := glm.mat4Perspective(1.5, WIDTH / HEIGHT, 1.0, 1000)
     return proj * view
 }
 
 only_projection_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {
-    return glm.mat4Perspective(1.0, WIDTH / HEIGHT, 10.0, 10000)
+    return glm.mat4Perspective(1.0, WIDTH / HEIGHT, 10.0, 1000)
 }
 
 only_view_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {

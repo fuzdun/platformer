@@ -1,7 +1,7 @@
 package main
 
 import SDL "vendor:sdl2"
-//import imsdl "shared:odin-imgui/imgui_impl_sdl2"
+import imsdl "shared:odin-imgui/imgui_impl_sdl2"
 
 Input_State :: struct {
     a_pressed: bool,
