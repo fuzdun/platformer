@@ -15,8 +15,8 @@ float distance_from_sphere(vec3 p, vec3 c, float r) {
 }
 
 float map_world(vec3 p) {
-    float t = i_time_frag / 400 + id * 1000.0;
-    float displacment = sin(3.0 * p.x + t) * sin(2.0 * p.y + t) * sin(1.0 * p.z + t) * .40;
+    float t = i_time_frag / 300 + id * 1000.0;
+    float displacment = (sin(3.0 * p.x + t) + 0.25) * (sin(2.0 * p.y + t) + 0.25) * (sin(1.0 * p.z + t) + 0.25) * .20;
     return distance_from_sphere(p, vec3(0.0, 0.0, 0.0), f_radius) + displacment;
 }
 
@@ -63,8 +63,14 @@ void main() {
     vec3 camera_pos = vec3(0.0, 0.0, -5.0);
     vec3 ro = camera_pos;
     vec3 rd = vec3(uv2, 1.0);
-    vec4 col = ray_march(ro, rd);
-    fragColor = col; 
+    // vec4 col = ray_march(ro, rd);
+    vec4 col = vec4(1.0, 0.0, 1.0, 1.0);
+    float intensity = max(0, pow(1.0 - length(uv2), 3));
+    // if (intensity <= 0.1) {
+    //     discard;
+    // }
+    fragColor = col * intensity * f_radius;
+    // fragColor = col; 
 }
 // void main() {
 //     float radius = length(uv - vec2(0.5, 0.5));

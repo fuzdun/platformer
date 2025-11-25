@@ -26,7 +26,8 @@ draw :: proc(
     es: Editor_State,
     szs: Slide_Zone_State,
     time: f64,
-    interp_t: f64
+    interp_t: f64,
+    dt: f32
 ) {
 
     // #####################################################
@@ -342,17 +343,24 @@ draw :: proc(
 
         pv := PARTICLE_VERTICES
         for &pv in pv {
-            pv.position = (camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y) * 2.0
+            pv.position = (camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y) * 1.0
         }
+        player_flat_velocity := [3]f32{pls.velocity.x, 0, pls.velocity.z}
+        norm_player_flat_velocity := la.normalize0(player_flat_velocity)
         if rnd.float32() < 1.0 {
-            for _ in 0..=8 {
+            for _ in 0..<1 {
+                particle_spawn_idx := rs.player_spin_particles.insert_at 
+                arm_idx := particle_spawn_idx % PLAYER_SPIN_PARTICLE_ARM_COUNT
+                spawn_angle := PLAYER_SPIN_TAIL_INTERVAL * f32(arm_idx) + (f32(time) / 120.0)
+                angle_offset := norm_player_flat_velocity * math.sin(spawn_angle) + [3]f32{0, 1, 0} * math.cos(spawn_angle)
                 particle_info: Spin_Particle_Info = {
-                    {(rnd.float32() - 0.5) * 0.5, (rnd.float32() - 0.5) * 0.5, (rnd.float32() - 0.5) * 0.5},
-                    rnd.float32() * 2.0 + 0.25,
+                    pls.velocity / 4.0 + angle_offset * 7.0,
+                    1.2,
                     f32(time),
-                    2000
+                    (rnd.float32() * 50) + 500
                 }
-                ring_buffer_push(&rs.player_spin_particles, Spin_Particle{pls.position.x, pls.position.y, pls.position.z, 0})
+                spawn_pos := pls.position.xyz + angle_offset * 1.0
+                ring_buffer_push(&rs.player_spin_particles, Spin_Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
                 ring_buffer_push(&rs.player_spin_particle_info, particle_info)
             }
         }
@@ -361,36 +369,25 @@ draw :: proc(
             pp := rs.player_spin_particles.values[:particle_count]
             pi := rs.player_spin_particle_info.values[:particle_count]
             for p_idx in 0..<particle_count {
-                pp[p_idx].xyz += pi[p_idx].vel
-                pi[p_idx].vel += {0, -0.005, 0 }
-                pp[p_idx].w = pi[p_idx].max_size
+                pp[p_idx].xyz += pi[p_idx].vel * dt
+                part := pi[p_idx] 
+                pi[p_idx].vel += {0, -5, 0 } * dt
+                sz_fact := clamp((f32(time) - part.time) / part.len, 0, 1)
+                pp[p_idx].w = part.max_size * (1.0 - sz_fact * sz_fact * sz_fact)
             }
-            // spin_tail_interval := f32(math.PI) * 2.0 / PLAYER_SPIN_PARTICLE_ARM_COUNT
-            // for &p, idx in pp {
-            //     ring_idx := idx / PLAYER_SPIN_PARTICLE_ARM_COUNT
-            //     a := f32(idx) * spin_tail_interval
-            //     a += f32(time) / 800.0
-            //     dist_t := (f32(time) * 0.05 + 25.0 * f32(ring_idx)) / 200.0
-            //     p.z += math.sin(a) * 40 * dist_t
-            //     p.x += math.cos(a) * 40 * dist_t
-            //     p.w = clamp(1.0 - dist_t, 0, 1)
-            // }
             sorted_pp := make([][4]f32, len(pp), context.temp_allocator)
             copy_slice(sorted_pp, pp[:])
-            // relative_cam_pos := la.normalize0(pls.position - cs.position) * 400
-            // context.user_ptr = &tive_cam_pos
             context.user_ptr = &cs.position
             z_sort := proc(a: [4]f32, b: [4]f32) -> bool {
                 cam_pos := (cast(^[3]f32) context.user_ptr)^
-                return la.length2(a.xyz + cam_pos) < la.length2(b.xyz + cam_pos)
+                return la.length2(a.xyz - cam_pos) > la.length2(b.xyz - cam_pos)
             }
-            // slice.sort_by(sorted_pp[:], z_sort)
+            slice.sort_by(sorted_pp[:], z_sort)
 
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
             gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(pv[0]) * len(pv), &pv[0])
             gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
             gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(sorted_pp[0]) * particle_count, &sorted_pp[0])
-
         }
 
         use_shader(shs, rs, .Player_Particle)

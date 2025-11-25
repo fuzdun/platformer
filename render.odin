@@ -132,7 +132,6 @@ Render_State :: struct {
     vertex_offsets: Vertex_Offsets,
     index_offsets: Index_Offsets,
 
-    // player_spin_particles: [PLAYER_SPIN_PARTICLE_COUNT][4]f32
     player_spin_particles: RingBuffer(PLAYER_SPIN_PARTICLE_COUNT, Spin_Particle),
     player_spin_particle_info: RingBuffer(PLAYER_SPIN_PARTICLE_COUNT, Spin_Particle_Info)
 }

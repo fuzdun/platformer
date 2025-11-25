@@ -606,7 +606,7 @@ main :: proc () {
         // render--------------------------
         // fmt.println(len(dynamic_lgs))
         draw_slice := EDIT ? dynamic_lgs[:] : lgs[:]
-        draw(draw_slice, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, f64(accumulator) / f64(target_frame_clocks))
+        draw(draw_slice, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, f64(accumulator) / f64(target_frame_clocks), FIXED_DELTA_TIME)
         when ODIN_OS != .Windows {
             if EDIT {
                 update_imgui(&es, dynamic_lgs)
