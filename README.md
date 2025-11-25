@@ -1,6 +1,6 @@
 Working title: **Durian**
 
-An arcade platformer platformer inspired by games like Thumper, Hyper Demon and Space Giraffe. The goal is to induce a platforming flow state using clear audiovisual gameplay cues set against progressively more psychedelic obfuscation. The game will feature a reactive soundtrack mixing live drums, cavernous ambient and jungle/DnB
+An arcade platformer platformer inspired by games like Thumper, Hyper Demon and Space Giraffe. Arcade flow state + psychedelic obfuscation. A reactive soundtrack will mix live drums, cavernous ambient and jungle/DnB
 
 Built with Odin, SDL2 and OpenGL
 
