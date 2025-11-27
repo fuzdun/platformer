@@ -46,9 +46,8 @@ uniform float slide_t;
 uniform sampler2D ditherTexture;
 
 #define TWOPI 6.2831853
-#define SHADES 3.0
 #define SLIDE_RADIUS 15.0
-#define SAMPLE_RES 640.0
+#define SAMPLE_RES 320 
 #define LINE_W 0.2
 
 vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
@@ -134,6 +133,21 @@ float udTriangle( in vec3 v1, in vec3 v2, in vec3 v3, in vec3 p )
         dot2(v13*clamp(dot(v13,p3)/dot2(v13),0.0,1.0)-p3)));
 }
 
+#define RING_COUNT 12.0
+#define RING_SIZE 3.0
+#define RING_PHASE_OFFSET 0.6
+#define RING_WAVE_SIZE 2.5
+float ditherRingNum(float distVal, float mask) {
+    float time = i_time / 200.0;
+    for (int i = 0; i < RING_COUNT; i++) {
+        float ringTargetDist = i * RING_SIZE + mask * 3.5 + sin(time + RING_PHASE_OFFSET * i) * RING_WAVE_SIZE; 
+        if (distVal < ringTargetDist) {
+            return i / RING_COUNT;
+        }
+    }
+    return RING_COUNT;
+}
+
 void main()
 {
     vec4 glassColor = mix(vec4(0.08, 0.08, 0.100, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
@@ -189,10 +203,10 @@ void main()
     vec3 plane_y = normalize(cross(normal_frag, plane_x));
     float ring_uvx = dot(plane_x, proj_player_diff);
     float ring_uvy = dot(plane_y, proj_player_diff);
-    float ring_a = atan(ring_uvx / ring_uvy) * 25;
+    float ring_a = atan(ring_uvx / ring_uvy);
     float uvd = length(proj_player_diff);
     float slide_ring_size = (1.0 - (abs(slide_t - 0.5) / 0.5)) * SLIDE_RADIUS;
-    float noise_offset = noise(vec2(ring_a + time * 20, time * 10)) * 1.5;
+    float noise_offset = noise(vec2(ring_a * 25 + time * 20, time * 10)) * 1.5;
     float ring_factor = abs(uvd - (plane_player_dist + slide_ring_size + noise_offset));
     float noise_border = smoothstep(-0.03, 0.0, ring_factor) - smoothstep(0.30, 0.33, ring_factor);
 
@@ -236,7 +250,8 @@ void main()
     vec3 grad_normal = normalize(grad_noise_val.yzw);
     float lighting_amt = dot(vec3(0, -1, 0), grad_normal);
     float lighting2_amt = dot(normalize(vec3(1, 1, 1)), grad_normal);
-    vec3 pattern_col =  (lighting_amt * 0.3 + 0.7) * vec3(0.0, 0.8, 1.0) + (lighting2_amt * 0.3 + 0.7) * vec3(0.25, 0.0, 0.25);
+    vec3 pattern_col =  (lighting_amt * 0.3 + 0.7) * vec3(0.0, 0.7, 1.0) + (lighting2_amt * 0.3 + 0.7) * vec3(0.25, 0.0, 0.45);
+    // vec3 pattern_col = vec3(0, 0, 1);
 
     float sd = (udTriangle(b_poss[0], b_poss[1], b_poss[2], global_pos));
     float border_t = did_shatter == 1.0 ? smoothstep(0.0, LINE_W, sd) : 1.0;
@@ -246,7 +261,10 @@ void main()
     // BLUE NOISE
     float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 300.0) * (SAMPLE_RES / 64.0)).r;
     mask = reshapeUniformToTriangle(mask);
-    mask = min(1.0, max(floor(mask + length(intersection - player_pos) / 8.0) / 4.0, 0.25)); 
+    
+    // float ring_num = floor(mask + length(intersection - player_pos) / RING_SIZE) / RING_COUNT;
+    float ring_num = ditherRingNum(length(intersection - player_pos), mask);
+    mask = min(1.0, max(ring_num, 0.20)); 
 
     fragColor = mix(vec4(col, 1.0), glassColor, mask);
     fragColor = mix(fragColor, vec4(1.0, 1.0, 1.0, 1.0), noise_border);

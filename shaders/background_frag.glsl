@@ -81,7 +81,7 @@ vec3 tonemap(vec3 x)
 
 void main() {
     // float shade = pattern(round(uv * 100) / 100.0);
-    float shade = pattern(uv * 1.0);
+    float shade = pattern(uv * 0.5);
     vec3 pattern_col = vec3(colormap(shade).rgb) * .4;
     fragColor = vec4(0);
     vec4 col = vec4(pattern_col, 0.5);
@@ -110,11 +110,11 @@ void main() {
         float noise_disp = noise_sample * ease_out(t) * .2;
         float diffusion = length(pt_diff) / ((t * 1) - noise_disp);
         vec4 this_col = vec4(tonemap(abs(sin(vec3(1.0, 0.0, -2.8) + diffusion * vec3(20.0, 0.0, 4.8)))), 1.0);
-        float mix_fact = clamp(diffusion * diffusion * 0.5 + 0.5 + et / 3000.0, 0, 1);
+        float mix_fact = clamp(diffusion * diffusion * 0.5 + 0.5 + et / 3000.0, 0.0, 1.0);
         col = mix(this_col, col, mix_fact);
-        // col *= 2.0;
         col = clamp(col, 0.0, 1.0);
     }
+    col.a = 0.45;
     fragColor = col;
     
     // float noise_sample = noise(normalize(center_uv) + i_time * vec2(0.5, 0.5));
