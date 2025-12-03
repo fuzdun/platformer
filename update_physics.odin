@@ -7,6 +7,28 @@ import la "core:math/linalg"
 NORMAL_Y_MIN_GROUND :: 0.85
 NORMAL_Y_MIN_SLOPE :: 0.2
 
+get_particle_collision :: proc(
+    particles: []Spin_Particle,
+    particle_info: []Spin_Particle_Info,
+    lgs: #soa[]Level_Geometry,
+    level_colliders: [SHAPE]Collider_Data,
+    static_collider_vertices: [dynamic][3]f32,
+    dt: f32
+) {
+    filter: Level_Geometry_Attributes = { .Collider }
+    for lg in lgs {
+        coll := level_colliders[lg.collider]
+        if filter <= lg.attributes {
+            for &p, p_idx in particles {
+                // pi := &particle_info[p_idx]
+                // if pt_aabb_collision(p.xyz + pi.vel * dt, lg.aabb) {
+                //     pi.vel = 0 
+                // }
+            }
+        }
+    }
+}
+
 get_collisions_and_update_contact_state :: proc(
     lgs: #soa[]Level_Geometry,
     position: [3]f32,
@@ -32,16 +54,23 @@ get_collisions_and_update_contact_state :: proc(
 
     tv_offset := 0
 
-    filter: Level_Geometry_Attributes = { .Collider }
+    // filter: Level_Geometry_Attributes = { .Collider }
+    fmt.println("======")
 
-    for lg, id in lgs {
+    id := 0
+    for lg in lgs {
         coll := level_colliders[lg.collider] 
         // check for destroyed geometry
         if (lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
             //check has collider
-            if filter <= lg.attributes {
+            if .Collider in lg.attributes {
+                if lg.shape == .DASH_BARRIER {
+                    fmt.println("got one")
+                }
+
                 // check AABB collision
                 if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
+                    fmt.println("got two")
                     vertices := static_collider_vertices[tv_offset:tv_offset + len(coll.vertices)] 
                     l := len(coll.indices)
                     for i := 0; i <= l - 3; i += 3 {
@@ -72,9 +101,10 @@ get_collisions_and_update_contact_state :: proc(
                         }
                     }
                 }
+                tv_offset += len(coll.vertices)
+                id += 1
             }         
         }
-        tv_offset += len(coll.vertices)
     }
 
     best_plane_normal := collided ? collision.normal : {100, 100, 100}

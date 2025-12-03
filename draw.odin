@@ -9,7 +9,6 @@ import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 import tim "core:time"
-import rnd "core:math/rand"
 
 FWD_Z_CULL :: 600
 BCK_Z_CULL :: 100
@@ -345,38 +344,42 @@ draw :: proc(
         for &pv in pv {
             pv.position = (camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y) * 1.0
         }
-        player_flat_velocity := [3]f32{pls.velocity.x, 0, pls.velocity.z}
-        norm_player_flat_velocity := la.normalize0(player_flat_velocity)
-        if rnd.float32() < 1.0 {
-            for _ in 0..<1 {
-                particle_spawn_idx := rs.player_spin_particles.insert_at 
-                arm_idx := particle_spawn_idx % PLAYER_SPIN_PARTICLE_ARM_COUNT
-                spawn_angle := PLAYER_SPIN_TAIL_INTERVAL * f32(arm_idx) + (f32(time) / 120.0)
-                angle_offset := norm_player_flat_velocity * math.sin(spawn_angle) + [3]f32{0, 1, 0} * math.cos(spawn_angle)
-                particle_info: Spin_Particle_Info = {
-                    pls.velocity / 4.0 + angle_offset * 7.0,
-                    1.2,
-                    f32(time),
-                    (rnd.float32() * 50) + 500
-                }
-                spawn_pos := pls.position.xyz + angle_offset * 1.0
-                ring_buffer_push(&rs.player_spin_particles, Spin_Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
-                ring_buffer_push(&rs.player_spin_particle_info, particle_info)
-            }
-        }
+        // player_flat_velocity := [3]f32{pls.velocity.x, 0, pls.velocity.z}
+        // norm_player_flat_velocity := la.normalize0(player_flat_velocity)
+        // if pls.spin_state.spinning {
+        //     if rnd.float32() < 1.0 {
+        //         for _ in 0..<4 {
+        //             particle_spawn_idx := rs.player_spin_particles.insert_at 
+        //             arm_idx := particle_spawn_idx % PLAYER_SPIN_PARTICLE_ARM_COUNT
+        //             spawn_angle := -PLAYER_SPIN_TAIL_INTERVAL * f32(arm_idx) + (f32(time) / 30.0)
+        //             angle_offset := norm_player_flat_velocity * math.sin(spawn_angle) + [3]f32{0, 1, 0} * math.cos(spawn_angle)
+        //             particle_info: Spin_Particle_Info = {
+        //                 pls.velocity + angle_offset * 15.0,
+        //                 1.2,
+        //                 f32(time),
+        //                 (rnd.float32() * 200) + 2000
+        //             }
+        //             spawn_pos := pls.position.xyz + angle_offset * 1.0
+        //             ring_buffer_push(&rs.player_spin_particles, Spin_Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
+        //             ring_buffer_push(&rs.player_spin_particle_info, particle_info)
+        //         }
+        //     }
+        // }
         particle_count := rs.player_spin_particles.len
         if particle_count > 0 {
-            pp := rs.player_spin_particles.values[:particle_count]
-            pi := rs.player_spin_particle_info.values[:particle_count]
-            for p_idx in 0..<particle_count {
-                pp[p_idx].xyz += pi[p_idx].vel * dt
-                part := pi[p_idx] 
-                pi[p_idx].vel += {0, -5, 0 } * dt
-                sz_fact := clamp((f32(time) - part.time) / part.len, 0, 1)
-                pp[p_idx].w = part.max_size * (1.0 - sz_fact * sz_fact * sz_fact)
-            }
-            sorted_pp := make([][4]f32, len(pp), context.temp_allocator)
-            copy_slice(sorted_pp, pp[:])
+            // pp := rs.player_spin_particles.values[:particle_count]
+            // pi := rs.player_spin_particle_info.values[:particle_count]
+            // for p_idx in 0..<particle_count {
+            //     pp[p_idx].xyz += pi[p_idx].vel * dt
+            //     part := pi[p_idx] 
+            //     if pi[p_idx].vel != 0 {
+            //         pi[p_idx].vel += {0, -60, 0 } * dt
+            //     }
+            //     sz_fact := clamp((f32(time) - part.time) / part.len, 0, 1)
+            //     pp[p_idx].w = part.max_size * (1.0 - sz_fact * sz_fact * sz_fact)
+            // }
+            sorted_pp := make([][4]f32, particle_count, context.temp_allocator)
+            copy_slice(sorted_pp, rs.player_spin_particles.values[:particle_count])
             context.user_ptr = &cs.position
             z_sort := proc(a: [4]f32, b: [4]f32) -> bool {
                 cam_pos := (cast(^[3]f32) context.user_ptr)^

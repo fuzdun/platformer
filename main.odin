@@ -473,6 +473,10 @@ main :: proc () {
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
     gl.BindBufferRange(gl.UNIFORM_BUFFER, 7, rs.transparencies_ubo, 0, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
 
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.physics_vertices_ubo)
+    gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec3) * len(phs.static_collider_vertices), nil, gl.DYNAMIC_DRAW)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 8, rs.physics_vertices_ubo, 0, size_of(glm.vec3) * len(phs.static_collider_vertices))
+
     gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 
     // load blue noise dither texture -----
@@ -598,7 +602,7 @@ main :: proc () {
             if EDIT {
                 editor_update(&dynamic_lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
-                game_update(&lgs, is, &pls, &phs, &cs, &ts, &szs, f32(elapsed_time), FIXED_DELTA_TIME * ts.time_mult)
+                game_update(&lgs, is, &pls, &phs, &rs, &cs, &ts, &szs, f32(elapsed_time), FIXED_DELTA_TIME * ts.time_mult)
             }
             accumulator -= target_frame_clocks 
         }

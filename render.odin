@@ -122,6 +122,7 @@ Render_State :: struct {
     shatter_ubo: u32,
     crack_time_ubo: u32,
     transparencies_ubo: u32,
+    physics_vertices_ubo: u32,
 
     dither_tex: u32,
 

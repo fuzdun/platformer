@@ -77,6 +77,10 @@ player_triangle_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2
     return
 }
 
+pt_aabb_collision :: proc(c: [3]f32, aabb: Aabb) -> bool {
+    return c.x > aabb.x0 && c.x < aabb.x1 && c.y > aabb.y0 && c.y < aabb.y1 && c.z > aabb.z0 && c.z < aabb.z1
+}
+
 sphere_aabb_collision :: proc(c: [3]f32, r: f32, aabb: Aabb) -> bool {
     total : f32 = 0
     if c.x < aabb.x0 do total += (c.x - aabb.x0) * (c.x - aabb.x0)

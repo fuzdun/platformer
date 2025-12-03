@@ -39,7 +39,8 @@ ProgramName :: enum {
     Barrier,
     Wireframe,
     Slide_Zone,
-    Bouncy
+    Bouncy,
+    Particle_Physics
 }
 
 PROGRAM_CONFIGS :: #partial[ProgramName]Program {
@@ -132,6 +133,11 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         pipeline = {"slide_zone_vertex", "slide_zone_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"shatter_delay"}
+    },
+    .Particle_Physics = {
+        pipeline = {"particle_physics_compute"},
+        shader_types = {.COMPUTE_SHADER},
+        uniforms = {}
     }
 }
 
