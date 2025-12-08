@@ -216,8 +216,12 @@ main :: proc () {
     loaded_level_geometry := load_level_geometry("test_level", perm_arena_alloc)
     num_entities := len(loaded_level_geometry) 
 
-    // sort into render groups -------------
-    lgs = sort_lgs(loaded_level_geometry, perm_arena_alloc)
+    // convert loaded gemoetry to SOA ------
+    // lgs = sort_lgs(loaded_level_geometry, perm_arena_alloc)
+    lgs = make(#soa[]Level_Geometry, len(loaded_level_geometry), perm_arena_alloc)
+    for lg, idx in loaded_level_geometry {
+        lgs[idx] = lg
+    }
 
     // add to physics ----------------------
     phs.static_collider_vertices = make([dynamic][3]f32, perm_arena_alloc)

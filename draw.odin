@@ -33,25 +33,36 @@ draw :: proc(
     //  PREPARE RENDER DATA
     // #####################################################
 
-    // count geometry groups and cull 
+
+
+    // count geometry groups
     // -------------------------------------------
     group_offsets: [NUM_RENDER_GROUPS]int
-    culled_lgs := make(#soa[dynamic]Level_Geometry, context.temp_allocator)
-    reserve_soa(&culled_lgs, len(lgs))
     min_z_cull := cs.position.z - FWD_Z_CULL
     max_z_cull := cs.position.z + BCK_Z_CULL
+    num_culled_lgs := 0
     for lg, idx in lgs {
         if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
-            append(&culled_lgs, lg)
             group_offsets[lg_render_group(lg)] += 1
+            num_culled_lgs += 1
         }
     }
-    num_culled_lgs := len(culled_lgs)
 
     // generate draw commands 
     // -------------------------------------------
     counts_to_offsets(group_offsets[:])
-    draw_commands := offsets_to_render_commands(group_offsets[:], len(culled_lgs), rs^, sr)
+    draw_commands := offsets_to_render_commands(group_offsets[:], num_culled_lgs, rs^, sr)
+
+    // sort and cull
+    // -------------------------------------------
+    culled_lgs := make(#soa[]Level_Geometry, num_culled_lgs, context.temp_allocator)
+    for lg, idx in lgs {
+        if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
+            rg := lg_render_group(lg)
+            culled_lgs[group_offsets[rg]] = lg
+            group_offsets[rg] += 1
+        }
+    }
 
     // load UBOs 
     // -------------------------------------------

@@ -24,7 +24,8 @@ SHAPE :: enum {
     SLIDE_ZONE,
     ICE_CREAM,
     BOUNCY,
-    CHAIR
+    CHAIR,
+    FRANK
 }
 
 Level_Geometry_Render_Type :: enum {
@@ -46,7 +47,8 @@ SHAPE_FILENAME := [SHAPE]string {
     .SLIDE_ZONE = "slide_zone",
     .ICE_CREAM = "ice_cream_cone",
     .CHAIR = "chair",
-    .BOUNCY = "basic_cube"
+    .BOUNCY = "basic_cube",
+    .FRANK = "frank"
 }
 
 SHAPE_NAME := [SHAPE]string {
@@ -57,7 +59,8 @@ SHAPE_NAME := [SHAPE]string {
     .SLIDE_ZONE = "SLIDE_ZONE",
     .ICE_CREAM = "ICE_CREAM",
     .CHAIR = "CHAIR",
-    .BOUNCY = "BOUNCY"
+    .BOUNCY = "BOUNCY",
+    .FRANK = "FRANK"
 }
 
 TEXT_VERTICES :: [4]Quad_Vertex4 {
@@ -273,6 +276,7 @@ sort_lgs :: proc(lgs: []Level_Geometry, alloc: runtime.Allocator) -> Level_Geome
         insert_idx := group_counts[render_group]
         group_counts[render_group] += 1
         sorted_lgs[insert_idx] = lg
+        sorted_lgs[idx] = lg
     }
     return sorted_lgs
 }

@@ -240,7 +240,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
 
 
-    get_particle_collision(rs.player_spin_particles.values[:], rs.player_spin_particle_info.values[:], lgs^, phs.level_colliders, phs.static_collider_vertices, delta_time)
+    // get_particle_collision(rs.player_spin_particles.values[:], rs.player_spin_particle_info.values[:], lgs^, phs.level_colliders, phs.static_collider_vertices, delta_time)
 
     // fmt.println(tim.since(collisions_start))
 

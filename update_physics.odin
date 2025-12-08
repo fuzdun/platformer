@@ -29,6 +29,36 @@ get_particle_collision :: proc(
     }
 }
 
+Collision_Check_Data :: #soa[]struct {
+    
+}
+
+get_particle_collision_vertices :: proc (
+    lgs: #soa[]Level_Geometry,
+    level_colliders: [SHAPE]Collider_Data,
+    static_collider_vertices: [dynamic][3]f32,
+    et: f32
+) {
+    tv_offset := 0
+    for lg, id in lgs {
+        coll := level_colliders[lg.collider] 
+        // check for destroyed geometry
+        // if (lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
+            //check has collider
+            // if .Collider in lg.attributes {
+                // check AABB collision
+                // if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
+        vertices := static_collider_vertices[tv_offset:tv_offset + len(coll.vertices)] 
+        l := len(coll.indices)
+        for i := 0; i <= l - 3; i += 3 {
+            t0 := vertices[coll.indices[i]]
+            t1 := vertices[coll.indices[i+1]]
+            t2 := vertices[coll.indices[i+2]]
+        }
+        tv_offset += len(coll.vertices)
+    }
+}
+
 get_collisions_and_update_contact_state :: proc(
     lgs: #soa[]Level_Geometry,
     position: [3]f32,
@@ -55,22 +85,15 @@ get_collisions_and_update_contact_state :: proc(
     tv_offset := 0
 
     // filter: Level_Geometry_Attributes = { .Collider }
-    fmt.println("======")
 
-    id := 0
-    for lg in lgs {
+    for lg, id in lgs {
         coll := level_colliders[lg.collider] 
         // check for destroyed geometry
         if (lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
             //check has collider
             if .Collider in lg.attributes {
-                if lg.shape == .DASH_BARRIER {
-                    fmt.println("got one")
-                }
-
                 // check AABB collision
                 if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
-                    fmt.println("got two")
                     vertices := static_collider_vertices[tv_offset:tv_offset + len(coll.vertices)] 
                     l := len(coll.indices)
                     for i := 0; i <= l - 3; i += 3 {
@@ -101,10 +124,9 @@ get_collisions_and_update_contact_state :: proc(
                         }
                     }
                 }
-                tv_offset += len(coll.vertices)
-                id += 1
             }         
         }
+        tv_offset += len(coll.vertices)
     }
 
     best_plane_normal := collided ? collision.normal : {100, 100, 100}

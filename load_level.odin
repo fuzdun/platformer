@@ -72,7 +72,7 @@ load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Lev
             } else if lg.shape == .BOUNCY {
                 lg.attributes += {.Bouncy}
                 lg.render_type = .Bouncy
-            } else if lg.shape == .ICE_CREAM || lg.shape == .CHAIR {
+            } else if lg.shape == .ICE_CREAM || lg.shape == .CHAIR || lg.shape == .FRANK {
                 lg.attributes -= {.Collider}
                 lg.render_type = .Wireframe
             }
@@ -84,9 +84,6 @@ load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Lev
 
 add_geometry_to_physics :: proc(ps: ^Physics_State, szs: ^Slide_Zone_State, lgs_in: #soa[]Level_Geometry) {
     for &lg, lg_idx in lgs_in {
-        if .Collider not_in lg.attributes {
-            continue
-        }
         rot_mat := glm.mat4FromQuat(lg.transform.rotation)
         vertices_len := len(ps.level_colliders[lg.shape].vertices)
         transformed_vertices := make([][3]f32, vertices_len)
