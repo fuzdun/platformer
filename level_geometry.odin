@@ -13,7 +13,7 @@ Level_Geometry :: struct {
     transform: Transform,
     angular_velocity: la.Vector3f32,
     shape: SHAPE,
-    collider: Collider,
+    collider: SHAPE,
     render_type: Level_Geometry_Render_Type,
     attributes: Level_Geometry_Attributes,
     aabb: Aabb,
@@ -35,10 +35,6 @@ Transform :: struct {
 }
 
 Angular_Velocity :: la.Vector3f32
-
-Shape :: SHAPE
-
-Collider :: SHAPE
 
 Active_Shaders :: bit_set[ProgramName; u64]
 

@@ -77,13 +77,13 @@ load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, ps: ^Physics_State, p
 
     collider_mesh_idx := len(js.scenes[0].nodes) == 2 ? 1 : 0
     sr[shape] = read_mesh_data_from_binary(js, bin_data, 0, false, perm_arena).(Shape_Data)
-    ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true, perm_arena).(Collider_Data)
+    ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true, perm_arena).(Mesh)
 
     vmem.arena_destroy(&temp_arena)
     return true
 }
 
-Model_Data :: union{Shape_Data, Collider_Data}
+Model_Data :: union{Shape_Data, Mesh}
 
 read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: []u8, i: int, collider: bool, perm_arena: runtime.Allocator) -> Model_Data {
     pos_idx := model_data.meshes[i].primitives[0].attributes["POSITION"]
@@ -126,7 +126,7 @@ read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: [
         }
         return sd
     }
-    coll: Collider_Data
+    coll: Mesh
     coll.vertices = make([][3]f32, len(pos_data), perm_arena) 
     coll.indices = make([]u16, len(indices_data), perm_arena)
     for pos, pi in pos_data {

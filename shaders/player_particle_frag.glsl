@@ -66,9 +66,9 @@ void main() {
     // vec4 col = ray_march(ro, rd);
     vec4 col = vec4(1.0, 1.0, 1.0, 1.0);
     float intensity = max(0, pow(1.0 - length(uv2), 3));
-    // if (intensity <= 0.1) {
-    //     discard;
-    // }
+    if (intensity <= 0.2) {
+        discard;
+    }
     float a_fact = intensity * f_radius;
     col.a *= 1.0 - smoothstep(0.3, 0.25, a_fact);
     fragColor = col;

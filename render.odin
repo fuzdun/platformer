@@ -109,6 +109,7 @@ Render_State :: struct {
     standard_vbo: u32,
     player_vbo: u32,
     particle_vbo: u32,
+    prev_particle_pos_vbo: u32,
     particle_pos_vbo: u32,
     background_vbo: u32,
     editor_lines_vbo: u32,
@@ -182,15 +183,6 @@ Break_Data :: struct {
     time: f32,
     pos: [3]f32,
     dir: [3]f32
-}
-
-Lg_Render_Data :: struct {
-    render_group: int,
-    transform_mat: glm.mat4,
-    z_width: f32,
-    crack_time: f32,
-    break_data: Break_Data,
-    transparency: f32
 }
 
 Common_Ubo :: struct {

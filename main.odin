@@ -27,7 +27,7 @@ MOVE :: #config(MOVE, false)
 WIDTH :: 1920.0
 HEIGHT :: 1080.0
 FULLSCREEN :: true
-TARGET_FRAME_RATE :: 60.0
+TARGET_FRAME_RATE :: 30.0
 FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
 FORCE_EXTERNAL_MONITOR :: false
 
@@ -224,8 +224,8 @@ main :: proc () {
     }
 
     // add to physics ----------------------
-    phs.static_collider_vertices = make([dynamic][3]f32, perm_arena_alloc)
-    add_geometry_to_physics(&phs, &szs, lgs)
+    //phs.static_collider_vertices = make([dynamic][3]f32, perm_arena_alloc)
+    //add_geometry_to_physics(&phs, &szs, lgs)
 
     // dynamic_lgs (used for editor) -------
     dynamic_lgs := make(#soa[dynamic]Level_Geometry, perm_arena_alloc)
@@ -362,6 +362,7 @@ main :: proc () {
     gl.GenBuffers(1, &rs.player_vbo)
     gl.GenBuffers(1, &rs.particle_vbo)
     gl.GenBuffers(1, &rs.particle_pos_vbo)
+    gl.GenBuffers(1, &rs.prev_particle_pos_vbo)
     gl.GenBuffers(1, &rs.background_vbo)
     gl.GenBuffers(1, &rs.text_vbo)
     gl.GenBuffers(1, &rs.editor_lines_vbo)
@@ -406,14 +407,20 @@ main :: proc () {
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
     gl.EnableVertexAttribArray(2)
     gl.VertexAttribPointer(2, 4, gl.FLOAT, false, 0, 0)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_particle_pos_vbo)
+    gl.EnableVertexAttribArray(3)
+    gl.VertexAttribPointer(3, 4, gl.FLOAT, false, 0, 0)
     gl.VertexAttribDivisor(0, 0)
     gl.VertexAttribDivisor(1, 0)
     gl.VertexAttribDivisor(2, 1)
+    gl.VertexAttribDivisor(3, 1)
     particle_vertices := PARTICLE_VERTICES
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(particle_vertices[0]) * len(particle_vertices), &particle_vertices[0], gl.STATIC_DRAW) 
     particles := rs.player_spin_particles
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(particles.values[0]) * PLAYER_SPIN_PARTICLE_COUNT, &particles.values[0], gl.STATIC_DRAW) 
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_particle_pos_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(particles.values[0]) * PLAYER_SPIN_PARTICLE_COUNT, &particles.values[0], gl.STATIC_DRAW) 
 
     bv := BACKGROUND_VERTICES
@@ -477,9 +484,9 @@ main :: proc () {
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
     gl.BindBufferRange(gl.UNIFORM_BUFFER, 7, rs.transparencies_ubo, 0, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.physics_vertices_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec3) * len(phs.static_collider_vertices), nil, gl.DYNAMIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 8, rs.physics_vertices_ubo, 0, size_of(glm.vec3) * len(phs.static_collider_vertices))
+    //gl.BindBuffer(gl.UNIFORM_BUFFER, rs.physics_vertices_ubo)
+    //gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec3) * len(phs.static_collider_vertices), nil, gl.DYNAMIC_DRAW)
+    //gl.BindBufferRange(gl.UNIFORM_BUFFER, 8, rs.physics_vertices_ubo, 0, size_of(glm.vec3) * len(phs.static_collider_vertices))
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 
@@ -559,6 +566,9 @@ main :: proc () {
 
     resync := true
     quit_handler :: proc () { quit_app = true }
+
+    ubo_size: i32 = 0
+    gl.GetIntegerv(gl.MAX_UNIFORM_BLOCK_SIZE, &ubo_size)
 
     for !quit_app {
         if quit_app do break

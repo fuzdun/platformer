@@ -2,6 +2,7 @@ package main
 
 import "core:math"
 import "core:fmt"
+import "core:slice"
 import la "core:math/linalg"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
@@ -216,6 +217,12 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // #####################################################
     // APPLY PLAYER VELOCITY, HANDLE COLLISIONS
     // #####################################################
+    
+    physics_map_start := tim.now()
+    physics_map := build_physics_map(lgs^, phs.level_colliders, elapsed_time)
+    //fmt.println(phs.level_colliders)
+    //fmt.println(physics_map)
+    get_particle_collisions(rs.player_spin_particles.values[:], rs.player_spin_particle_info.values[:], physics_map)
 
     collision_adjusted_cts, new_position, collision_adjusted_velocity, collision_ids, contact_ids := apply_velocity(
         new_cts,
@@ -224,25 +231,20 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         pls.dash_state.dashing,
         pls.slide_state.sliding,
         lgs^,
-        phs.level_colliders,
-        phs.static_collider_vertices,
+        physics_map,
         elapsed_time,
         delta_time
     );
-    // collisions_start := tim.now()
 
+    fmt.println(tim.since(physics_map_start))
     
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.physics_vertices_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec3) * len(phs.static_collider_vertices), &phs.static_collider_vertices[0], gl.DYNAMIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 8, rs.physics_vertices_ubo, 0, size_of(glm.vec3) * len(phs.static_collider_vertices))
+    //gl.BindBuffer(gl.UNIFORM_BUFFER, rs.physics_vertices_ubo)
+    //gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec3) * len(phs.static_collider_vertices), &phs.static_collider_vertices[0], gl.DYNAMIC_DRAW)
+    //gl.BindBufferRange(gl.UNIFORM_BUFFER, 8, rs.physics_vertices_ubo, 0, size_of(glm.vec3) * len(phs.static_collider_vertices))
     
     // fmt.println(len(phs.static_collider_vertices))
 
-
-
     // get_particle_collision(rs.player_spin_particles.values[:], rs.player_spin_particle_info.values[:], lgs^, phs.level_colliders, phs.static_collider_vertices, delta_time)
-
-    // fmt.println(tim.since(collisions_start))
 
     // handle restart player position
     // -------------------------------------------
@@ -532,8 +534,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     }
 
     if bunny_hopped {
-       last_touched := collision_adjusted_cts.last_touched
-       lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
+       //last_touched := collision_adjusted_cts.last_touched
+       //lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
     }
 
     for id in collision_ids {
@@ -545,9 +547,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         } else if .Slide_Zone in lg.attributes && new_slide_state.sliding {
             // do nothing
         } else if .Breakable in lg.attributes {
-            lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.shatter_data.crack_time
+            //lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.shatter_data.crack_time
         } else if .Crackable in lg.attributes {
-            lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.shatter_data.crack_time
+            //lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.shatter_data.crack_time
         }
     }
 
@@ -579,9 +581,10 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     player_flat_velocity := [3]f32{pls.velocity.x, 0, pls.velocity.z}
     norm_player_flat_velocity := la.normalize0(player_flat_velocity)
-    if pls.spin_state.spinning {
+    //if pls.spin_state.spinning {
+    if is.c_pressed {
         if rnd.float32() < 1.0 {
-            for _ in 0..<4 {
+            for _ in 0..<20 {
                 particle_spawn_idx := rs.player_spin_particles.insert_at 
                 arm_idx := particle_spawn_idx % PLAYER_SPIN_PARTICLE_ARM_COUNT
                 spawn_angle := -PLAYER_SPIN_TAIL_INTERVAL * f32(arm_idx) + (f32(elapsed_time) / 30.0)
@@ -605,12 +608,26 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         for p_idx in 0..<particle_count {
             pp[p_idx].xyz += pi[p_idx].vel * delta_time
             part := pi[p_idx] 
-            // if pi[p_idx].vel != 0 {
-                pi[p_idx].vel += {0, -60, 0 } * delta_time
-            // }
+            pi[p_idx].vel += {0, -60, 0 } * delta_time
             sz_fact := clamp((f32(elapsed_time) - part.time) / part.len, 0, 1)
             pp[p_idx].w = part.max_size * (1.0 - sz_fact * sz_fact * sz_fact)
         }
+        sorted_pp := make([][4]f32, particle_count, context.temp_allocator)
+        copy_slice(sorted_pp, pp)
+        context.user_ptr = &cs.position
+        z_sort := proc(a: [4]f32, b: [4]f32) -> bool {
+            cam_pos := (cast(^[3]f32) context.user_ptr)^
+            return la.length2(a.xyz - cam_pos) > la.length2(b.xyz - cam_pos)
+        }
+        //slice.sort_by(sorted_pp[:], z_sort)
+        gl.BindBuffer(gl.COPY_READ_BUFFER, rs.particle_pos_vbo)
+        particle_pos_buffer_size: i32
+        gl.GetBufferParameteriv(gl.COPY_READ_BUFFER, gl.BUFFER_SIZE, &particle_pos_buffer_size)
+        gl.BindBuffer(gl.COPY_WRITE_BUFFER, rs.prev_particle_pos_vbo)
+        gl.CopyBufferSubData(gl.COPY_READ_BUFFER, gl.COPY_WRITE_BUFFER, 0, 0, int(particle_pos_buffer_size))
+
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+        gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(sorted_pp[0]) * particle_count, &sorted_pp[0])
     }
 
     // #####################################################

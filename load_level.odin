@@ -83,30 +83,30 @@ load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Lev
 }
 
 add_geometry_to_physics :: proc(ps: ^Physics_State, szs: ^Slide_Zone_State, lgs_in: #soa[]Level_Geometry) {
-    for &lg, lg_idx in lgs_in {
-        rot_mat := glm.mat4FromQuat(lg.transform.rotation)
-        vertices_len := len(ps.level_colliders[lg.shape].vertices)
-        transformed_vertices := make([][3]f32, vertices_len)
-        defer delete(transformed_vertices)
-        if lg.shape == .SLIDE_ZONE {
-            sz: Obb
-            sz.id = lg_idx
-            x := rot_mat * [4]f32{1, 0, 0, 0}
-            y := rot_mat * [4]f32{0, 1, 0, 0}
-            z := rot_mat * [4]f32{0, 0, 1, 0}
-            sz.axes = {x.xyz, y.xyz, z.xyz}
-            sz.dim = lg.transform.scale 
-            sz.center = lg.transform.position
-            append(&szs.entities, sz)
-        }
-        trans_mat := trans_to_mat4(lg.transform)
-        for v, vi in ps.level_colliders[lg.shape].vertices {
-            transformed_vertices[vi] = (trans_mat * [4]f32{v[0], v[1], v[2], 1.0}).xyz
-        }
-        lg.aabb = vertices_to_aabb(transformed_vertices)
-        lg.physics_idx = len(ps.static_collider_vertices)
-        append(&ps.static_collider_vertices, ..transformed_vertices)
-    }
+    //for &lg, lg_idx in lgs_in {
+    //    rot_mat := glm.mat4FromQuat(lg.transform.rotation)
+    //    vertices_len := len(ps.level_colliders[lg.shape].vertices)
+    //    transformed_vertices := make([][3]f32, vertices_len)
+    //    defer delete(transformed_vertices)
+    //    if lg.shape == .SLIDE_ZONE {
+    //        sz: Obb
+    //        sz.id = lg_idx
+    //        x := rot_mat * [4]f32{1, 0, 0, 0}
+    //        y := rot_mat * [4]f32{0, 1, 0, 0}
+    //        z := rot_mat * [4]f32{0, 0, 1, 0}
+    //        sz.axes = {x.xyz, y.xyz, z.xyz}
+    //        sz.dim = lg.transform.scale 
+    //        sz.center = lg.transform.position
+    //        append(&szs.entities, sz)
+    //    }
+    //    trans_mat := trans_to_mat4(lg.transform)
+    //    for v, vi in ps.level_colliders[lg.shape].vertices {
+    //        transformed_vertices[vi] = (trans_mat * [4]f32{v[0], v[1], v[2], 1.0}).xyz
+    //    }
+    //    lg.aabb = vertices_to_aabb(transformed_vertices)
+    //    lg.physics_idx = len(ps.static_collider_vertices)
+    //    append(&ps.static_collider_vertices, ..transformed_vertices)
+    //}
 }
 
 vertices_to_aabb :: proc(vertices: [][3]f32) -> Aabb {

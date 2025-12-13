@@ -72,7 +72,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Player_Particle = {
         pipeline = {"player_particle_vertex", "player_particle_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"radius"},
+        uniforms = {"radius", "interp_t"},
     },
     .Editor_Geometry = {
         pipeline = {"editor_vertex", "editor_frag"},

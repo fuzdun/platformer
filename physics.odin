@@ -4,9 +4,8 @@ import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
 
-
 Physics_State :: struct{
-    level_colliders: [SHAPE]Collider_Data,
+    level_colliders: [SHAPE]Mesh,
     static_collider_vertices: [dynamic][3]f32,
 }
 
@@ -16,9 +15,72 @@ Collision :: struct{
     t: f32
 }
 
-Collider_Data :: struct{
+Mesh :: struct{
     vertices: [][3]f32,
     indices: []u16
+}
+
+Collider :: struct{
+    id: int,
+    vertices: [][3]f32,
+    indices: []u16,
+    aabb: Aabb
+}
+
+Physics_Segment :: [dynamic]Collider
+
+Entity_Map :: [][dynamic]int
+
+PHYSICS_SEGMENT_COUNT :: 10
+PHYSICS_SEGMENT_SIZE :: 500.0
+
+build_entity_map :: proc() {
+     
+}
+
+build_physics_map :: proc(lgs: Level_Geometry_State, colliders: [SHAPE]Mesh, et: f32) -> (physics_map: []Physics_Segment) {
+    physics_map = make([]Physics_Segment, PHYSICS_SEGMENT_COUNT, context.temp_allocator)
+    for segment_idx in 0..<5 {
+        physics_map[segment_idx] = make(Physics_Segment, context.temp_allocator)
+    }
+    for lg, lg_idx in lgs {
+        if .Collider not_in lg.attributes || !(lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
+            continue
+        }
+        segment_idx: int = 0 //int(math.floor(lg.transform.position.z / PHYSICS_SEGMENT_SIZE)) 
+        //segment := physics_map[segment_idx]
+        shape_data := colliders[lg.shape]
+        trans_mat := trans_to_mat4(lg.transform)
+        coll: Collider
+        coll.id = lg_idx
+        coll.vertices = make([][3]f32, len(shape_data.vertices), context.temp_allocator)
+        for vertex, vertex_i in shape_data.vertices {
+            coll.vertices[vertex_i] = (trans_mat * [4]f32{vertex.x, vertex.y, vertex.z, 1.0}).xyz
+        }
+        coll.indices = make([]u16, len(shape_data.indices), context.temp_allocator)
+        copy(coll.indices, shape_data.indices)
+        coll.aabb = vertices_to_aabb(coll.vertices)
+        append(&physics_map[segment_idx], coll)
+    }
+    return
+}
+
+particle_triangle_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f32) -> (collided: bool = false, collision_n: [3]f32) {
+    p_normal, p_dist := triangle_plane(t0, t1, t2)
+    collision_n = p_normal
+    intercept_pt: [3]f32
+    did_intercept := false
+    if intercept_pt, did_intercept = sphere_plane_intersection(c0, r, p_normal, p_dist); did_intercept {
+        if pt_inside_triangle(t0, t1, t2, intercept_pt) {
+            collided = true
+        } else {
+            closest_pt := closest_triangle_pt(t0, t1, t2, intercept_pt)
+            if la.length2(closest_pt - c0) < r * r {
+                collided = true
+            }
+        }
+    }
+    return
 }
 
 player_triangle_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f32, v: [3]f32, v_l: f32, v_n: [3]f32, c1: [3]f32, cr: [3]f32, gr: f32) -> (collided: bool = false, collision_t: f32, collision_n: [3]f32, contact: bool = false) {

@@ -3,6 +3,7 @@
 layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec2 uv_in;
 layout (location = 2) in vec4 offset;
+layout (location = 3) in vec4 prev_offset;
 
 layout (std140, binding = 0) uniform Common
 {
@@ -23,6 +24,7 @@ layout (std140, binding = 2) uniform Player_Pos
 };
 
 uniform float radius;
+uniform float interp_t;
 
 out vec2 uv;
 out float f_radius; 
@@ -37,7 +39,8 @@ float easeout(float n) {
 }
 
 void main() {
-    vec4 adjusted_offset = vec4(offset.xyz, 0.0);// + vec4(player_pos, 0.0);
+    vec4 adjusted_offset = vec4(mix(prev_offset.xyz, offset.xyz, interp_t), 0.0);// + vec4(player_pos, 0.0);
+    // vec4 adjusted_offset = vec4(offset.xyz, 0.0);// + vec4(player_pos, 0.0);
     // vec3 constrain_proj = constrain_dir * dot(constrain_dir, offset.xyz);
     // vec3 constrained_pos = offset.xyz - constrain_proj;
     // float dash_pos_t = length(constrain_dir - constrain_proj) / 2.0;
