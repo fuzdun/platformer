@@ -218,11 +218,16 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // APPLY PLAYER VELOCITY, HANDLE COLLISIONS
     // #####################################################
     
-    physics_map_start := tim.now()
+    // physics_map_start := tim.now()
     physics_map := build_physics_map(lgs^, phs.level_colliders, elapsed_time)
-    //fmt.println(phs.level_colliders)
-    //fmt.println(physics_map)
-    get_particle_collisions(rs.player_spin_particles.values[:], rs.player_spin_particle_info.values[:], physics_map)
+
+    spin_particle_collisions := get_particle_collisions(rs.player_spin_particles, physics_map)
+    for spc in spin_particle_collisions {
+        particle := &rs.player_spin_particles.particles.values[spc.id]
+        particle_info := &rs.player_spin_particles.particle_info[spc.id]
+        particle.xyz -= particle_info.vel * FIXED_DELTA_TIME
+        particle_info.vel -= la.dot(spc.normal, particle_info.vel) * spc.normal * 1.5
+    }
 
     collision_adjusted_cts, new_position, collision_adjusted_velocity, collision_ids, contact_ids := apply_velocity(
         new_cts,
@@ -236,11 +241,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         delta_time
     );
 
-    fmt.println(tim.since(physics_map_start))
-    
-    //gl.BindBuffer(gl.UNIFORM_BUFFER, rs.physics_vertices_ubo)
-    //gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec3) * len(phs.static_collider_vertices), &phs.static_collider_vertices[0], gl.DYNAMIC_DRAW)
-    //gl.BindBufferRange(gl.UNIFORM_BUFFER, 8, rs.physics_vertices_ubo, 0, size_of(glm.vec3) * len(phs.static_collider_vertices))
+    // fmt.println(tim.since(physics_map_start))
     
     // fmt.println(len(phs.static_collider_vertices))
 
@@ -506,7 +507,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     idx := 0
     for _ in 0 ..<len(pls.screen_splashes) {
         splash := pls.screen_splashes[idx]
-        if elapsed_time - splash[3] > 3000 {
+        if elapsed_time - splash[3] > 10000 {
             ordered_remove(&pls.screen_splashes, idx)
         } else {
             idx += 1
@@ -521,6 +522,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
             new_crunch_time
         })
     }
+    if len(pls.screen_splashes) > 5 {
+        ordered_remove(&pls.screen_splashes, 0);
+    }
 
     // #####################################################
     // MUTATE LEVEL GEOMETRY
@@ -534,8 +538,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     }
 
     if bunny_hopped {
-       //last_touched := collision_adjusted_cts.last_touched
-       //lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
+       last_touched := collision_adjusted_cts.last_touched
+       lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
     }
 
     for id in collision_ids {
@@ -547,9 +551,9 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         } else if .Slide_Zone in lg.attributes && new_slide_state.sliding {
             // do nothing
         } else if .Breakable in lg.attributes {
-            //lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.shatter_data.crack_time
+            lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.shatter_data.crack_time
         } else if .Crackable in lg.attributes {
-            //lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.shatter_data.crack_time
+            lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.shatter_data.crack_time
         }
     }
 
@@ -579,55 +583,77 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         }
     }
 
-    player_flat_velocity := [3]f32{pls.velocity.x, 0, pls.velocity.z}
-    norm_player_flat_velocity := la.normalize0(player_flat_velocity)
-    //if pls.spin_state.spinning {
-    if is.c_pressed {
-        if rnd.float32() < 1.0 {
-            for _ in 0..<20 {
-                particle_spawn_idx := rs.player_spin_particles.insert_at 
-                arm_idx := particle_spawn_idx % PLAYER_SPIN_PARTICLE_ARM_COUNT
-                spawn_angle := -PLAYER_SPIN_TAIL_INTERVAL * f32(arm_idx) + (f32(elapsed_time) / 30.0)
-                angle_offset := norm_player_flat_velocity * math.sin(spawn_angle) + [3]f32{0, 1, 0} * math.cos(spawn_angle)
-                particle_info: Spin_Particle_Info = {
-                    pls.velocity + angle_offset * 15.0,
-                    1.2,
-                    f32(elapsed_time),
-                    (rnd.float32() * 200) + 2000
-                }
-                spawn_pos := pls.position.xyz + angle_offset * 1.0
-                ring_buffer_push(&rs.player_spin_particles, Spin_Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
-                ring_buffer_push(&rs.player_spin_particle_info, particle_info)
+    surface_ortho1 := la.vector3_orthogonal(normalized_contact_ray)
+    surface_ortho2 := la.cross(normalized_contact_ray, surface_ortho1)
+
+    player_flat_vel := la.normalize0([3]f32{collision_adjusted_velocity.x, 0, collision_adjusted_velocity.z})
+    player_flat_vel_ortho := la.cross(player_flat_vel, [3]f32{0, 1, 0})
+
+    if pls.dash_state.dashing {
+        for idx in 0..<10 {
+            spawn_angle := rnd.float32() * math.PI * 2.0
+            spawn_vector := math.sin(spawn_angle) * player_flat_vel_ortho + math.cos(spawn_angle) * [3]f32{0, 1, 0} 
+            particle_info: Particle_Info = {
+                (spawn_vector * 20.0 * rnd.float32() + 0.2) + player_flat_vel * DASH_SPD * 0.5,
+                1.2,
+                f32(elapsed_time),
+                (rnd.float32() * 800) + 3000
             }
+            spawn_pos := pls.position.xyz + la.normalize0([3]f32{spawn_vector.x, 0.1, spawn_vector.z}) * 0.5
+            rs.player_spin_particles.particle_info[rs.player_spin_particles.particles.insert_at] = particle_info
+            ring_buffer_push(&rs.player_spin_particles.particles, Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
         }
     }
-    particle_count := rs.player_spin_particles.len
+
+    if bunny_hopped {
+        for idx in 0..<1500 {
+            spawn_angle := rnd.float32() * math.PI * 2.0
+            spawn_vector := (math.sin(spawn_angle) * surface_ortho1 + math.cos(spawn_angle) * surface_ortho2 - normalized_contact_ray * (rnd.float32() * 0.5 + 0.25)) * 2.5
+            particle_info: Particle_Info = {
+                spawn_vector * 50.0 * rnd.float32() + 0.2,
+                1.2,
+                f32(elapsed_time),
+                (rnd.float32() * 800) + 3000
+            }
+            spawn_pos := pls.position.xyz + la.normalize0([3]f32{spawn_vector.x, 0.1, spawn_vector.z}) * 0.5
+            rs.player_spin_particles.particle_info[rs.player_spin_particles.particles.insert_at] = particle_info
+            ring_buffer_push(&rs.player_spin_particles.particles, Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
+        }
+    }
+    particle_count := rs.player_spin_particles.particles.len
     if particle_count > 0 {
-        pp := rs.player_spin_particles.values[:particle_count]
-        pi := rs.player_spin_particle_info.values[:particle_count]
+        pp := rs.player_spin_particles.particles.values[:particle_count]
+        pi := rs.player_spin_particles.particle_info[:particle_count]
         for p_idx in 0..<particle_count {
             pp[p_idx].xyz += pi[p_idx].vel * delta_time
             part := pi[p_idx] 
-            pi[p_idx].vel += {0, -60, 0 } * delta_time
+            pi[p_idx].vel += {0, -75, 0 } * delta_time
             sz_fact := clamp((f32(elapsed_time) - part.time) / part.len, 0, 1)
             pp[p_idx].w = part.max_size * (1.0 - sz_fact * sz_fact * sz_fact)
         }
         sorted_pp := make([][4]f32, particle_count, context.temp_allocator)
         copy_slice(sorted_pp, pp)
-        context.user_ptr = &cs.position
-        z_sort := proc(a: [4]f32, b: [4]f32) -> bool {
-            cam_pos := (cast(^[3]f32) context.user_ptr)^
-            return la.length2(a.xyz - cam_pos) > la.length2(b.xyz - cam_pos)
-        }
-        //slice.sort_by(sorted_pp[:], z_sort)
-        gl.BindBuffer(gl.COPY_READ_BUFFER, rs.particle_pos_vbo)
-        particle_pos_buffer_size: i32
-        gl.GetBufferParameteriv(gl.COPY_READ_BUFFER, gl.BUFFER_SIZE, &particle_pos_buffer_size)
-        gl.BindBuffer(gl.COPY_WRITE_BUFFER, rs.prev_particle_pos_vbo)
-        gl.CopyBufferSubData(gl.COPY_READ_BUFFER, gl.COPY_WRITE_BUFFER, 0, 0, int(particle_pos_buffer_size))
+        // context.user_ptr = &cs.position
+        // z_sort := proc(a: [4]f32, b: [4]f32) -> bool {
+        //     cam_pos := (cast(^[3]f32) context.user_ptr)^
+        //     return la.length2(a.xyz - cam_pos) > la.length2(b.xyz - cam_pos)
+        // }
 
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+        buffer_size: i32
+        gl.BindBuffer(gl.COPY_READ_BUFFER, rs.trail_particle_vbo)
+        gl.GetBufferParameteriv(gl.COPY_READ_BUFFER, gl.BUFFER_SIZE, &buffer_size)
+        gl.BindBuffer(gl.COPY_WRITE_BUFFER, rs.prev_trail_particle_vbo)
+        gl.CopyBufferSubData(gl.COPY_READ_BUFFER, gl.COPY_WRITE_BUFFER, 0, 0, int(buffer_size))
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.trail_particle_vbo)
         gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(sorted_pp[0]) * particle_count, &sorted_pp[0])
+
+        particle_velocities := rs.player_spin_particles.particle_info.vel
+        gl.BindBuffer(gl.COPY_READ_BUFFER, rs.trail_particle_velocity_vbo)
+        gl.GetBufferParameteriv(gl.COPY_READ_BUFFER, gl.BUFFER_SIZE, &buffer_size)
+        gl.BindBuffer(gl.COPY_WRITE_BUFFER, rs.prev_trail_particle_velocity_vbo)
+        gl.CopyBufferSubData(gl.COPY_READ_BUFFER, gl.COPY_WRITE_BUFFER, 0, 0, int(buffer_size))
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.trail_particle_velocity_vbo)
+        gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(particle_velocities[0]) * particle_count, &particle_velocities[0])
     }
 
     // #####################################################
@@ -644,7 +670,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     tgt : [3]f32 = {tgt_x, tgt_y, tgt_z}
     cs.position = math.lerp(cs.position, tgt, f32(CAMERA_POS_LERP))
     cs.target.x = math.lerp(cs.target.x, new_position.x, f32(CAMERA_X_LERP))
-    cs.target.y = math.lerp(cs.target.y, new_position.y, f32(CAMERA_Y_LERP))
+    cs.target.y = math.lerp(cs.target.y, new_position.y + 24.0, f32(CAMERA_Y_LERP))
     cs.target.z = math.lerp(cs.target.z, new_position.z, f32(CAMERA_Z_LERP))
 }
 

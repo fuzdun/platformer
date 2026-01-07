@@ -10,7 +10,7 @@ import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 import tim "core:time"
 
-FWD_Z_CULL :: 600
+FWD_Z_CULL :: 60000
 BCK_Z_CULL :: 100
 
 draw :: proc(
@@ -67,7 +67,7 @@ draw :: proc(
     transforms, angular_velocities,
     shapes, colliders, render_types,
     attributess, aabbs, shatter_datas,
-    transparencies, _physics_idx := soa_unzip(culled_lgs[:])
+    transparencies := soa_unzip(culled_lgs[:])
 
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
@@ -161,6 +161,8 @@ draw :: proc(
         camera_right_worldspace = la.normalize(camera_right_worldspace)
         camera_up_worldspace: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
         camera_up_worldspace = la.normalize(camera_up_worldspace)
+        camera_fwd_worldspace: [3]f32 = {proj_mat[0][2], proj_mat[1][2], proj_mat[2][2]}
+        camera_fwd_worldspace = la.normalize(camera_fwd_worldspace)
 
         // standard geometry
         // -------------------------------------------
@@ -315,8 +317,9 @@ draw :: proc(
 
         // draw dash line
         // -------------------------------------------
-        gl.BindVertexArray(rs.lines_vao)
+        gl.Disable(gl.CULL_FACE)
         gl.Enable(gl.BLEND)
+        gl.BindVertexArray(rs.lines_vao)
         gl.LineWidth(2)
 
         dash_line_start := pls.dash_state.dash_start_pos + pls.dash_state.dash_dir * 4.5;
@@ -354,10 +357,10 @@ draw :: proc(
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
         gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(pv[0]) * len(pv), &pv[0])
 
-        particle_count := rs.player_spin_particles.len
+        particle_count := rs.player_spin_particles.particles.len
         if particle_count > 0 {
             sorted_pp := make([][4]f32, particle_count, context.temp_allocator)
-            copy_slice(sorted_pp, rs.player_spin_particles.values[:particle_count])
+            copy_slice(sorted_pp, rs.player_spin_particles.particles.values[:particle_count])
             context.user_ptr = &cs.position
             z_sort := proc(a: [4]f32, b: [4]f32) -> bool {
                 cam_pos := (cast(^[3]f32) context.user_ptr)^
@@ -375,13 +378,20 @@ draw :: proc(
             //gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(sorted_pp[0]) * particle_count, &sorted_pp[0])
         }
 
-        gl.BindVertexArray(rs.particle_vao)
-        //gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
-        //gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_particle_pos_vbo)
-        use_shader(shs, rs, .Player_Particle)
-        set_float_uniform(shs, "radius", 0.45)
+        gl.BindVertexArray(rs.trail_particle_vao)
+        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_particle_pos_vbo)
+        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.trail_particle_vbo)
+        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_trail_particle_vbo)
+        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.trail_particle_velocity_vbo)
+        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_trail_particle_velocity_vbo)
+        // use_shader(shs, rs, .Player_Particle)
+        use_shader(shs, rs, .Trail_Particle)
         set_float_uniform(shs, "interp_t", f32(interp_t))
-        gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, i32(rs.player_spin_particles.len))
+        set_float_uniform(shs, "delta_time", FIXED_DELTA_TIME)
+        // set_float_uniform(shs, "radius", FIXED_DELTA_TIME)
+        set_vec3_uniform(shs, "camera_dir", 1, &camera_fwd_worldspace)
+        gl.DrawArrays(gl.POINTS, 0, i32(rs.player_spin_particles.particles.len))
 
 
         // slide zone outline
@@ -396,6 +406,36 @@ draw :: proc(
         use_shader(shs, rs, .Level_Geometry_Outline)
         set_vec3_uniform(shs, "color", 1, &slide_zone_outline_color)
         draw_indirect_render_queue(rs^, draw_commands[.Slide_Zone][:], gl.PATCHES)
+
+        // draw spin trails
+        // -------------------------------------------
+        gl.BindVertexArray(rs.spin_trails_vao)
+        gl.Enable(gl.BLEND)
+        gl.Enable(gl.CULL_FACE)
+        gl.Enable(gl.DEPTH_TEST)
+
+        spin_trail_off := glm.mat4Translate(i_ppos)
+        spin_trail_rotation_1 := la.matrix4_rotate_f32(f32(time) / 100, [3]f32{1, 0, 0})
+        player_velocity_dir := la.normalize0(pls.velocity.xz)
+        // player_velocity_dir := la.normalize0(pls.spin_state.spin_dir)
+        spin_trail_rotation_2 := la.matrix4_rotate_f32(la.atan2(player_velocity_dir.x, player_velocity_dir.y), [3]f32{0, 1, 0})
+        spin_trail_transform := spin_trail_off * spin_trail_rotation_2 * spin_trail_rotation_1
+
+
+        gl.BindBuffer(gl.ARRAY_BUFFER, rs.spin_trails_vbo)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.spin_trails_ebo)
+
+        use_shader(shs, rs, .Spin_Trails)
+        set_matrix_uniform(shs, "transform", &spin_trail_transform)
+        set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
+        set_matrix_uniform(shs, "inverse_view", &inverse_view)
+        // set_matrix_uniform(shs, "spin_rotation", &spin_trail_rotation)
+        gl.BindTexture(gl.TEXTURE_2D, rs.postprocessing_rbo)
+
+        if is.c_pressed {
+            gl.DrawElements(gl.TRIANGLES, i32(len(sr[.SPIN_TRAIL].indices)), gl.UNSIGNED_INT, nil)
+        }
+
 
         // post-processing
         // -------------------------------------------

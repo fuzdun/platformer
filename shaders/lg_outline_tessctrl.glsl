@@ -4,7 +4,7 @@ layout (vertices=3) out;
 
 in VS_OUT {
     vec2 uv;
-    vec3 obj_pos;
+    vec4 obj_pos;
     flat int cracked;
     flat int broken; 
     float player_dist;
@@ -13,7 +13,7 @@ in VS_OUT {
 
 out TC_OUT {
     vec2 uv;
-    vec3 obj_pos;
+    vec4 obj_pos;
     flat int cracked;
     flat int broken;
     float player_dist;

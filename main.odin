@@ -27,7 +27,7 @@ MOVE :: #config(MOVE, false)
 WIDTH :: 1920.0
 HEIGHT :: 1080.0
 FULLSCREEN :: true
-TARGET_FRAME_RATE :: 30.0
+TARGET_FRAME_RATE :: 60.0
 FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
 FORCE_EXTERNAL_MONITOR :: false
 
@@ -195,8 +195,10 @@ main :: proc () {
     add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices, perm_arena_alloc)
 
     // player spin particles----------------
-    ring_buffer_init(&rs.player_spin_particles, Spin_Particle{})
-    ring_buffer_init(&rs.player_spin_particle_info, Spin_Particle_Info{})
+    particle_buffer_init(&rs.player_spin_particles)
+    // ring_buffer_init(&rs.player_spin_particles, Particle{})
+    // rs.player_spin_particle_info = make(#soa[]Particle_Info, rs.player_spin_particles.cap)
+    // ring_buffer_init(&rs.player_spin_particle_info, Spin_Particle_Info{})
 
     // #####################################################
     // LOAD BLENDER RESOURCES 
@@ -208,6 +210,11 @@ main :: proc () {
         }
     }
 
+    for &v in sr[.SPIN_TRAIL].vertices {
+        v.pos.yz *= 6.0
+        v.pos.x *= 0.5
+    }
+
     // #####################################################
     // LOAD AND SORT LEVEL GEOMETRY
     // #####################################################
@@ -217,15 +224,26 @@ main :: proc () {
     num_entities := len(loaded_level_geometry) 
 
     // convert loaded gemoetry to SOA ------
-    // lgs = sort_lgs(loaded_level_geometry, perm_arena_alloc)
     lgs = make(#soa[]Level_Geometry, len(loaded_level_geometry), perm_arena_alloc)
     for lg, idx in loaded_level_geometry {
         lgs[idx] = lg
     }
 
     // add to physics ----------------------
-    //phs.static_collider_vertices = make([dynamic][3]f32, perm_arena_alloc)
-    //add_geometry_to_physics(&phs, &szs, lgs)
+    for lg, lg_idx in lgs {
+        if lg.shape == .SLIDE_ZONE {
+            sz: Obb
+            sz.id = lg_idx
+            rot_mat := glm.mat4FromQuat(lg.transform.rotation)
+            x := rot_mat * [4]f32{1, 0, 0, 0}
+            y := rot_mat * [4]f32{0, 1, 0, 0}
+            z := rot_mat * [4]f32{0, 0, 1, 0}
+            sz.axes = {x.xyz, y.xyz, z.xyz}
+            sz.dim = lg.transform.scale 
+            sz.center = lg.transform.position
+            append(&szs.entities, sz)
+        }
+    }
 
     // dynamic_lgs (used for editor) -------
     dynamic_lgs := make(#soa[dynamic]Level_Geometry, perm_arena_alloc)
@@ -346,6 +364,7 @@ main :: proc () {
     gl.GenBuffers(1, &rs.standard_ebo)
     gl.GenBuffers(1, &rs.player_fill_ebo)
     gl.GenBuffers(1, &rs.player_outline_ebo)
+    gl.GenBuffers(1, &rs.spin_trails_ebo)
 
     gl.GenBuffers(1, &rs.indirect_buffer)
     
@@ -363,16 +382,23 @@ main :: proc () {
     gl.GenBuffers(1, &rs.particle_vbo)
     gl.GenBuffers(1, &rs.particle_pos_vbo)
     gl.GenBuffers(1, &rs.prev_particle_pos_vbo)
+    gl.GenBuffers(1, &rs.trail_particle_vbo)
+    gl.GenBuffers(1, &rs.prev_trail_particle_vbo)
+    gl.GenBuffers(1, &rs.trail_particle_velocity_vbo)
+    gl.GenBuffers(1, &rs.prev_trail_particle_velocity_vbo)
     gl.GenBuffers(1, &rs.background_vbo)
     gl.GenBuffers(1, &rs.text_vbo)
     gl.GenBuffers(1, &rs.editor_lines_vbo)
+    gl.GenBuffers(1, &rs.spin_trails_vbo)
 
     gl.GenVertexArrays(1, &rs.standard_vao)
     gl.GenVertexArrays(1, &rs.particle_vao)
+    gl.GenVertexArrays(1, &rs.trail_particle_vao)
     gl.GenVertexArrays(1, &rs.background_vao)
     gl.GenVertexArrays(1, &rs.lines_vao)
     gl.GenVertexArrays(1, &rs.player_vao)
     gl.GenVertexArrays(1, &rs.text_vao)
+    gl.GenVertexArrays(1, &rs.spin_trails_vao)
 
     gl.GenTextures(1, &rs.dither_tex)
 
@@ -417,11 +443,29 @@ main :: proc () {
     particle_vertices := PARTICLE_VERTICES
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(particle_vertices[0]) * len(particle_vertices), &particle_vertices[0], gl.STATIC_DRAW) 
-    particles := rs.player_spin_particles
+    particles := rs.player_spin_particles.particles
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(particles.values[0]) * PLAYER_SPIN_PARTICLE_COUNT, &particles.values[0], gl.STATIC_DRAW) 
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_particle_pos_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(particles.values[0]) * PLAYER_SPIN_PARTICLE_COUNT, &particles.values[0], gl.STATIC_DRAW) 
+
+    gl.BindVertexArray(rs.trail_particle_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.trail_particle_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(glm.vec4) * PLAYER_SPIN_PARTICLE_COUNT, nil, gl.STATIC_DRAW) 
+    gl.EnableVertexAttribArray(0)
+    gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(glm.vec4), 0)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_trail_particle_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(glm.vec4) * PLAYER_SPIN_PARTICLE_COUNT, nil, gl.STATIC_DRAW) 
+    gl.EnableVertexAttribArray(1)
+    gl.VertexAttribPointer(1, 4, gl.FLOAT, false, size_of(glm.vec4), 0)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.trail_particle_velocity_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(glm.vec3) * PLAYER_SPIN_PARTICLE_COUNT, nil, gl.STATIC_DRAW) 
+    gl.EnableVertexAttribArray(2)
+    gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(glm.vec3), 0)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_trail_particle_velocity_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(glm.vec3) * PLAYER_SPIN_PARTICLE_COUNT, nil, gl.STATIC_DRAW) 
+    gl.EnableVertexAttribArray(3)
+    gl.VertexAttribPointer(3, 3, gl.FLOAT, false, size_of(glm.vec3), 0)
 
     bv := BACKGROUND_VERTICES
     gl.BindVertexArray(rs.background_vao)
@@ -431,6 +475,19 @@ main :: proc () {
     gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, position))
     gl.EnableVertexAttribArray(1)
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
+
+
+    stv := sr[.SPIN_TRAIL].vertices
+    sti := sr[.SPIN_TRAIL].indices
+    gl.BindVertexArray(rs.spin_trails_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, rs.spin_trails_vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, size_of(stv[0]) * len(stv), &stv[0], gl.STATIC_DRAW)
+    gl.EnableVertexAttribArray(0)
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
+    gl.EnableVertexAttribArray(1)
+    gl.VertexAttribPointer(1, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, normal))
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.spin_trails_ebo)
+    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(sti[0]) * len(sti), raw_data(sti), gl.STATIC_DRAW)
 
     gl.BindVertexArray(rs.text_vao)
     gl.BindBuffer(gl.ARRAY_BUFFER, rs.text_vbo)
@@ -483,10 +540,6 @@ main :: proc () {
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transparencies_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.DYNAMIC_DRAW)
     gl.BindBufferRange(gl.UNIFORM_BUFFER, 7, rs.transparencies_ubo, 0, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
-
-    //gl.BindBuffer(gl.UNIFORM_BUFFER, rs.physics_vertices_ubo)
-    //gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec3) * len(phs.static_collider_vertices), nil, gl.DYNAMIC_DRAW)
-    //gl.BindBufferRange(gl.UNIFORM_BUFFER, 8, rs.physics_vertices_ubo, 0, size_of(glm.vec3) * len(phs.static_collider_vertices))
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 
@@ -621,10 +674,14 @@ main :: proc () {
             accumulator -= target_frame_clocks 
         }
 
+        interpolated_time := f64(accumulator) / f64(target_frame_clocks)
+        // fmt.println("=======")
+        // fmt.println(previous_interpolated_time)
+        // fmt.println(interpolated_time)
+
         // render--------------------------
-        // fmt.println(len(dynamic_lgs))
         draw_slice := EDIT ? dynamic_lgs[:] : lgs[:]
-        draw(draw_slice, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, f64(accumulator) / f64(target_frame_clocks), FIXED_DELTA_TIME)
+        draw(draw_slice, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, interpolated_time, FIXED_DELTA_TIME)
         when ODIN_OS != .Windows {
             if EDIT {
                 update_imgui(&es, dynamic_lgs)

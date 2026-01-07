@@ -149,11 +149,13 @@ NORMAL_Y_MIN_SLOPE :: 0.2
 
 get_particle_collisions :: proc(
     //lgs: #soa[]Level_Geometry,
-    particles: []Spin_Particle,
-    particle_info: []Spin_Particle_Info,
+    // particles: []Particle,
+    // particle_info: ^#soa[]Particle_Info,
+    particles: $T/Particle_Buffer,
     physics_map: []Physics_Segment,
-) {
-    for &particle_pos, particle_idx in particles {
+) -> (collisions: [dynamic]Particle_Collision) {
+    collisions = make([dynamic]Particle_Collision, context.temp_allocator)
+    particle_loop: for particle_pos, particle_idx in particles.particles.values {
         segment_idx := 0 
         segment := physics_map[segment_idx]
         for collider in segment {
@@ -165,13 +167,16 @@ get_particle_collisions :: proc(
                     t1 := collider.vertices[triangle_indices[1]]
                     t2 := collider.vertices[triangle_indices[2]]
                     if collided, collision_normal := particle_triangle_collision(particle_pos.xyz, 1.0, t0, t1, t2); collided {
-                        particle_pos.xyz -= particle_info[particle_idx].vel * FIXED_DELTA_TIME
-                        particle_info[particle_idx].vel -= la.dot(collision_normal, particle_info[particle_idx].vel) * collision_normal
+                        // particle_pos.xyz -= particle_info[particle_idx].vel * FIXED_DELTA_TIME
+                        // particle_info[particle_idx].vel -= la.dot(collision_normal, particle_info[particle_idx].vel) * collision_normal * 1.5
+                        append(&collisions, Particle_Collision{particle_idx, collision_normal})
+                        continue particle_loop
                     }
                 }
             }
         } 
     }
+    return
 }
 
 get_collisions_and_update_contact_state :: proc(

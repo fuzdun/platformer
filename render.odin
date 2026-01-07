@@ -11,8 +11,8 @@ import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import ft "shared:freetype"
 
-OUTER_TESSELLATION_AMT :: 8.0
-INNER_TESSELLATION_AMT :: 8.0
+OUTER_TESSELLATION_AMT :: 3.0
+INNER_TESSELLATION_AMT :: 3.0
 
 I_MAT :: glm.mat4(1.0)
 
@@ -25,7 +25,8 @@ SHAPE :: enum {
     ICE_CREAM,
     BOUNCY,
     CHAIR,
-    FRANK
+    FRANK,
+    SPIN_TRAIL,
 }
 
 Level_Geometry_Render_Type :: enum {
@@ -48,7 +49,8 @@ SHAPE_FILENAME := [SHAPE]string {
     .ICE_CREAM = "ice_cream_cone",
     .CHAIR = "chair",
     .BOUNCY = "basic_cube",
-    .FRANK = "frank"
+    .FRANK = "frank",
+    .SPIN_TRAIL = "spin_trail"
 }
 
 SHAPE_NAME := [SHAPE]string {
@@ -60,7 +62,8 @@ SHAPE_NAME := [SHAPE]string {
     .ICE_CREAM = "ICE_CREAM",
     .CHAIR = "CHAIR",
     .BOUNCY = "BOUNCY",
-    .FRANK = "FRANK"
+    .FRANK = "FRANK",
+    .SPIN_TRAIL = "SPIN_TRAIL"
 }
 
 TEXT_VERTICES :: [4]Quad_Vertex4 {
@@ -84,6 +87,25 @@ PARTICLE_VERTICES :: [4]Quad_Vertex {
     {{0.7, 0.7, 0.0}, {1, 1}},
 }
 
+// SPIN_TRAIL_VERTICES: [8][3]f32: {
+//     {-0.5, -1, 1},
+//     {-0.5, 1, 1},
+//     {0.5, -1, 1},
+//     {0.5, 1, 1},
+//     {0.5, -1, -1},
+//     {0.5, 1, -1},
+//     {-0.5, -1, -1},
+//     {-0.5, 1, -1}
+// }
+//
+// SPIN_TRAIL_INDICES: [36]int: {
+//     {
+//         0, 1, 2,
+//         2, 1, 3,
+//         2, 
+//     }
+// }
+
 Render_State :: struct {
     postprocessing_fbo: u32,
     postprocessing_tcb: u32,
@@ -96,24 +118,32 @@ Render_State :: struct {
 
     standard_vao: u32,
     particle_vao: u32,
+    trail_particle_vao: u32,
     background_vao: u32,
     lines_vao: u32,
     text_vao: u32,
     player_vao: u32,
+    spin_trails_vao: u32,
 
     standard_ebo: u32,
     background_ebo: u32,
     player_fill_ebo: u32,
     player_outline_ebo: u32,
+    spin_trails_ebo: u32,
 
     standard_vbo: u32,
     player_vbo: u32,
     particle_vbo: u32,
     prev_particle_pos_vbo: u32,
+    trail_particle_vbo: u32,
+    prev_trail_particle_vbo: u32,
+    trail_particle_velocity_vbo: u32,
+    prev_trail_particle_velocity_vbo: u32,
     particle_pos_vbo: u32,
     background_vbo: u32,
     editor_lines_vbo: u32,
     text_vbo: u32,
+    spin_trails_vbo: u32,
 
     indirect_buffer: u32,
 
@@ -126,7 +156,6 @@ Render_State :: struct {
     shatter_ubo: u32,
     crack_time_ubo: u32,
     transparencies_ubo: u32,
-    physics_vertices_ubo: u32,
 
     dither_tex: u32,
 
@@ -137,8 +166,9 @@ Render_State :: struct {
     vertex_offsets: Vertex_Offsets,
     index_offsets: Index_Offsets,
 
-    player_spin_particles: RingBuffer(PLAYER_SPIN_PARTICLE_COUNT, Spin_Particle),
-    player_spin_particle_info: RingBuffer(PLAYER_SPIN_PARTICLE_COUNT, Spin_Particle_Info)
+    player_spin_particles: Particle_Buffer(PLAYER_SPIN_PARTICLE_COUNT)
+
+
 }
 
 Char_Tex :: struct {

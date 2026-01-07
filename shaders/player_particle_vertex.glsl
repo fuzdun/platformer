@@ -11,17 +11,17 @@ layout (std140, binding = 0) uniform Common
     float i_time;
 };
 
-layout (std140, binding = 1) uniform Dash
-{
-    float dash_time;
-    float dash_total;
-    vec3 constrain_dir;
-};
+// layout (std140, binding = 1) uniform Dash
+// {
+//     float dash_time;
+//     float dash_total;
+//     vec3 constrain_dir;
+// };
 
-layout (std140, binding = 2) uniform Player_Pos
-{
-    vec3 player_pos;
-};
+// layout (std140, binding = 2) uniform Player_Pos
+// {
+//     vec3 player_pos;
+// };
 
 uniform float radius;
 uniform float interp_t;
@@ -40,6 +40,8 @@ float easeout(float n) {
 
 void main() {
     vec4 adjusted_offset = vec4(mix(prev_offset.xyz, offset.xyz, interp_t), 0.0);// + vec4(player_pos, 0.0);
+    // vec3 velocity = vec3(offset.xyz - prev_offset.xyz);
+    // adjusted_offset.xyz += velocity * max(0, dot(velocity, aPos.xyz)) * 10.0;
     // vec4 adjusted_offset = vec4(offset.xyz, 0.0);// + vec4(player_pos, 0.0);
     // vec3 constrain_proj = constrain_dir * dot(constrain_dir, offset.xyz);
     // vec3 constrained_pos = offset.xyz - constrain_proj;

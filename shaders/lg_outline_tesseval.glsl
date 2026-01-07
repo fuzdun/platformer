@@ -4,7 +4,7 @@ layout(triangles, equal_spacing, ccw) in;
 
 in TC_OUT {
     vec2 uv;
-    vec3 obj_pos;
+    vec4 obj_pos;
     flat int cracked;
     flat int broken;
     float player_dist;
@@ -12,7 +12,7 @@ in TC_OUT {
 
 out TE_OUT {
     vec2 uv;
-    vec3 obj_pos;
+    vec4 obj_pos;
     flat int cracked;
     flat int broken; 
     float player_dist;

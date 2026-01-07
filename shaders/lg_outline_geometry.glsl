@@ -16,7 +16,7 @@ layout (std140, binding = 2) uniform Player_Pos
 
 in TE_OUT {
     vec2 uv;
-    vec3 obj_pos;
+    vec4 obj_pos;
     flat int cracked;
     flat int broken;
     float player_dist;
@@ -30,9 +30,10 @@ out vec2 uv;
 out vec3 obj_pos;
 out float dist_fact;
 
-#define MIN_INTERVAL 100.0
-#define MAX_INTERVAL 400.0 
-#define ASSEMBLE_WINDOW 400.0
+#define MIN_INTERVAL 50.0
+#define MAX_INTERVAL 100.0 
+#define ASSEMBLE_WINDOW 200.0
+#define PI 3.1415926538
 
 float random2 (vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
@@ -50,10 +51,18 @@ void main() {
         return;  
     }
 
-    obj_pos = te_out[0].obj_pos;
-    // cracked = te_out[0].cracked;
+    obj_pos = te_out[0].obj_pos.xyz;
+
     for(int i=0; i < 3; i++) {
-        gl_Position = projection * gl_in[i].gl_Position;
+        vec4 new_pos = gl_in[i].gl_Position;
+        float xz_dist = distance(new_pos.xz, player_pos.xz);
+        vec2 norm_obj_dir = normalize(new_pos.xz - player_pos.xz);
+        float dist_flatten_fact = smoothstep(00, 300, xz_dist);
+        vec4 horizon_pt = new_pos;
+        horizon_pt.y -= (cos(dist_flatten_fact * PI) - 1) * 500.0;
+        horizon_pt.xz += norm_obj_dir * sin(dist_flatten_fact * PI) * 800.0;
+        new_pos = mix(new_pos, horizon_pt, dist_flatten_fact * dist_flatten_fact);
+        gl_Position = projection * new_pos;
         uv = te_out[i].uv;
         EmitVertex();
     }

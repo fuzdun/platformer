@@ -19,7 +19,6 @@ Level_Geometry :: struct {
     aabb: Aabb,
     shatter_data: Shatter_Ubo,
     transparency: f32,
-    physics_idx: int
 }
 
 Position :: la.Vector3f32 
@@ -70,10 +69,6 @@ move_geometry :: proc (lgs: ^Level_Geometry_State, phs: ^Physics_State, player_p
     lg.transform.position.y += y_dir 
     vertices_len := len(phs.level_colliders[lg.shape].vertices)
     trans_mat := trans_to_mat4(lg.transform)
-    for v, vi in phs.level_colliders[lg.shape].vertices {
-        phs.static_collider_vertices[lg.physics_idx + vi] = (trans_mat * [4]f32{v[0], v[1], v[2], 1.0}).xyz
-    }
-    lg.aabb = vertices_to_aabb(phs.static_collider_vertices[lg.physics_idx:lg.physics_idx + vertices_len])
 
     if cts.state != .IN_AIR && idx == cts.last_touched {
         player_pos.x += x_dir

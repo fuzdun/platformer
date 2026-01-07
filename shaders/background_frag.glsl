@@ -13,109 +13,61 @@ layout (std140, binding = 0) uniform Common
     float i_time;
 };
 
-#define RADIUS 0.5
+#define RADIUS 1.5
+#define BASE_TRANSPARENCY 0.3
 
-
-vec4 colormap(float x) {
-    float v = cos(20.0 * x) * 28.0 + 30.0 * x + 27.0;
-    if (v > 255.0) {
-        v = 510.0 - v;
-    }
-    v = v / 255.0;
-    return vec4(v * 1.0, v * 1.0, v * 1.5, 1.0);
-}
-
-
-float hash(vec2 p) {
+float hash2(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
+
+// float hash3(vec3 p) {
+//     return fract(sin(dot(p, vec3(127.1, 311.7, 654.3))) * 43758.5453123);
+// }
 
 float noise(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
-               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+    return mix(mix(hash2(i + vec2(0.0, 0.0)), hash2(i + vec2(1.0, 0.0)), u.x),
+               mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), u.x),
                u.y);
 }
 
-float ease_out(float x) {
-    return 1.0 - (1.0 - x) * (1.0 - x) * (1.0 - x) * (1.0 - x);
-}
+// float ease_out(float x) {
+//     return 1.0 - (1.0 - x) * (1.0 - x) * (1.0 - x) * (1.0 - x);
+// }
 
-
-
-float fbm (vec2 p )
-{
-    float intv1 = sin((i_time / 2000 + 12.0) / 10.0);
-    float intv2 = cos((i_time / 2000 + 12.0) / 10.0);
-
-    mat2 mtx_off = mat2(intv1, 1.0, intv2, 1.0);
-    mat2 mtx = mat2(1.6, 1.2, -1.2, 1.6);
-    mtx = mtx_off * mtx;
-    float f = 0.0;
-    f += 0.25*noise( p + (i_time / 2000) * 1.5); p = mtx*p;
-    f += 0.25*noise( p ); p = mtx*p;
-    f += 0.25*noise( p ); p = mtx*p;
-    f += 0.25*noise( p );
-    return f;
-}
-
-float pattern( in vec2 p )
-{
-	return fbm(p + fbm(p + fbm(p)));
-}
-
-vec3 tonemap(vec3 x)
-{
-    x *= 16.0;
-    const float A = 0.15;
-    const float B = 0.50;
-    const float C = 0.10;
-    const float D = 0.20;
-    const float E = 0.02;
-    const float F = 0.30;
-    
-    return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;
-}
+float random(float n){return fract(sin(n) * 43758.5453123);}
 
 void main() {
-    // float shade = pattern(round(uv * 100) / 100.0);
-    float shade = pattern(uv * 0.5);
-    vec3 pattern_col = vec3(colormap(shade).rgb) * .4;
-    fragColor = vec4(0);
-    vec4 col = vec4(pattern_col, 0.5);
-    // vec4 col = vec4(pattern_col * 0.0, 0.3);
+    vec2 standard_uv = uv * 2.0 - 1.0;
+    vec2 floored_uv = round(standard_uv * 5.0) / 5.0;
+    vec2 uv_deviation = standard_uv - floored_uv;
 
-    // float t = i_time / 1000.0;
-    vec2 center_uv = uv * 2.0 - 1.0;
+    // center-relative uv with distortion based on position within screen-space cells
+    vec2 boxed_uv = standard_uv + uv_deviation * uv_deviation * 30.;
 
-    vec2 floored_uv = round(center_uv * 5.0) / 5.0;
-    vec2 diff = center_uv - floored_uv;
-    center_uv = center_uv + diff * diff * 60.;
-
-    // vec2 crunch_pts[CRUNCH_PT_COUNT] = vec2[](vec2(-0.5, -0.5), vec2(0.0, 0.0));
-
-    // vec4 col = vec4(0.0);
+    float final_transparency = 0.0;
+    vec3 color = vec3(0);
 
     for (int i = 0; i < crunch_pt_count; i++) {
         vec4 cpt = crunch_pts[i]; 
         vec4 proj_pt = projection * vec4(cpt.xyz, 1.0);
-        // vec2 pt = (proj_pt / proj_pt.w).xy * 2.0 - 1.0;
         vec2 pt = (proj_pt / proj_pt.w).xy;
-        vec2 pt_diff = center_uv - pt;
-        float et = max((i_time - cpt.w), 0.01);
-        float t = et / 400.0;
-        float noise_sample = noise(i_time / 1000.0 + i + normalize(pt_diff) + t * vec2(0.5, 0.5)) * 2.0;
-        float noise_disp = noise_sample * ease_out(t) * .2;
-        float diffusion = length(pt_diff) / ((t * 1) - noise_disp);
-        vec4 this_col = vec4(tonemap(abs(sin(vec3(1.0, 0.0, -2.8) + diffusion * vec3(20.0, 0.0, 4.8)))), 1.0);
-        float mix_fact = clamp(diffusion * diffusion * 0.5 + 0.5 + et / 3000.0, 0.0, 1.0);
-        col = mix(this_col, col, mix_fact);
-        col = clamp(col, 0.0, 1.0);
+        float standard_crunch_pt_dist = length(standard_uv - pt);
+        float radial_transparency = smoothstep(0, 0.1, standard_crunch_pt_dist) - smoothstep(RADIUS, RADIUS + 0.1, standard_crunch_pt_dist);
+        vec2 boxed_crunch_pt_diff = boxed_uv - pt;
+        float time_t = max((i_time - cpt.w), 0.01) / 800.0;
+        float noise_sample = noise(i_time / 1000.0 + i + normalize(boxed_crunch_pt_diff) + time_t * vec2(0.25, 0.25));
+        float transparency = (1.0 - length(boxed_crunch_pt_diff)) - noise_sample + time_t;
+        float smoothed_transparency = smoothstep(0.0, 0.1, transparency) - smoothstep(0.90, 1.00, transparency);
+        smoothed_transparency *= radial_transparency * BASE_TRANSPARENCY;
+        final_transparency = max(smoothed_transparency, final_transparency);
+        vec3 this_color = vec3(random(cpt.w), random(cpt.w * 2.0), random(cpt.w * 3.0));
+        color = mix(color, this_color, smoothed_transparency);
     }
-    col.a = 0.45;
-    fragColor = col;
+    // col.a = 0;
+    fragColor = vec4(color, final_transparency);
     
     // float noise_sample = noise(normalize(center_uv) + i_time * vec2(0.5, 0.5));
     // float noise_disp = noise_sample * ease_out(t) * .2;

@@ -28,6 +28,7 @@ ProgramName :: enum {
     Editor_Geometry,
     Background,
     Player_Particle,
+    Trail_Particle,
     Static_Line,
     Grid_Line,
     Text,
@@ -40,7 +41,7 @@ ProgramName :: enum {
     Wireframe,
     Slide_Zone,
     Bouncy,
-    Particle_Physics
+    Spin_Trails 
 }
 
 PROGRAM_CONFIGS :: #partial[ProgramName]Program {
@@ -73,6 +74,11 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         pipeline = {"player_particle_vertex", "player_particle_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"radius", "interp_t"},
+    },
+    .Trail_Particle = {
+        pipeline = {"trail_particle_vertex", "trail_particle_geometry", "trail_particle_frag"},
+        shader_types = {.VERTEX_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"interp_t", "camera_dir", "delta_time"},
     },
     .Editor_Geometry = {
         pipeline = {"editor_vertex", "editor_frag"},
@@ -134,11 +140,11 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"shatter_delay"}
     },
-    .Particle_Physics = {
-        pipeline = {"particle_physics_compute"},
-        shader_types = {.COMPUTE_SHADER},
-        uniforms = {}
-    }
+    .Spin_Trails = {
+        pipeline = {"spin_trails_vertex", "spin_trails_frag"},
+        shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
+        uniforms = {"transform", "camera_pos"}
+    },
 }
 
 use_shader :: proc(sh: ^Shader_State, rs: ^Render_State, name: ProgramName) {

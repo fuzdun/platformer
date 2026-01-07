@@ -60,9 +60,9 @@ out float denom;
 
 out float did_shatter;
 
-#define MIN_INTERVAL 100.0
-#define MAX_INTERVAL 400.0 
-#define ASSEMBLE_WINDOW 400.0
+#define MIN_INTERVAL 50.0
+#define MAX_INTERVAL 100.0 
+#define ASSEMBLE_WINDOW 200.0
 
 #define SHATTER_INTERVAL 1300.0
 #define SHATTER_WINDOW 1500.0
@@ -74,6 +74,7 @@ out float did_shatter;
 #define ASSEMBLE true
 #define SHATTER true
 #define SHRINK true
+#define PI 3.1415926538
 
 float easeInCubic(float x) {
     return x * x;
@@ -127,7 +128,7 @@ void main() {
     float break_pt_dist = length(avg_pos.xyz - break_pos) / 3.0;
     break_pt_dist *= break_pt_dist;
     float break_disp = clamp((i_time - break_time) / 1000.0, 0, 1);
-    vec4 disp = broken ? vec4(break_dir * break_disp * seed_val_1 * 3000.0 / break_pt_dist, 0.0) : (avg_pos - te_out[0].obj_pos) * easeOutCubic(easeInCubic(dist_fact)) * 1.5;
+    vec4 disp = broken ? vec4(break_dir * break_disp * seed_val_1 * 3000.0 / break_pt_dist, 0.0) : (avg_pos - te_out[0].obj_pos) * easeOutCubic(easeInCubic(dist_fact)) * 1.75;
     vec4 new_avg = avg_pos + disp;
 
     t0_pos = te_out[0].t0_pos;
@@ -166,6 +167,7 @@ void main() {
     float shatter_t = easeOutCubic(t);
 
     vec4 new_poss[3];
+    vec4 proj_obj_pos = projection * te_out[0].obj_pos;
 
     for(int i=0; i < 3; i++) {
         vec4 new_pos = gl_in[i].gl_Position;
@@ -181,9 +183,18 @@ void main() {
         new_poss[i] = new_pos;
         b_poss[i] = new_pos.xyz;
     }
+
     for(int i=0; i < 3; i++) {
+        vec4 new_pos = new_poss[i];
+        float xz_dist = distance(new_pos.xz, player_pos.xz);
+        vec2 norm_obj_dir = normalize(new_pos.xz - player_pos.xz);
+        float dist_flatten_fact = smoothstep(00, 300, xz_dist);
+        vec4 horizon_pt = new_pos;
+        horizon_pt.y -= (cos(dist_flatten_fact * PI) - 1) * 500.0;
+        horizon_pt.xz += norm_obj_dir * sin(dist_flatten_fact * PI) * 800.0;
+        new_pos = mix(new_pos, horizon_pt, dist_flatten_fact * dist_flatten_fact);
+        gl_Position = projection * new_pos;
         global_pos = b_poss[i];
-        gl_Position = projection * new_poss[i];
         perspective_uv = te_out[i].uv;
         EmitVertex();
     }

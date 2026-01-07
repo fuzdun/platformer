@@ -21,7 +21,7 @@ void main() {
     float edge_decay = 0.5 - edge_dist;
     float center_dist = length(diff);
     float center_decay = min(0.6, center_dist) / 0.6;
-    fact = (wave_f / 10.0) / decay;
+    fact = (wave_f / 7.5) / decay;
     float magnitude = fact * edge_decay * center_decay * delay;
     sample_uv += normalize(diff) * magnitude;
     vec4 tex_color = texture(screenTexture, sample_uv);

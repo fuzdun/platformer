@@ -15,6 +15,11 @@ Collision :: struct{
     t: f32
 }
 
+Particle_Collision :: struct{
+    id: int,
+    normal: [3]f32,
+}
+
 Mesh :: struct{
     vertices: [][3]f32,
     indices: []u16
@@ -432,8 +437,6 @@ sphere_obb_intersection :: proc(obb: Obb, c: [3]f32, r: f32) -> (collided: bool,
     p = closest_obb_pt(obb, c) 
     v := p - c
     collided = la.dot(v, v) <= r * r
-    // fmt.println("v:", la.length(v))
-    // fmt.println("r:", r)
     return
 }
 

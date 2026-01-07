@@ -57,13 +57,18 @@ out VS_OUT {
 void main() {
     mat4 transform = transforms[gl_BaseInstance + gl_InstanceID];
     vec4 new_pos = transform * aPos;
+    // float player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
+    float player_dist = distance(player_pos, new_pos.xyz) - 200;
+    // vec2 projected_point = (projection * new_pos).xy;
+    // vec2 projected_disp = projected_point - 0.5;
+    // new_pos.xy -= (player_dist / 50.0) * projected_disp;
     gl_Position = new_pos;
     vec3 rot_normal = normalize(mat3(transpose(inverse(transform))) * normal_in).xyz;
 
     vs_out.obj_pos = vec4(transform[3][0], transform[3][1], transform[3][2], 1.0);
     vs_out.uv = vertexUV;
     vs_out.normal_frag = rot_normal;
-    vs_out.player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
+    vs_out.player_dist = player_dist;
     vs_out.plane_dist = dot((transform * aPos).xyz, rot_normal);
     Break_Data bd = break_data[gl_BaseInstance + gl_InstanceID];
     vs_out.break_time_pos = bd.break_time_pos; 

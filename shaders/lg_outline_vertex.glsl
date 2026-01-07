@@ -36,7 +36,7 @@ layout (std140, binding = 6) uniform Shatter_Datas
 
 out VS_OUT {
     vec2 uv;
-    vec3 obj_pos;
+    vec4 obj_pos;
     flat int cracked;
     flat int broken;
     float player_dist;
@@ -44,20 +44,25 @@ out VS_OUT {
 } vs_out;
 
 out vec2 uv;
-out vec3 obj_pos;
 out float player_dist;
 out flat int cracked;
 
 void main() {
     mat4 transform = transforms[gl_BaseInstance + gl_InstanceID];
+    vec4 new_pos = transform * aPos;
+    // float player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
+    float player_dist = distance(player_pos, new_pos.xyz) - 200;
+    // vec2 projected_point = (projection * new_pos).xy;
+    // vec2 projected_disp = projected_point - 0.5;
+    // new_pos.xy -= (player_dist / 50.0) * projected_disp;
+    // new_pos = mix(vec4(0), new_pos, 0.5);
     Break_Data bd = break_data[gl_BaseInstance + gl_InstanceID];
     float break_time = bd.break_time_pos.x;
     float crack_time = bd.crack_time_break_dir.x;
     vs_out.cracked = (crack_time != 0 && i_time > crack_time) ? 1 : 0;
     vs_out.broken = (break_time != 0 && i_time > break_time) ? 1 : 0;
-    vs_out.obj_pos = vec3(transform[3][0], transform[3][1], transform[3][2]);
-    vec4 new_pos = transform * aPos;
-    vs_out.player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
+    vs_out.obj_pos = vec4(transform[3][0], transform[3][1], transform[3][2], 1.0);
+    vs_out.player_dist = player_dist;
     gl_Position = new_pos;
     vs_out.uv = vertexUV;
     vs_out.tess_amt = 12;

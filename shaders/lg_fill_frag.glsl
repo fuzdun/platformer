@@ -47,7 +47,8 @@ uniform sampler2D ditherTexture;
 
 #define TWOPI 6.2831853
 #define SLIDE_RADIUS 15.0
-#define SAMPLE_RES 320 
+// #define SAMPLE_RES 320 
+#define SAMPLE_RES 100 
 #define LINE_W 0.2
 
 vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
@@ -150,7 +151,7 @@ float ditherRingNum(float distVal, float mask) {
 
 void main()
 {
-    vec4 glassColor = mix(vec4(0.08, 0.08, 0.100, 0.40), vec4(1.00, 1.0, 1.0, 0.60), displacement);
+    vec4 glassColor = mix(vec4(0.05, 0.05, 0.10, 0.50), vec4(0.30, 0.3, 1.0, 1.00), displacement);
 
     // if geometry not fully assembled, use "glass" color
     if (displacement > 0.00) {
@@ -270,5 +271,5 @@ void main()
     fragColor = mix(fragColor, vec4(1.0, 1.0, 1.0, 1.0), noise_border);
 
     fragColor = mix(vec4(1.0, 1.0, 1.0, 1.0), fragColor, border_t);
-    fragColor *= dot(normal_frag, normalize(vec3(0, 1, 1))) / 2.0 + 0.75;
+    fragColor *= dot(normal_frag, normalize(vec3(1, 1, 1))) / 2.0 + 0.75;
 }

@@ -64,7 +64,7 @@ void main() {
     vec3 ro = camera_pos;
     vec3 rd = vec3(uv2, 1.0);
     // vec4 col = ray_march(ro, rd);
-    vec4 col = vec4(1.0, 1.0, 1.0, 1.0);
+    vec4 col = vec4(1.0, 0.0, 0.0, 1.0);
     float intensity = max(0, pow(1.0 - length(uv2), 3));
     if (intensity <= 0.2) {
         discard;
