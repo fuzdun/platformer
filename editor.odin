@@ -35,7 +35,9 @@ Editor_State :: struct {
     y_rot: f32,
     zoom: f32,
     connections: [dynamic]Connection,
-    pos: [3]f32
+    pos: [3]f32,
+    displayed_attributes: [Level_Geometry_Component]bool,
+    displayed_shape: i32
 }
 
 Connection :: struct {

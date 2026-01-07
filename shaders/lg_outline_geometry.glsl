@@ -55,7 +55,11 @@ void main() {
 
     for(int i=0; i < 3; i++) {
         vec4 new_pos = gl_in[i].gl_Position;
-        float xz_dist = distance(new_pos.xz, player_pos.xz);
+        // float xz_dst = abs(new_pos.x - player_pos.x);
+        // float xz_dist = distance(new_pos.xz, player_pos.xz);
+        vec2 xz_diff = new_pos.xz - player_pos.xz;
+        xz_diff.y *= 0.80;
+        float xz_dist = length(xz_diff);
         vec2 norm_obj_dir = normalize(new_pos.xz - player_pos.xz);
         float dist_flatten_fact = smoothstep(00, 300, xz_dist);
         vec4 horizon_pt = new_pos;

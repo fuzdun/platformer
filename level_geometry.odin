@@ -46,9 +46,9 @@ Aabb :: struct {
     z1: f32
 }
 
-Level_Geometry_Attributes :: bit_set[Level_Geometry_Component_Name; u64]
+Level_Geometry_Attributes :: bit_set[Level_Geometry_Component; u64]
 
-Level_Geometry_Component_Name :: enum {
+Level_Geometry_Component :: enum {
     Collider = 0,
     Velocity = 1,
     Angular_Velocity = 2,
@@ -58,6 +58,18 @@ Level_Geometry_Component_Name :: enum {
     Slide_Zone = 6,
     Breakable = 7,
     Bouncy = 8
+}
+
+Level_Geometry_Component_Name :: [Level_Geometry_Component]string {
+    .Collider = "collider",
+    .Velocity = "velocity",
+    .Angular_Velocity = "angular_Velocity",
+    .Crackable = "crackable",
+    .Dash_Breakable = "dash_Breakable",
+    .Hazardous = "hazardous",
+    .Slide_Zone = "slide_Zone",
+    .Breakable = "breakable",
+    .Bouncy = "bouncy"
 }
 
 move_geometry :: proc (lgs: ^Level_Geometry_State, phs: ^Physics_State, player_pos: ^[3]f32, cts: Contact_State, idx: int) {

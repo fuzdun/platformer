@@ -212,7 +212,7 @@ main :: proc () {
 
     for &v in sr[.SPIN_TRAIL].vertices {
         v.pos.yz *= 6.0
-        v.pos.x *= 0.5
+        v.pos.x *= 0.25
     }
 
     // #####################################################
@@ -249,6 +249,10 @@ main :: proc () {
     dynamic_lgs := make(#soa[dynamic]Level_Geometry, perm_arena_alloc)
     for lg in lgs {
         append(&dynamic_lgs, lg)
+    }
+
+    for attribute in dynamic_lgs[es.selected_entity].attributes {
+        es.displayed_attributes[attribute] = true
     }
 
     // #####################################################
@@ -684,7 +688,7 @@ main :: proc () {
         draw(draw_slice, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, interpolated_time, FIXED_DELTA_TIME)
         when ODIN_OS != .Windows {
             if EDIT {
-                update_imgui(&es, dynamic_lgs)
+                update_imgui(&es, &dynamic_lgs)
             }
         }
         SDL.GL_SwapWindow(window)

@@ -22,7 +22,7 @@ CAMERA_Y_LERP :: 0.08
 CAMERA_Z_LERP :: 0.08
 
 FOV :: 2.5
-// FOV :: 1.0
+EDITOR_FOV :: 1.0
 
 Camera_State :: struct {
     position: [3]f32,
@@ -39,7 +39,7 @@ interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {
     c_right := glm.normalize(glm.cross(up, c_dir))
     c_up := glm.normalize(glm.cross(c_dir, c_right))
     view := glm.mat4LookAt(c_pos, tgt, up)
-    proj := glm.mat4Perspective(FOV, WIDTH / HEIGHT, 1.0, 10000)
+    proj := glm.mat4Perspective(EDIT ? EDITOR_FOV : FOV, WIDTH / HEIGHT, 1.0, 10000)
     return proj * view
 }
 
@@ -51,12 +51,12 @@ construct_camera_matrix :: proc(cs: Camera_State) -> glm.mat4 {
     c_right := glm.normalize(glm.cross(up, c_dir))
     c_up := glm.normalize(glm.cross(c_dir, c_right))
     view := glm.mat4LookAt(c_pos, tgt, up)
-    proj := glm.mat4Perspective(FOV, WIDTH / HEIGHT, 1.0, 10000)
+    proj := glm.mat4Perspective(EDIT ? EDITOR_FOV : FOV, WIDTH / HEIGHT, 1.0, 10000)
     return proj * view
 }
 
 only_projection_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {
-    return glm.mat4Perspective(FOV, WIDTH / HEIGHT, 1.0, 10000)
+    return glm.mat4Perspective(EDIT ? EDITOR_FOV : FOV, WIDTH / HEIGHT, 1.0, 10000)
 }
 
 only_view_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {

@@ -186,7 +186,8 @@ void main() {
 
     for(int i=0; i < 3; i++) {
         vec4 new_pos = new_poss[i];
-        float xz_dist = distance(new_pos.xz, player_pos.xz);
+        float xz_dist = abs(new_pos.x - player_pos.x);
+        // float xz_dist = distance(new_pos.xz, player_pos.xz);
         vec2 norm_obj_dir = normalize(new_pos.xz - player_pos.xz);
         float dist_flatten_fact = smoothstep(00, 300, xz_dist);
         vec4 horizon_pt = new_pos;

@@ -83,7 +83,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Editor_Geometry = {
         pipeline = {"editor_vertex", "editor_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"projection"},
+        uniforms = {"projection", "selected_index"},
     },
     .Background = {
         pipeline = {"background_vertex", "background_frag"},

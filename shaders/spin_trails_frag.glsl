@@ -34,7 +34,7 @@ vec4 ray_march(vec3 ro, vec3 rd) {
     for (int i = 0; i < NUMBER_OF_STEPS; ++i) {
         vec3 current_pos = ro + ray_depth * rd;
 
-        float turbulenceFrequency = 2.0;
+        float turbulenceFrequency = 1.4;
         for (int turbulenceIter = 0; turbulenceIter < 5; turbulenceIter++) {
             vec3 turbulenceOffset = cos((current_pos.xzy - vec3(i_time / 0.1, i_time, turbulenceFrequency)) * turbulenceFrequency);
             turbulenceOffset.x = 0.0;
@@ -44,7 +44,7 @@ vec4 ray_march(vec3 ro, vec3 rd) {
 
 
         // current_pos *= 1.0 + sin((atan(current_pos.y, current_pos.z) + i_time / 400) * 5.0) / 4.0;
-        float distance_to_torus = distance_from_torus(current_pos, vec2(5.0, 0.50));
+        float distance_to_torus = distance_from_torus(current_pos, vec2(5.0, 0.30));
         // float distance_to_sphere = distance_from_sphere(current_pos, 1.0);
 
         // if (distance_to_torus < 0.01) {
@@ -60,7 +60,7 @@ vec4 ray_march(vec3 ro, vec3 rd) {
 
         step_size = 0.1 + closest / 7.0;
         ray_depth += step_size;
-        col += vec4(0.003, 0.001, 0.003, 0.005) / step_size;
+        col += vec4(0.006, 0.004, 0.001, 0.008) / step_size;
     }
     // return vec4(0);
     if(col.a < 0.65) {

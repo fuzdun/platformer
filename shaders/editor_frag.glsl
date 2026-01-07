@@ -1,6 +1,7 @@
 #version 460 core
 
 in vec2 uv;
+in flat int selected;
 out vec4 fragColor;
 
 void main()
@@ -14,7 +15,7 @@ void main()
 	                         1.0 - smoothstep(0.0, v_border, uv.y);
 	   float border_fact = max(x_border_fact, y_border_fact);
 	   vec3 border_col = border_fact * vec3(1.0, 0.8, 1.0);
-	   vec3 col = vec3(0.0, 0.0, 1.0) + border_col;
+	   vec3 col = (selected == 1 ? vec3(1.0, 0, 1.0) : vec3(0.0, 0.0, 1.0)) + border_col;
 	   fragColor = vec4(col, 1.0);
 }
 

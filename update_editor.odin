@@ -189,16 +189,16 @@ editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, sr: Shape_Resources, es
     }
     if is.ent_pressed {
         if !es.saved {
-            // encode_test_level_cbor(lgs[:])
+            encode_test_level_cbor(lgs[:])
             es.saved = true
         }
     } else {
         es.saved = false
     }
 
-    if need_sort {
-        es.selected_entity = editor_sort_lgs(lgs, es.selected_entity)
-    }
+    // if need_sort {
+        // es.selected_entity = editor_sort_lgs(lgs, es.selected_entity)
+    // }
 
     es.can_switch = !is.tab_pressed
 }
