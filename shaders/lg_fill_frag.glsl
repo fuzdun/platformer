@@ -271,5 +271,5 @@ void main()
     fragColor = mix(fragColor, vec4(1.0, 1.0, 1.0, 1.0), noise_border);
 
     fragColor = mix(vec4(1.0, 1.0, 1.0, 1.0), fragColor, border_t);
-    fragColor *= dot(normal_frag, normalize(vec3(1, 1, 1))) / 2.0 + 0.75;
+    fragColor *= dot(normal_frag, normalize(vec3(1, 1, 1))) / 2.0 + 1.0;
 }

@@ -148,9 +148,6 @@ NORMAL_Y_MIN_SLOPE :: 0.2
 //}
 
 get_particle_collisions :: proc(
-    //lgs: #soa[]Level_Geometry,
-    // particles: []Particle,
-    // particle_info: ^#soa[]Particle_Info,
     particles: $T/Particle_Buffer,
     physics_map: []Physics_Segment,
 ) -> (collisions: [dynamic]Particle_Collision) {
@@ -159,7 +156,6 @@ get_particle_collisions :: proc(
         segment_idx := 0 
         segment := physics_map[segment_idx]
         for collider in segment {
-            //lg := lgs[collider.id]
             if sphere_aabb_collision(particle_pos.xyz, 1.0, collider.aabb) {
                 for i := 0; i < len(collider.indices); i += 3 {
                     triangle_indices := collider.indices[i:i+3]
@@ -167,8 +163,6 @@ get_particle_collisions :: proc(
                     t1 := collider.vertices[triangle_indices[1]]
                     t2 := collider.vertices[triangle_indices[2]]
                     if collided, collision_normal := particle_triangle_collision(particle_pos.xyz, 1.0, t0, t1, t2); collided {
-                        // particle_pos.xyz -= particle_info[particle_idx].vel * FIXED_DELTA_TIME
-                        // particle_info[particle_idx].vel -= la.dot(collision_normal, particle_info[particle_idx].vel) * collision_normal * 1.5
                         append(&collisions, Particle_Collision{particle_idx, collision_normal})
                         continue particle_loop
                     }

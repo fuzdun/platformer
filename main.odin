@@ -6,6 +6,8 @@ import "core:fmt"
 import "core:mem"
 import "core:os"
 import "core:strconv"
+import "core:flags"
+import "core:math"
 import vmem "core:mem/virtual"
 import glm "core:math/linalg/glsl"
 import str "core:strings"
@@ -23,6 +25,7 @@ MAX_LEVEL_GEOMETRY_COUNT :: 2000
 EDIT :: #config(EDIT, false)
 PERF_TEST :: #config(PERF_TEST, false)
 MOVE :: #config(MOVE, false)
+GENERATE :: #config(GENERATE, false)
 
 WIDTH :: 1920.0
 HEIGHT :: 1080.0
@@ -38,7 +41,6 @@ SEED := rnd.float32() * 1000
 quit_app := false
 
 main :: proc () {
-
     // #####################################################
     // DEBUG MEMORY ALLOCATOR
     // #####################################################
@@ -64,6 +66,7 @@ main :: proc () {
         }
     }
 
+
     // #####################################################
     // INIT ARENA ALLOCATORS
     // #####################################################
@@ -71,6 +74,24 @@ main :: proc () {
     perm_arena: vmem.Arena
     arena_err := vmem.arena_init_growing(&perm_arena); ensure(arena_err == nil)
     perm_arena_alloc := vmem.arena_allocator(&perm_arena)
+
+
+    // #####################################################
+    // SET LEVEL TO LOAD 
+    // #####################################################
+
+    level_to_load := "levels/test_level.bin"
+    
+    if len(os.args) == 3 {
+        if os.args[1] == "chunk" {
+            level_to_load = str.concatenate({"chunks/chunk_", os.args[2], ".bin" }, perm_arena_alloc)
+       }
+    }
+    if len(os.args) == 2 {
+        level_to_load = str.concatenate({"levels/", os.args[1], ".bin"}, perm_arena_alloc)
+        level_to_load = os.args[1]
+    }
+
 
     // #####################################################
     // INIT SDL WINDOW
@@ -183,6 +204,7 @@ main :: proc () {
     // editor-------------------------------
     es.y_rot = INIT_EDITOR_ROTATION 
     es.zoom = INIT_EDITOR_ZOOM
+    es.save_dest = level_to_load
 
     // slize zones-------------------------
     szs.entities = make(#soa[dynamic]Obb, perm_arena_alloc)
@@ -220,7 +242,14 @@ main :: proc () {
     // #####################################################
 
     // load from level file ----------------
-    loaded_level_geometry := load_level_geometry("test_level", perm_arena_alloc)
+    loaded_level_geometry: []Level_Geometry
+
+    if GENERATE {
+        loaded_level_geometry = generate_level(perm_arena_alloc)
+    } else {
+        loaded_level_geometry = load_level_geometry(level_to_load, context.temp_allocator)
+    }
+     // fmt.println(loaded_level_geometry)
     num_entities := len(loaded_level_geometry) 
 
     // convert loaded gemoetry to SOA ------

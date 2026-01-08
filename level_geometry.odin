@@ -7,6 +7,9 @@ import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 import rnd "core:math/rand"
 
+CHUNK_WIDTH :: 500
+CHUNK_DEPTH :: 500
+
 Level_Geometry_State :: #soa[]Level_Geometry
 
 Level_Geometry :: struct {

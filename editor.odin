@@ -24,6 +24,8 @@ GRID_LINES :: 100
 GRID_LEN :: 10000
 GRID_COL: [3]f32 : {.75, .75, .75}
 
+CHUNK_BORDER_COL :: [3]f32{1, 0, 1}
+
 Editor_State :: struct {
     selected_entity: int,
     saved: bool,
@@ -37,7 +39,9 @@ Editor_State :: struct {
     connections: [dynamic]Connection,
     pos: [3]f32,
     displayed_attributes: [Level_Geometry_Component]bool,
-    displayed_shape: i32
+    displayed_shape: i32,
+    displayed_render_type: i32,
+    save_dest: string
 }
 
 Connection :: struct {
@@ -89,7 +93,7 @@ get_geometry_dist :: proc(ps: Physics_State, lga: Level_Geometry, lgb: Level_Geo
 editor_save_changes :: proc(lgs:^Level_Geometry_State, is: Input_State, es: ^Editor_State) {
     if is.ent_pressed {
         if !es.saved {
-            encode_test_level_cbor(lgs^)
+            encode_test_level_cbor(lgs^, es.save_dest)
             es.saved = true
         }
     } else {

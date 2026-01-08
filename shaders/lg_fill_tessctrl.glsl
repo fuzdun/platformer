@@ -3,6 +3,7 @@
 layout (vertices=3) out;
 
 in VS_OUT {
+    float id;
     vec2 uv;
     vec3 normal_frag;
     vec4 obj_pos;
@@ -14,6 +15,7 @@ in VS_OUT {
     float inner_tess_amt;
 } vs_out[];
 
+patch out float id;
 patch out vec3 v0;
 patch out vec3 v1;
 patch out float d00;
@@ -33,6 +35,7 @@ out TC_OUT {
 } tc_out[];
 
 void main() {
+    id = vs_out[gl_InvocationID].id;
     normal_frag = vs_out[gl_InvocationID].normal_frag;
     obj_pos = vs_out[gl_InvocationID].obj_pos;
     player_dist = vs_out[gl_InvocationID].player_dist;

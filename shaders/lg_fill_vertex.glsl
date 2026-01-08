@@ -42,6 +42,7 @@ layout (std140, binding = 6) uniform Shatter_Datas
 };
 
 out VS_OUT {
+    float id;
     vec2 uv;
     vec3 normal_frag;
     vec4 obj_pos;
@@ -55,6 +56,7 @@ out VS_OUT {
 
 
 void main() {
+    vs_out.id = gl_BaseInstance + gl_InstanceID + 1; 
     mat4 transform = transforms[gl_BaseInstance + gl_InstanceID];
     vec4 new_pos = transform * aPos;
     // float player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;

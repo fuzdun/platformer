@@ -14,6 +14,8 @@ layout (std140, binding = 2) uniform Player_Pos
 };
 
 in TE_OUT {
+    float id;
+
     vec2 uv;
     vec3 normal_frag;
     vec4 obj_pos;
@@ -112,7 +114,8 @@ void main() {
     float crack_time = crack_time_break_dir.x;
     vec3 break_dir = crack_time_break_dir.yzw;
     bool broken = break_time != 0;
-    float seed_val_1 = random2(te_out[0].uv + te_out[1].uv + te_out[2].uv) * 0.5 + .5;
+    float seed_val_1 = random2(te_out[0].uv + te_out[1].uv + te_out[2].uv + te_out[0].id * 100.0) * 0.5 + .5; 
+    // float seed_val_1 = random2(te_out[0].uv + te_out[1].uv + te_out[2].uv) * 0.5 + .5;
     float seed_val_2 = fract(seed_val_1 * 43758.5453123);
     float seed_val_3 = fract(seed_val_2 * 43758.5453123);
     float interval = MIN_INTERVAL + (MAX_INTERVAL - MIN_INTERVAL) * seed_val_2;
@@ -186,8 +189,10 @@ void main() {
 
     for(int i=0; i < 3; i++) {
         vec4 new_pos = new_poss[i];
-        float xz_dist = abs(new_pos.x - player_pos.x);
-        // float xz_dist = distance(new_pos.xz, player_pos.xz);
+        // float xz_dist = abs(new_pos.x - player_pos.x);
+        vec2 xz_diff = new_pos.xz - player_pos.xz;
+        // xz_diff.y *= 0.80;
+        float xz_dist = length(xz_diff);
         vec2 norm_obj_dir = normalize(new_pos.xz - player_pos.xz);
         float dist_flatten_fact = smoothstep(00, 300, xz_dist);
         vec4 horizon_pt = new_pos;

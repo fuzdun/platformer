@@ -6,6 +6,7 @@ in TC_OUT {
     vec2 uv;
 } tc_out[];
 
+patch in float id;
 patch in vec3 v0;
 patch in vec3 v1;
 patch in float d00;
@@ -21,6 +22,7 @@ patch in vec4 break_time_pos;
 patch in vec4 crack_time_break_dir;
 
 out TE_OUT {
+    float id;
     vec2 uv;
     vec3 normal_frag;
     vec4 obj_pos;
@@ -48,6 +50,8 @@ void main() {
     vec3 p1 = gl_in[1].gl_Position.xyz * gl_TessCoord.y;
     vec3 p2 = gl_in[2].gl_Position.xyz * gl_TessCoord.z;
     gl_Position = vec4(p0 + p1 + p2, 1);
+
+    te_out.id = id;
 
     vec2 t0 = tc_out[0].uv * gl_TessCoord.x;
     vec2 t1 = tc_out[1].uv * gl_TessCoord.y;

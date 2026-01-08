@@ -29,6 +29,7 @@ Input_State :: struct {
     alt_pressed: bool,
     lctrl_pressed: bool,
     lshift_pressed: bool,
+    f12_pressed: bool,
     hor_axis: f32,
     vert_axis: f32
 }
@@ -133,6 +134,8 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
                 is.lctrl_pressed = true
             case .LSHIFT:
                 is.lshift_pressed = true
+            case .F12:
+                is.f12_pressed = true
             }
         case .KEYUP:
             #partial switch event.key.keysym.sym {
@@ -186,6 +189,8 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
                 is.lctrl_pressed = false
             case .LSHIFT:
                 is.lshift_pressed = false
+            case .F12:
+                is.f12_pressed = false
             }
         }
     }

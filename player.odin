@@ -6,8 +6,8 @@ import la "core:math/linalg"
 
 
 // init
-INIT_PLAYER_POS :: [3]f32 { 0, 0, 400 }
-// INIT_PLAYER_POS :: [3]f32 { 300, 0, 400 }
+INIT_PLAYER_POS :: [3]f32 { 250, 30, 0 }
+// INIT_PLAYER_POS :: [3]f32 { 0, 0, 400 }
 
 // move speed
 MAX_PLAYER_SPEED: f32: 100.0

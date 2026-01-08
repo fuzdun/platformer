@@ -1,5 +1,7 @@
 package main
 
+import "core:bytes"
+import "core:strconv"
 import la "core:math/linalg"
 import "core:encoding/cbor"
 import "core:os"
@@ -20,19 +22,53 @@ trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
     return
 }
 
-encode_test_level_cbor :: proc(lgs: #soa[]Level_Geometry) {
+encode_test_level_cbor :: proc(lgs: #soa[]Level_Geometry, dest: string) {
     aos_level_data := make([dynamic]Level_Geometry, context.temp_allocator)
     for &lg in lgs {
-        lg.attributes = {.Collider, .Crackable}
+        // lg.attributes = {.Collider, .Crackable}
         append(&aos_level_data, lg)
     }
     bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
-    os.write_entire_file("levels/test_level.bin", bin)
+    os.write_entire_file(dest, bin)
+}
+
+generate_new_chunk :: proc(lgs: #soa[]Level_Geometry) {
+    aos_level_data := make([dynamic]Level_Geometry, context.temp_allocator)
+    lg: Level_Geometry
+    append(&aos_level_data, lg)
+    bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
+    os.write_entire_file("chunks/new_chunk.bin", bin)
+}
+
+generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
+    level_geometry := make([]Level_Geometry, 100, arena)
+    spawn_offset := [3]f32{0, 0, 0}
+    entry_idx := 0
+    for _ in 0..<10 {
+        chunk_num := rnd.choice([]string{"0", "1", "2"})
+        level_filename := str.concatenate({"chunks/chunk_", chunk_num, ".bin"}, context.temp_allocator)
+        level_bin, read_err := os.read_entire_file(level_filename, context.temp_allocator)
+        decoded, decode_err := cbor.decode(string(level_bin), nil, context.temp_allocator)
+        decoded_arr := decoded.(^cbor.Array)
+        for entry, idx in decoded_arr {
+            lg: Level_Geometry
+            entry_bin, _ := cbor.encode(entry, cbor.ENCODE_SMALL, context.temp_allocator)
+            cbor.unmarshal(string(entry_bin), &lg)
+            lg.attributes = trim_bit_set(lg.attributes)
+            lg.transparency = 1.0
+            lg.transform.position += spawn_offset
+            level_geometry[entry_idx] = lg
+            entry_idx += 1
+        }
+        spawn_offset.z -= CHUNK_DEPTH
+    }
+    return level_geometry
 }
 
 load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Level_Geometry {
-    level_filename := str.concatenate({"levels/", filename, ".bin"}, context.temp_allocator)
-    level_bin, read_err := os.read_entire_file(level_filename, context.temp_allocator)
+    // level_prefix := loading_chunk ? "chunks/chunk_" : "levels/"
+    // level_filename := str.concatenate({level_prefix, filename, ".bin"}, context.temp_allocator)
+    level_bin, read_err := os.read_entire_file(filename, context.temp_allocator)
     decoded, decode_err := cbor.decode(string(level_bin), nil, context.temp_allocator)
     decoded_arr := decoded.(^cbor.Array)
     loaded_level_geometry: []Level_Geometry
@@ -63,19 +99,19 @@ load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Lev
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
             lg.transparency = 1.0
-            if lg.shape == .DASH_BARRIER {
-                lg.attributes += {.Hazardous, .Dash_Breakable, .Breakable}
-                lg.render_type = .Dash_Barrier
-            } else if lg.shape == .SLIDE_ZONE {
-                lg.attributes += {.Hazardous, .Slide_Zone, .Breakable}
-                lg.render_type = .Slide_Zone
-            } else if lg.shape == .BOUNCY {
-                lg.attributes += {.Bouncy}
-                lg.render_type = .Bouncy
-            } else if lg.shape == .ICE_CREAM || lg.shape == .CHAIR || lg.shape == .FRANK {
-                lg.attributes -= {.Collider}
-                lg.render_type = .Wireframe
-            }
+            // if lg.shape == .DASH_BARRIER {
+            //     lg.attributes += {.Hazardous, .Dash_Breakable, .Breakable}
+            //     lg.render_type = .Dash_Barrier
+            // } else if lg.shape == .SLIDE_ZONE {
+            //     lg.attributes += {.Hazardous, .Slide_Zone, .Breakable}
+            //     lg.render_type = .Slide_Zone
+            // } else if lg.shape == .BOUNCY {
+            //     lg.attributes += {.Bouncy}
+            //     lg.render_type = .Bouncy
+            // } else if lg.shape == .ICE_CREAM || lg.shape == .CHAIR || lg.shape == .FRANK {
+            //     lg.attributes -= {.Collider}
+            //     lg.render_type = .Wireframe
+            // }
             loaded_level_geometry[idx] = lg
         }
     }

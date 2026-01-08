@@ -81,6 +81,25 @@ draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, is:
     append(&lines, Line_Vertex{epos - [3]f32{0, 0, GUIDELINE_LEN}, 0, GUIDELINE_COL})
     append(&lines, Line_Vertex{epos + [3]f32{0, 0, GUIDELINE_LEN}, 1, GUIDELINE_COL})
 
+
+    // draw chunk borders
+    chunk_origin := [3]f32{0, 0, 0}
+    chunk_w_vector := [3]f32{CHUNK_WIDTH, 0, 0}
+    chunk_d_vector := [3]f32{0, 0, -CHUNK_DEPTH}
+    append(&lines, Line_Vertex{chunk_origin, 0, CHUNK_BORDER_COL})
+    append(&lines, Line_Vertex{chunk_origin + chunk_w_vector, 1, CHUNK_BORDER_COL})
+
+    append(&lines, Line_Vertex{chunk_origin, 0, CHUNK_BORDER_COL})
+    append(&lines, Line_Vertex{chunk_origin + chunk_d_vector, 1, CHUNK_BORDER_COL})
+
+    append(&lines, Line_Vertex{chunk_origin + chunk_d_vector, 0, CHUNK_BORDER_COL})
+    append(&lines, Line_Vertex{chunk_origin + chunk_d_vector + chunk_w_vector, 1, CHUNK_BORDER_COL})
+
+    append(&lines, Line_Vertex{chunk_origin + chunk_w_vector, 0, CHUNK_BORDER_COL})
+    append(&lines, Line_Vertex{chunk_origin + chunk_w_vector + chunk_d_vector, 1, CHUNK_BORDER_COL})
+
+
+
     // draw grid
     grid_lines := make([dynamic]Line_Vertex); defer delete(grid_lines)
     grid_sz_2 := GRID_LINES / 2

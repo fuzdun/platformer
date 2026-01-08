@@ -38,6 +38,15 @@ Level_Geometry_Render_Type :: enum {
     Bouncy
 }
 
+Level_Geometry_Render_Type_Name :: [Level_Geometry_Render_Type]string {
+    .Standard = "Standard",
+    .Dither_Test = "Dither_Test",
+    .Dash_Barrier = "Dash_Barrier",
+    .Wireframe = "Wireframe",
+    .Slide_Zone = "Slide_Zone",
+    .Bouncy = "Bouncy",
+}
+
 NUM_RENDER_GROUPS :: len(SHAPE) * len(Level_Geometry_Render_Type) 
 
 SHAPE_FILENAME := [SHAPE]string {

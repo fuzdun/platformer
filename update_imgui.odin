@@ -32,6 +32,7 @@ update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^#soa[dynamic]Level_Geometr
     imgui.end_child()
     imgui.end()
 
+    es.displayed_shape = i32(dynamic_lgs[es.selected_entity].shape)
 
     imgui.begin("Shape")
     {
@@ -39,10 +40,26 @@ update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^#soa[dynamic]Level_Geometr
         for shape_name, idx in SHAPE_NAME {
             shape_items[idx] = str.unsafe_string_to_cstring(shape_name)
         }
-        imgui.combo("", &es.displayed_shape, shape_items[0], 4)
+        imgui.combo("", &es.displayed_shape, shape_items[0], 8)
         if imgui.is_item_edited() {
             dynamic_lgs[es.selected_entity].shape = SHAPE(es.displayed_shape)
-            // editor_sort_lgs(dynamic_lgs, es.selected_entity)
+            es.selected_entity = editor_sort_lgs(dynamic_lgs, es.selected_entity)
+        }
+    }
+    imgui.end()
+
+    es.displayed_render_type = i32(dynamic_lgs[es.selected_entity].render_type)
+
+    imgui.begin("Render Type")
+    {
+        render_type_items: [len(Level_Geometry_Render_Type_Name)]cstring
+        for render_type_name, idx in Level_Geometry_Render_Type_Name {
+            render_type_items[idx] = str.unsafe_string_to_cstring(render_type_name)
+        }
+        imgui.combo("", &es.displayed_render_type, render_type_items[0], 8)
+        if imgui.is_item_edited() {
+            dynamic_lgs[es.selected_entity].render_type = Level_Geometry_Render_Type(es.displayed_render_type)
+            es.selected_entity = editor_sort_lgs(dynamic_lgs, es.selected_entity)
         }
     }
     imgui.end()
@@ -66,11 +83,13 @@ update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^#soa[dynamic]Level_Geometr
 
     selected_lg := &dynamic_lgs[es.selected_entity]
 
+    new_attributes: bit_set[Level_Geometry_Component; u64]
     for value, attribute in es.displayed_attributes {
         if value {
-            selected_lg.attributes += {attribute}
+            new_attributes += {attribute}
         }
     }
+    selected_lg.attributes = new_attributes
 
     imgui.render()
     imgl.render_draw_data(imgui.get_draw_data())

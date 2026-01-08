@@ -58,7 +58,7 @@ void main() {
         // float xz_dst = abs(new_pos.x - player_pos.x);
         // float xz_dist = distance(new_pos.xz, player_pos.xz);
         vec2 xz_diff = new_pos.xz - player_pos.xz;
-        xz_diff.y *= 0.80;
+        // xz_diff.y *= 0.80;
         float xz_dist = length(xz_diff);
         vec2 norm_obj_dir = normalize(new_pos.xz - player_pos.xz);
         float dist_flatten_fact = smoothstep(00, 300, xz_dist);
