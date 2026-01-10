@@ -13,6 +13,11 @@ layout (std140, binding = 2) uniform Player_Pos
     vec3 player_pos;
 };
 
+layout (std140, binding = 8) uniform Intensity
+{
+    float intensity;
+};
+
 in vec3 global_pos;
 in vec2 perspective_uv;
 in vec3 normal_frag;
@@ -47,8 +52,8 @@ uniform sampler2D ditherTexture;
 
 #define TWOPI 6.2831853
 #define SLIDE_RADIUS 15.0
-// #define SAMPLE_RES 320 
-#define SAMPLE_RES 100 
+// #define SAMPLE_RES 100 
+#define SAMPLE_RES 150 
 #define LINE_W 0.2
 
 vec2 distanceToSegment( vec3 a, vec3 b, vec3 p )
@@ -151,6 +156,8 @@ float ditherRingNum(float distVal, float mask) {
 
 void main()
 {
+    float effective_sample_res = SAMPLE_RES - 75 * intensity;
+
     vec4 glassColor = mix(vec4(0.05, 0.05, 0.10, 0.50), vec4(0.30, 0.3, 1.0, 1.00), displacement);
 
     // if geometry not fully assembled, use "glass" color
@@ -167,7 +174,7 @@ void main()
     vec2 screen_uv = gl_FragCoord.xy;
     screen_uv.x /= screen_width;
     screen_uv.y /= screen_width;
-    screen_uv = floor(screen_uv * SAMPLE_RES) / SAMPLE_RES;
+    screen_uv = floor(screen_uv * effective_sample_res) / effective_sample_res;
 
     // get normalized device coordinates
     vec2 rounded_frag = screen_uv * screen_width;
@@ -260,7 +267,7 @@ void main()
     vec3 col = pattern_col + trail_col + impact_col;
 
     // BLUE NOISE
-    float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 300.0) * (SAMPLE_RES / 64.0)).r;
+    float mask = texture(ditherTexture, (screen_uv + player_pos.xz * vec2(1, -0.5) / 300.0) * (effective_sample_res / 64.0)).r;
     mask = reshapeUniformToTriangle(mask);
     
     // float ring_num = floor(mask + length(intersection - player_pos) / RING_SIZE) / RING_COUNT;

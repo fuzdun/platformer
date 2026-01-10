@@ -143,7 +143,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Spin_Trails = {
         pipeline = {"spin_trails_vertex", "spin_trails_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"transform", "camera_pos"}
+        uniforms = {"transform", "camera_pos", "spin_amt"}
     },
 }
 

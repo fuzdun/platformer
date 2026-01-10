@@ -14,6 +14,11 @@ layout (std140, binding = 2) uniform Player_Pos
     vec3 player_pos;
 };
 
+layout (std140, binding = 8) uniform Intensity
+{
+    float intensity;
+};
+
 in TE_OUT {
     vec2 uv;
     vec4 obj_pos;
@@ -55,16 +60,13 @@ void main() {
 
     for(int i=0; i < 3; i++) {
         vec4 new_pos = gl_in[i].gl_Position;
-        // float xz_dst = abs(new_pos.x - player_pos.x);
-        // float xz_dist = distance(new_pos.xz, player_pos.xz);
         vec2 xz_diff = new_pos.xz - player_pos.xz;
-        // xz_diff.y *= 0.80;
         float xz_dist = length(xz_diff);
         vec2 norm_obj_dir = normalize(new_pos.xz - player_pos.xz);
-        float dist_flatten_fact = smoothstep(00, 300, xz_dist);
+        float dist_flatten_fact = smoothstep(00, 400 - (200 * intensity), xz_dist);
         vec4 horizon_pt = new_pos;
-        horizon_pt.y -= (cos(dist_flatten_fact * PI) - 1) * 500.0;
-        horizon_pt.xz += norm_obj_dir * sin(dist_flatten_fact * PI) * 800.0;
+        horizon_pt.y -= (cos(dist_flatten_fact * PI) - 1) * 500.0 * intensity;
+        horizon_pt.xz += norm_obj_dir * sin(dist_flatten_fact * PI) * 800.0 * intensity;
         new_pos = mix(new_pos, horizon_pt, dist_flatten_fact * dist_flatten_fact);
         gl_Position = projection * new_pos;
         uv = te_out[i].uv;

@@ -2,6 +2,7 @@ package main
 
 import "core:math"
 import "base:runtime"
+import "core:fmt"
 import la "core:math/linalg"
 
 ICO_H_ANGLE :: math.PI / 180 * 72
@@ -73,6 +74,7 @@ add_player_sphere_data :: proc(vertices: ^[]Vertex, fill_indices: ^[]u32, outlin
                     new_v.xyz = la.vector_slerp(new_v0, new_v1, f32(k) / f32(j))
                 }
                 append(&new_vs, new_v) 
+
             }
         }
         for j in 1..=ICOSPHERE_SUBDIVISION {
@@ -124,7 +126,9 @@ add_player_sphere_data :: proc(vertices: ^[]Vertex, fill_indices: ^[]u32, outlin
         outline_indices[i * 2 + 4] = u32(i + 2)
         outline_indices[i * 2 + 5] = u32(i)
     }
-
+    for &v in temp_vertices {
+        v.pos *= 2.0
+    }
     vertices^ = make([]Vertex, len(temp_vertices), arena)
     copy(vertices^, temp_vertices[:])
 }

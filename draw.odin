@@ -4,6 +4,7 @@ import "core:sort"
 import "core:fmt"
 import "core:slice"
 import "core:math"
+import "core:strconv"
 import vmem "core:mem/virtual"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
@@ -71,6 +72,7 @@ draw :: proc(
 
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
+    intensity := pls.intensity
 
     z_widths := make([]Z_Width_Ubo, num_culled_lgs, context.temp_allocator)
     for i in 0..<num_culled_lgs {
@@ -126,6 +128,9 @@ draw :: proc(
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transparencies_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Transparency_Ubo) * num_culled_lgs, &transparency_ubos[0])
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.intensity_ubo)
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(f32), &intensity)
 
     gl.Viewport(0, 0, WIDTH, HEIGHT)
 
@@ -243,11 +248,10 @@ draw :: proc(
         set_vec3_uniform(shs, "color", 1, &barrier_outline_color)
         draw_indirect_render_queue(rs^, draw_commands[.Dash_Barrier][:], gl.PATCHES)
 
+
         // #####################################################
         //  DRAW PLAYER
         // #####################################################
-
-        // draw_player(rs, pls, shs, f32(time), f32(interp_t))
 
         gl.BindVertexArray(rs.player_vao)
         gl.Enable(gl.DEPTH_TEST)
@@ -328,7 +332,7 @@ draw :: proc(
             {pls.dash_state.dash_end_pos, 1, {1.0, 0.0, 1.0}}
         }
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.DYNAMIC_DRAW)
+        gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.STATIC_DRAW)
 
         green := [3]f32{1.0, 0.0, 1.0}
 
@@ -415,9 +419,8 @@ draw :: proc(
         gl.Enable(gl.DEPTH_TEST)
 
         spin_trail_off := glm.mat4Translate(i_ppos)
-        spin_trail_rotation_1 := la.matrix4_rotate_f32(f32(time) / 100, [3]f32{1, 0, 0})
+        spin_trail_rotation_1 := la.matrix4_rotate_f32(f32(time) / 150, [3]f32{1, 0, 0})
         player_velocity_dir := la.normalize0(pls.velocity.xz)
-        // player_velocity_dir := la.normalize0(pls.spin_state.spin_dir)
         spin_trail_rotation_2 := la.matrix4_rotate_f32(la.atan2(player_velocity_dir.x, player_velocity_dir.y), [3]f32{0, 1, 0})
         spin_trail_transform := spin_trail_off * spin_trail_rotation_2 * spin_trail_rotation_1
 
@@ -428,13 +431,22 @@ draw :: proc(
         use_shader(shs, rs, .Spin_Trails)
         set_matrix_uniform(shs, "transform", &spin_trail_transform)
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
-        set_matrix_uniform(shs, "inverse_view", &inverse_view)
-        // set_matrix_uniform(shs, "spin_rotation", &spin_trail_rotation)
-        gl.BindTexture(gl.TEXTURE_2D, rs.postprocessing_rbo)
+        set_float_uniform(shs, "spin_amt", pls.spin_state.spin_amt)
 
-        if is.c_pressed {
+        if pls.spin_state.spinning {
             gl.DrawElements(gl.TRIANGLES, i32(len(sr[.SPIN_TRAIL].indices)), gl.UNSIGNED_INT, nil)
         }
+        
+        gl.BindVertexArray(rs.text_vao)
+        use_shader(shs, rs, .Text)
+
+        spin_count_buf: [4]byte
+        strconv.itoa(spin_count_buf[:], pls.hops_remaining)
+        render_screen_text(shs, rs, string(spin_count_buf[:]), [3]f32{0.75, 0.5, 0}, la.MATRIX4F32_IDENTITY, .3)
+
+        score_buf: [8]byte
+        strconv.itoa(score_buf[:], pls.score)
+        render_screen_text(shs, rs, string(score_buf[:]), [3]f32{-0.9, 0.75, 0}, la.MATRIX4F32_IDENTITY, .3)
 
 
         // post-processing

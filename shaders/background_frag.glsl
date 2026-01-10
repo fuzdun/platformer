@@ -13,8 +13,13 @@ layout (std140, binding = 0) uniform Common
     float i_time;
 };
 
+layout (std140, binding = 8) uniform Intensity
+{
+    float intensity;
+};
+
 #define RADIUS 1.5
-#define BASE_TRANSPARENCY 0.3
+#define BASE_TRANSPARENCY 0.1
 
 float hash2(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -33,9 +38,9 @@ float noise(vec2 p) {
                u.y);
 }
 
-// float ease_out(float x) {
-//     return 1.0 - (1.0 - x) * (1.0 - x) * (1.0 - x) * (1.0 - x);
-// }
+float ease_out(float x) {
+    return 1.0 - (1.0 - x) * (1.0 - x) * (1.0 - x) * (1.0 - x);
+}
 
 float random(float n){return fract(sin(n) * 43758.5453123);}
 
@@ -57,25 +62,24 @@ void main() {
         float standard_crunch_pt_dist = length(standard_uv - pt);
         float radial_transparency = smoothstep(0, 0.1, standard_crunch_pt_dist) - smoothstep(RADIUS, RADIUS + 0.1, standard_crunch_pt_dist);
         vec2 boxed_crunch_pt_diff = boxed_uv - pt;
-        float time_t = max((i_time - cpt.w), 0.01) / 800.0;
+        float time_t = max((i_time - cpt.w), 0.01) /(1200.0 - 600 * intensity);
         float noise_sample = noise(i_time / 1000.0 + i + normalize(boxed_crunch_pt_diff) + time_t * vec2(0.25, 0.25));
         float transparency = (1.0 - length(boxed_crunch_pt_diff)) - noise_sample + time_t;
         float smoothed_transparency = smoothstep(0.0, 0.1, transparency) - smoothstep(0.90, 1.00, transparency);
-        smoothed_transparency *= radial_transparency * BASE_TRANSPARENCY;
+        smoothed_transparency *= radial_transparency * BASE_TRANSPARENCY + 0.30 * intensity;
         final_transparency = max(smoothed_transparency, final_transparency);
         vec3 this_color = vec3(random(cpt.w), random(cpt.w * 2.0), random(cpt.w * 3.0));
         color = mix(color, this_color, smoothed_transparency);
     }
-    // col.a = 0;
-    fragColor = vec4(color, final_transparency);
+    // col.a = 0
     
-    // float noise_sample = noise(normalize(center_uv) + i_time * vec2(0.5, 0.5));
+    // float noise_sample = noise(normalize(standard_uv) + i_time * vec2(0.5, 0.5));
     // float noise_disp = noise_sample * ease_out(t) * .2;
     // // Time varying pixel color
     // float diffusion = length(center_uv) / (t - noise_disp);
     // vec3 col = abs(sin(vec3(2.1, 0.0, 0.0) + diffusion * vec3(1.0, 0.0, 1.0)));
     // fragColor = mix(vec4(col, 1.0), vec4(0.0, 0.0, 0.0, 0.0), diffusion * diffusion * 0.7 + 0.3 + i_time / 4000.0);
     // // fragColor = mix(vec4(col, 1.0), vec4(0.0, 0.0, 0.0, 0.0), diffusion * diffusion * 0.7 + 0.3);
-    //
+    fragColor = vec4(color, final_transparency);
 }
 

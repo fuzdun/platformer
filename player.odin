@@ -10,32 +10,43 @@ INIT_PLAYER_POS :: [3]f32 { 250, 30, 0 }
 // INIT_PLAYER_POS :: [3]f32 { 0, 0, 400 }
 
 // move speed
-MAX_PLAYER_SPEED: f32: 100.0
-MAX_FALL_SPEED: f32: 200.0
-AIR_SPEED :: 100.0
+MAX_PLAYER_SPEED: f32: 90.0
+MAX_FALL_SPEED: f32: 400.0
+AIR_ACCEL :: 100.0
+AIR_SPIN_ACCEL :: 75.0
 SLOPE_SPEED :: 80.0 
-P_ACCEL: f32: 150.0
-GROUND_BUNNY_V_SPEED: f32: 70
-GROUND_BUNNY_H_SPEED: f32: 30
+SLOW_ACCEL: f32: 150.0
+MED_ACCEL: f32: 20.0
+FAST_ACCEL: f32: 10.0
+FAST_CUTOFF: f32: 75.0
+MED_CUTOFF: f32: 40.0
+GROUND_BUNNY_V_SPEED: f32: 325 // 1.25x higher than normal jump
+SMALL_HOP_V_SPEED: f32: 150 // 1.25x higher than normal jump
+BUNNY_SPIN_VARIANCE: f32: 150
+GROUND_BUNNY_H_SPEED: f32: 0
 MIN_BUNNY_XZ_VEL: f32: 20.0
+BUNNY_HOP_TIME_MULT :: 4.0
+BUNNY_SPIN_TIME_VARIANCE :: 2.5
 
 DAMAGE_VELOCITY: f32: 1.0
 DAMAGE_LEN: f32: 500.0
 
-BREAK_BOOST_VELOCITY: f32: 5.0
+// BREAK_BOOST_VELOCITY: f32: 5.0
 BREAK_BOOST_LEN: f32: 250
 BOUNCE_VELOCITY: f32: 120.0
 
 // jump
-P_JUMP_SPEED: f32: 60.0
+P_JUMP_SPEED: f32: 150.0
 WALL_JUMP_FORCE :: 25 
-SLOPE_V_JUMP_FORCE :: 50 
+SLOPE_V_JUMP_FORCE :: 160 
 SLOPE_JUMP_FORCE :: 40
 
 // forces
-GROUND_FRICTION :: 0.01
-// GRAV: f32: 135
-GRAV: f32: 150
+IDLE_FRICTION :: 0.01
+GROUND_FRICTION :: 0.65
+FAST_FRICTION: f32: 0.03
+// GRAV: f32: 150
+GRAV: f32: 300
 WALL_GRAV: f32: 100 
 SLOPE_GRAV: f32: 150 
 
@@ -46,8 +57,9 @@ BUNNY_WINDOW: f32: 100
 WALL_DETACH_LEN :: 200
 
 // dash
-DASH_SPD: f32: 120.0
-DASH_LEN: f32: 220 
+MIN_DASH_SPD: f32: 30.0
+MAX_DASH_SPD: f32: 120.0
+DASH_LEN: f32: 240.0 
 DASH_DIST: f32: 15.0
 
 // slide
@@ -98,6 +110,15 @@ SPIKE_COMPRESSION_LERP: f32: 0.10
 CRACK_DELAY :: 1000
 BREAK_DELAY :: 750
 
+// intensity
+// MAX_INTENSITY_MOD :: .65
+INTENSITY_MOD_MIN_SPD :: 60
+INTENSITY_MOD_MAX_SPD :: 100
+
+MAX_FOV_MOD :: .85
+// FOV_MOD_MIN_SPD :: 30
+// FOV_MOD_MAX_SPD :: 100
+
 SPIN_TRAILS_VERTICES: [4]Quad_Vertex : {} 
 
 
@@ -119,6 +140,7 @@ Dash_State :: struct {
     dash_time: f32,
     dash_total: f32,
     can_dash: bool,
+    dash_spd: f32
 }
 
 Slide_State :: struct {
@@ -136,7 +158,7 @@ Spin_State :: struct {
     spinning: bool,
     spin_time: f32,
     spin_dir: [2]f32,
-    spin_amt: f32
+    spin_amt: f32,
 }
 
 Player_State :: struct {
@@ -148,6 +170,8 @@ Player_State :: struct {
     touch_pt: [3]f32,
     bunny_hop_y: f32,
     dash_hop_debounce_t: f32,
+    hops_remaining: int,
+    hops_recharge: f32,
 
     hurt_t: f32,
     broke_t: f32,
@@ -177,7 +201,10 @@ Player_State :: struct {
     particle_displacement: [3]f32,
     tgt_particle_displacement: [3]f32,
 
-    spike_compression: f32
+    spike_compression: f32,
+
+    intensity: f32,
+    score: int
 }
 
 free_player_state :: proc(ps: ^Player_State) {}
@@ -273,3 +300,4 @@ apply_player_vertices_roll_rotation :: proc(vertices: []Vertex, velocity: [3]f32
         v.pos = la.matrix_mul_vector(rot_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 0.0}).xyz
     }
 }
+

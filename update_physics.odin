@@ -348,13 +348,14 @@ apply_velocity :: proc(
             loops += 1
             new_contact_state.last_touched = collision.id
             collision_ids[collision.id] = {}
+            if .Dash_Breakable in entities[collision.id].attributes && dashing {
+                break
+            } else if .Slide_Zone in entities[collision.id].attributes && sliding {
+                break
+            }
             new_position += (remaining_vel * (collision.t) - GROUND_BUFFER) * velocity_normal
             remaining_vel *= 1.0 - collision.t
-            if .Dash_Breakable in entities[collision.id].attributes && dashing {
-                // pass
-            } else if .Slide_Zone in entities[collision.id].attributes && sliding{
-                // pass
-            } else if .Hazardous in entities[collision.id].attributes {
+            if .Hazardous in entities[collision.id].attributes {
                 remaining_vel = DAMAGE_VELOCITY
                 velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal * 1.25 
             } else {

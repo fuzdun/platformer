@@ -9,19 +9,24 @@ uniform float time;
 uniform float crunch_time;
 uniform vec2 ppos;
 
+layout (std140, binding = 8) uniform Intensity
+{
+    float intensity;
+};
+
 void main() {
     vec2 sample_uv = uv;
     vec2 diff = ppos - uv;
     float elapsed = time - crunch_time;
     float wave_f = sin(length(diff) * 5.5 * 3.14 - elapsed / 200 + .7);
-    float fact = 1.0;
+    float fact = 0.25 + (1.2 * intensity);
     float delay = clamp(elapsed / 300, .0001, 1.0);
     float decay = max(elapsed, 1) / 1000;
     float edge_dist = max(abs(uv.x - 0.5), abs(uv.y - 0.5));
     float edge_decay = 0.5 - edge_dist;
     float center_dist = length(diff);
     float center_decay = min(0.6, center_dist) / 0.6;
-    fact = (wave_f / 7.5) / decay;
+    fact *= (wave_f / 7.5) / decay;
     float magnitude = fact * edge_decay * center_decay * delay;
     sample_uv += normalize(diff) * magnitude;
     vec4 tex_color = texture(screenTexture, sample_uv);
