@@ -156,7 +156,7 @@ float ditherRingNum(float distVal, float mask) {
 
 void main()
 {
-    float effective_sample_res = SAMPLE_RES - 75 * intensity;
+    float effective_sample_res = SAMPLE_RES - 50 * intensity;
 
     vec4 glassColor = mix(vec4(0.05, 0.05, 0.10, 0.50), vec4(0.30, 0.3, 1.0, 1.00), displacement);
 
@@ -259,7 +259,9 @@ void main()
     float lighting_amt = dot(vec3(0, -1, 0), grad_normal);
     float lighting2_amt = dot(normalize(vec3(1, 1, 1)), grad_normal);
     vec3 pattern_col =  (lighting_amt * 0.3 + 0.7) * vec3(0.0, 0.7, 1.0) + (lighting2_amt * 0.3 + 0.7) * vec3(0.25, 0.0, 0.45);
-    // vec3 pattern_col = vec3(0, 0, 1);
+    // vec3 pattern_col1 = cos(vec3(3, 0, 2) * (lighting_amt * 0.3 + 0.7) + vec3(1, 0, 1) * i_time / 2000);
+    // vec3 pattern_col2 = sin(vec3(2, 0, 1) * (lighting2_amt * 0.3 + 0.7) + vec3(1, 0, 1) * i_time / 2000);
+    // vec3 pattern_col =  tanh((pattern_col1 + pattern_col2));// + (lighting2_amt * 0.3 + 0.7) * sin(vec3(2, 6, 1)) / 100.0);
 
     float sd = (udTriangle(b_poss[0], b_poss[1], b_poss[2], global_pos));
     float border_t = did_shatter == 1.0 ? smoothstep(0.0, LINE_W, sd) : 1.0;

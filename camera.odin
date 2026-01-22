@@ -40,8 +40,8 @@ Camera_Mode :: struct {
 }
 
 GROUND_CAMERA: Camera_Mode: {
-    pos_offset = {0, 10, 25},
-    pos_lerp = 0.05,
+    pos_offset = {0, 15, 25},
+    pos_lerp = 0.07,
     high_speed_pos_lerp = 0.095,
     x_angle_lerp = 0.07,
     // y_angle_lerp_rising = 0.07,
@@ -53,14 +53,14 @@ GROUND_CAMERA: Camera_Mode: {
 }
 
 AERIAL_CAMERA: Camera_Mode: {
-    pos_offset = {0, 10, 10},
+    pos_offset = {0, 10, 9.0},
     // pos_offset = {0, 10, 25},
     pos_lerp = 0.07,
     high_speed_pos_lerp = 0.085,
     x_angle_lerp = 0.09,
     // y_angle_lerp_rising = 0.07,
     // y_angle_lerp_falling = 0.1,
-    y_angle_lerp = 0.07,
+    y_angle_lerp = 0.09,
     z_angle_lerp = 0.08,
     tgt_y_offset = 6.0,
     // tgt_y_lerp = 0.1,

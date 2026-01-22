@@ -13,7 +13,7 @@ out vec4 fragColor;
 
 uniform float spin_amt;
 
-#define NUMBER_OF_STEPS 25
+#define NUMBER_OF_STEPS 30
 #define MINIMUM_HIT_DISTANCE 0.001
 #define MAXIMUM_TRACE_DISTANCE 80
 
@@ -42,16 +42,17 @@ vec4 ray_march(vec3 ro, vec3 rd) {
     for (int i = 0; i < NUMBER_OF_STEPS; ++i) {
         vec3 current_pos = ro + ray_depth * rd;
 
-        float turbulenceFrequency = 4.0 - (2.0 * spin_amt);
+        float turbulenceFrequency = 2.4;
         for (int turbulenceIter = 0; turbulenceIter < 5; turbulenceIter++) {
-            vec3 turbulenceOffset = cos((current_pos.xzy - vec3(i_time / 0.1, i_time, turbulenceFrequency)) * turbulenceFrequency);
+            vec3 turbulenceOffset = cos((current_pos.xzy - vec3(i_time / 500, i_time / 100, turbulenceFrequency)) * turbulenceFrequency);
             turbulenceOffset.x = 0.0;
             current_pos += turbulenceOffset / turbulenceFrequency;
             turbulenceFrequency /= 0.6;
         }
 
 
-        float distance_to_torus = distance_from_torus(current_pos, vec2(2.0 + 5.0 * spin_amt, 0.5 + 0.5 * spin_amt));
+        float width_fact = 1.0 - (1.0 - spin_amt) * (1.0 - spin_amt);
+        float distance_to_torus = distance_from_torus(current_pos, vec2(2.0 + 8.0 * width_fact, 0.5));
         // float distance_to_sphere = distance_from_sphere(current_pos, 1.0);
 
         // float closest = min(distance_to_torus, distance_to_sphere);
@@ -60,10 +61,10 @@ vec4 ray_march(vec3 ro, vec3 rd) {
         step_size = 0.1 + closest / 7.0;
         ray_depth += step_size;
         col += (plasma(cos(step_size / .1) * 0.5 + 0.5) / step_size) * 0.01;
-        a += 0.008 / step_size;
+        a += 0.004 / step_size;
     }
     // return vec4(0);
-    if(a < 0.65) {
+    if(a < 0.35) {
         return vec4(0);
     }
     return vec4(col, a);

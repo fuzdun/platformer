@@ -41,11 +41,13 @@ generate_new_chunk :: proc(lgs: #soa[]Level_Geometry) {
 }
 
 generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
-    level_geometry := make([]Level_Geometry, 100, arena)
+    level_geometry := make([]Level_Geometry, 300, arena)
     spawn_offset := [3]f32{0, 0, 0}
     entry_idx := 0
-    for _ in 0..<10 {
-        chunk_num := rnd.choice([]string{"0", "1", "2"})
+    for _ in 0..<30 {
+        flip := rnd.choice([]int{0, 1}) == 1
+        // chunk_num := rnd.choice([]string{"0", "1", "2", "3", "4", "7" })
+        chunk_num := rnd.choice([]string{"0", "1", "2", "3", "4", "5", "6", "7"})
         level_filename := str.concatenate({"chunks/chunk_", chunk_num, ".bin"}, context.temp_allocator)
         level_bin, read_err := os.read_entire_file(level_filename, context.temp_allocator)
         decoded, decode_err := cbor.decode(string(level_bin), nil, context.temp_allocator)

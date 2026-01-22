@@ -197,7 +197,7 @@ void main() {
         vec2 xz_diff = new_pos.xz - player_pos.xz;
         float xz_dist = length(xz_diff);
         vec2 norm_obj_dir = normalize(new_pos.xz - player_pos.xz);
-        float dist_flatten_fact = smoothstep(00, 400 - (200 * intensity), xz_dist);
+        float dist_flatten_fact = smoothstep(00, 400 - (150 * intensity), xz_dist);
         vec4 horizon_pt = new_pos;
         horizon_pt.y -= (cos(dist_flatten_fact * PI) - 1) * 500.0 * intensity;
         horizon_pt.xz += norm_obj_dir * sin(dist_flatten_fact * PI) * 800.0 * intensity;

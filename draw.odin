@@ -405,7 +405,7 @@ draw :: proc(
         gl.Disable(gl.CULL_FACE)
         gl.Disable(gl.DEPTH_TEST)
 
-        slide_zone_outline_color := [3]f32{0, 0, 1.0}
+        slide_zone_outline_color := [3]f32{1.0, 0, 1.0}
 
         use_shader(shs, rs, .Level_Geometry_Outline)
         set_vec3_uniform(shs, "color", 1, &slide_zone_outline_color)
@@ -419,7 +419,7 @@ draw :: proc(
         gl.Enable(gl.DEPTH_TEST)
 
         spin_trail_off := glm.mat4Translate(i_ppos)
-        spin_trail_rotation_1 := la.matrix4_rotate_f32(f32(time) / 150, [3]f32{1, 0, 0})
+        spin_trail_rotation_1 := la.matrix4_rotate_f32(f32(time) / 300, [3]f32{1, 0, 0})
         player_velocity_dir := la.normalize0(pls.velocity.xz)
         spin_trail_rotation_2 := la.matrix4_rotate_f32(la.atan2(player_velocity_dir.x, player_velocity_dir.y), [3]f32{0, 1, 0})
         spin_trail_transform := spin_trail_off * spin_trail_rotation_2 * spin_trail_rotation_1
@@ -440,14 +440,27 @@ draw :: proc(
         gl.BindVertexArray(rs.text_vao)
         use_shader(shs, rs, .Text)
 
-        spin_count_buf: [4]byte
-        strconv.itoa(spin_count_buf[:], pls.hops_remaining)
-        render_screen_text(shs, rs, string(spin_count_buf[:]), [3]f32{0.75, 0.5, 0}, la.MATRIX4F32_IDENTITY, .3)
+        // spin_count_buf: [4]byte
+        // strconv.itoa(spin_count_buf[:], pls.hops_remaining)
 
         score_buf: [8]byte
         strconv.itoa(score_buf[:], pls.score)
         render_screen_text(shs, rs, string(score_buf[:]), [3]f32{-0.9, 0.75, 0}, la.MATRIX4F32_IDENTITY, .3)
 
+        if pls.time_remaining > 0 {
+
+            for hop_idx in 0..<pls.hops_remaining {
+                render_screen_text(shs, rs, "S", [3]f32{0.35, 0.075 - (0.075 * f32(hop_idx)), 0}, la.MATRIX4F32_IDENTITY, .3)
+            }
+
+            time_buf: [4]byte
+            strconv.itoa(time_buf[:], int(pls.time_remaining))
+            render_screen_text(shs, rs, string(time_buf[:]), [3]f32{0.0, 0.65, 0}, la.MATRIX4F32_IDENTITY, .3)
+        }
+        
+        if f32(time) - pls.last_checkpoint_t < 2000 {
+            render_screen_text(shs, rs, "checkpoint (+10)", [3]f32{0.1, 0.65, 0}, la.MATRIX4F32_IDENTITY, .2)
+        }
 
         // post-processing
         // -------------------------------------------

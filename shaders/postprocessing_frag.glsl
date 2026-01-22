@@ -19,7 +19,8 @@ void main() {
     vec2 diff = ppos - uv;
     float elapsed = time - crunch_time;
     float wave_f = sin(length(diff) * 5.5 * 3.14 - elapsed / 200 + .7);
-    float fact = 0.25 + (1.2 * intensity);
+    float fact = 0.25 + (1.00 * intensity);
+    // float fact = 0;//.25 + (0.25 * intensity);
     float delay = clamp(elapsed / 300, .0001, 1.0);
     float decay = max(elapsed, 1) / 1000;
     float edge_dist = max(abs(uv.x - 0.5), abs(uv.y - 0.5));

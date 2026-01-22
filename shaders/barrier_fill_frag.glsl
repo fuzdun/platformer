@@ -45,7 +45,7 @@ uniform sampler2D ditherTexture;
 
 out vec4 fragColor;
 
-#define LINE_W 0.1
+#define LINE_W 0.4
 #define SAMPLE_RES 600
 #define SCREEN_WIDTH 1920.0
 #define SCREEN_HEIGHT 1080.0
@@ -122,7 +122,7 @@ void main()
     vec2 uv = t0_uv * bary_0 + t1_uv * bary_1 + t2_uv * bary_2;
 
     float plane_off = dot(normal_frag, global_pos);
-    float dist = (dot(normal_frag, player_pos) - plane_off) - 1.5;
+    float dist = (dot(normal_frag, player_pos) - plane_off) + 4.5;
     vec3 up = normal_frag.y == 1.0 ? vec3(1, 0, 0) : vec3(1.0, 0, 0);
     vec3 plane_x = normalize(cross(up, normal_frag));
     vec3 plane_y = normalize(cross(normal_frag, plane_x));
@@ -134,17 +134,17 @@ void main()
     float a = atan(uvx / uvy) * 25;
     float d1 = dist + noise(vec2(a + i_time / 60.0, i_time / 80.0)) * 2.5;
     float absd = abs(uvd - d1);
-    float noise_border = smoothstep(-0.1, 0.0, absd) - smoothstep(0.2, 0.3, absd);
-    vec4 proximity_outline_col = vec4(1.0, 1.0, 1.0, 1.0) * noise_border;
+    float noise_border = smoothstep(-0.2, 0.0, absd) - smoothstep(0.2, 0.4, absd);
+    vec4 proximity_outline_col = vec4(1.0, 1.0, 0.0, 1.0) * noise_border;
 
     float sd = (udTriangle(b_poss[0], b_poss[1], b_poss[2], global_pos));
     float border_t = smoothstep(0.0, LINE_W, sd);
 
-    float mask = GetBayerDither(ceil(length(t_diff) / 1.5) / 30.0 - 0.2, screen_uv);
+    float mask = GetBayerDither(ceil(length(t_diff) / 4.5) / 30.0 - 0.2, screen_uv);
 
     fragColor = mix(vec4(0.5, 0.0, 0.5, 0.8), vec4(0.0, 0.0, 0.0, 1.0), mask);
     fragColor = mix(vec4(1.0, 0.0, 0.0, 1.0), fragColor, border_t);
     fragColor += proximity_outline_col;
-    fragColor.r *= 1.0 + (1.0 - (mask / 2.0));
+    fragColor.r *= 1.5 + (1.0 - (mask / 2.0));
 }
 

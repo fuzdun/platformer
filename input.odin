@@ -64,21 +64,25 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
             }
         case .CONTROLLERBUTTONDOWN:
             switch event.cbutton.button {
-            case 1:
+            case u8(SDL.GameControllerButton.B):
                 is.z_pressed = true
-            case 2:
+            case u8(SDL.GameControllerButton.X):
                 is.r_pressed = true
-            case 3:
+            case u8(SDL.GameControllerButton.Y):
                 is.x_pressed = true
+            case u8(SDL.GameControllerButton.RIGHTSHOULDER):
+                is.c_pressed = true
             }
         case .CONTROLLERBUTTONUP:
             switch event.cbutton.button {
-            case 1:
+            case u8(SDL.GameControllerButton.B):
                 is.z_pressed = false
-            case 2:
+            case u8(SDL.GameControllerButton.X):
                 is.r_pressed = false
-            case 3:
+            case u8(SDL.GameControllerButton.Y):
                 is.x_pressed = false
+            case u8(SDL.GameControllerButton.RIGHTSHOULDER):
+                is.c_pressed = false
             }
         case .KEYDOWN:
             #partial switch event.key.keysym.sym {

@@ -92,7 +92,6 @@ main :: proc () {
     }
     if len(os.args) == 2 {
         level_to_load = str.concatenate({"levels/", os.args[1], ".bin"}, perm_arena_alloc)
-        level_to_load = os.args[1]
     }
 
 
@@ -195,6 +194,8 @@ main :: proc () {
     pls.screen_splashes = make([dynamic][4]f32, perm_arena_alloc)
     pls.hurt_t = -5000.0
     pls.broke_t = -5000.0
+    pls.time_remaining = TIME_LIMIT
+    pls.last_checkpoint_t = -5000
     ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
 
     // #####################################################
@@ -237,7 +238,7 @@ main :: proc () {
 
     for &v in sr[.SPIN_TRAIL].vertices {
         v.pos.yz *= 10.0
-        v.pos.x *= 0.5
+        v.pos.x *= .5
     }
 
     // #####################################################
@@ -263,7 +264,7 @@ main :: proc () {
 
     // add to physics ----------------------
     for lg, lg_idx in lgs {
-        if lg.shape == .SLIDE_ZONE {
+        if .Slide_Zone in lg.attributes {
             sz: Obb
             sz.id = lg_idx
             rot_mat := glm.mat4FromQuat(lg.transform.rotation)
