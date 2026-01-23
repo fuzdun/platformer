@@ -1,5 +1,6 @@
 package main
 
+import "base:runtime"
 import "core:math"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
@@ -52,7 +53,7 @@ SLOPE_GRAV: f32: 150
 
 // input
 COYOTE_TIME ::  150
-BUNNY_DASH_DEBOUNCE: f32: 400
+BUNNY_DASH_DEBOUNCE: f32: 100
 BUNNY_WINDOW: f32: 100
 WALL_DETACH_LEN :: 300
 
@@ -209,6 +210,26 @@ Player_State :: struct {
     time_remaining: f32,
     current_sector: int,
     last_checkpoint_t: f32
+}
+
+init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
+    pls.contact_state.state = .IN_AIR
+    pls.position = INIT_PLAYER_POS
+    pls.dash_state.can_dash = true
+    pls.slide_state.slide_end_time = -SLIDE_COOLDOWN
+    pls.slide_state.can_slide = true
+    pls.can_press_jump = false
+    pls.ground_x = {1, 0, 0}
+    pls.ground_z = {0, 0, -1}
+    pls.contact_state.touch_time = -1000.0
+    pls.spike_compression = 1.0
+    pls.crunch_time = -10000.0;
+    pls.screen_splashes = make([dynamic][4]f32, perm_alloc)
+    pls.hurt_t = -5000.0
+    pls.broke_t = -5000.0
+    pls.time_remaining = TIME_LIMIT
+    pls.last_checkpoint_t = -5000
+    ring_buffer_init(&pls.trail, [3]f32{0, 0, 0}, perm_alloc)
 }
 
 free_player_state :: proc(ps: ^Player_State) {}

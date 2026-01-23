@@ -371,25 +371,9 @@ draw :: proc(
                 return la.length2(a.xyz - cam_pos) > la.length2(b.xyz - cam_pos)
             }
             slice.sort_by(sorted_pp[:], z_sort)
-
-            //gl.BindBuffer(gl.COPY_READ_BUFFER, rs.particle_pos_vbo)
-            //particle_pos_buffer_size: i32
-            //gl.GetBufferParameteriv(gl.COPY_READ_BUFFER, gl.BUFFER_SIZE, &particle_pos_buffer_size)
-            //gl.BindBuffer(gl.COPY_WRITE_BUFFER, rs.prev_particle_pos_vbo)
-            //gl.CopyBufferSubData(gl.COPY_READ_BUFFER, gl.COPY_WRITE_BUFFER, 0, 0, int(particle_pos_buffer_size))
-            //
-            //gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
-            //gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(sorted_pp[0]) * particle_count, &sorted_pp[0])
         }
 
         gl.BindVertexArray(rs.trail_particle_vao)
-        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
-        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_particle_pos_vbo)
-        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.trail_particle_vbo)
-        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_trail_particle_vbo)
-        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.trail_particle_velocity_vbo)
-        // gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_trail_particle_velocity_vbo)
-        // use_shader(shs, rs, .Player_Particle)
         use_shader(shs, rs, .Trail_Particle)
         set_float_uniform(shs, "interp_t", f32(interp_t))
         set_float_uniform(shs, "delta_time", FIXED_DELTA_TIME)

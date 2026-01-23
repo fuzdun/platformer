@@ -96,25 +96,6 @@ PARTICLE_VERTICES :: [4]Quad_Vertex {
     {{0.7, 0.7, 0.0}, {1, 1}},
 }
 
-// SPIN_TRAIL_VERTICES: [8][3]f32: {
-//     {-0.5, -1, 1},
-//     {-0.5, 1, 1},
-//     {0.5, -1, 1},
-//     {0.5, 1, 1},
-//     {0.5, -1, -1},
-//     {0.5, 1, -1},
-//     {-0.5, -1, -1},
-//     {-0.5, 1, -1}
-// }
-//
-// SPIN_TRAIL_INDICES: [36]int: {
-//     {
-//         0, 1, 2,
-//         2, 1, 3,
-//         2, 
-//     }
-// }
-
 Render_State :: struct {
     postprocessing_fbo: u32,
     postprocessing_tcb: u32,
@@ -177,8 +158,6 @@ Render_State :: struct {
     index_offsets: Index_Offsets,
 
     player_spin_particles: Particle_Buffer(PLAYER_SPIN_PARTICLE_COUNT)
-
-
 }
 
 Char_Tex :: struct {
@@ -257,6 +236,11 @@ Transparency_Ubo :: struct #align(16) {
 }
 
 Render_Groups :: [Level_Geometry_Render_Type][dynamic]gl.DrawElementsIndirectCommand 
+
+init_render_state :: proc(rs: ^Render_State, perm_alloc: runtime.Allocator) {
+    add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices, perm_alloc)
+    particle_buffer_init(&rs.player_spin_particles, perm_alloc)
+}
 
 free_render_state :: proc(rs: ^Render_State) {
     ft.done_face(rs.face)

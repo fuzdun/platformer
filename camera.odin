@@ -77,6 +77,10 @@ Camera_State :: struct {
     fov: f32,
 }
 
+init_camera_state:: proc(cs: ^Camera_State) {
+    cs.position = INIT_CAMERA_POS 
+}
+
 interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {
     tgt := math.lerp(cs.prev_target, cs.target, t)
     c_pos := math.lerp(cs.prev_position, cs.position, t)

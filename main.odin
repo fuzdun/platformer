@@ -176,52 +176,18 @@ main :: proc () {
     sr:  Shape_Resources;
     szs: Slide_Zone_State;
 
-    // #####################################################
-    // INIT PLAYER STATE
-    // #####################################################
-
-    pls.contact_state.state = .IN_AIR
-    pls.position = INIT_PLAYER_POS
-    pls.dash_state.can_dash = true
-    pls.slide_state.slide_end_time = -SLIDE_COOLDOWN
-    pls.slide_state.can_slide = true
-    pls.can_press_jump = false
-    pls.ground_x = {1, 0, 0}
-    pls.ground_z = {0, 0, -1}
-    pls.contact_state.touch_time = -1000.0
-    pls.spike_compression = 1.0
-    pls.crunch_time = -10000.0;
-    pls.screen_splashes = make([dynamic][4]f32, perm_arena_alloc)
-    pls.hurt_t = -5000.0
-    pls.broke_t = -5000.0
-    pls.time_remaining = TIME_LIMIT
-    pls.last_checkpoint_t = -5000
-    ring_buffer_init(&pls.trail, [3]f32{0, 0, 0})
-
-    // #####################################################
-    // INIT MISC STATE
-    // #####################################################
-
-    // camera-------------------------------
-    cs.position = INIT_CAMERA_POS 
-
-    // editor-------------------------------
-    es.y_rot = INIT_EDITOR_ROTATION 
-    es.zoom = INIT_EDITOR_ZOOM
-    es.save_dest = level_to_load
-
-    // slize zones-------------------------
-    szs.entities = make(#soa[dynamic]Obb, perm_arena_alloc)
-    szs.intersected = make(map[int]struct{}, perm_arena_alloc)
-
-    // time---------------------------------
-    ts.time_mult = 1.0
+    init_player_state(&pls, perm_arena_alloc)
+    init_camera_state(&cs)
+    init_editor_state(&es, level_to_load)
+    init_slide_zone_state(&szs, perm_arena_alloc)
+    init_time_state(&ts)
 
     // player icosphere mesh----------------
+
     add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices, perm_arena_alloc)
 
     // player spin particles----------------
-    particle_buffer_init(&rs.player_spin_particles)
+    particle_buffer_init(&rs.player_spin_particles, perm_arena_alloc)
     // ring_buffer_init(&rs.player_spin_particles, Particle{})
     // rs.player_spin_particle_info = make(#soa[]Particle_Info, rs.player_spin_particles.cap)
     // ring_buffer_init(&rs.player_spin_particle_info, Spin_Particle_Info{})
@@ -654,7 +620,7 @@ main :: proc () {
     snap_vals : [8]i64 = { snap_hz, snap_hz * 2, snap_hz * 3, snap_hz * 4, snap_hz * 5, snap_hz * 6, snap_hz * 7, snap_hz * 8 }
     
     frame_time_buffer : RingBuffer(4, i64)
-    ring_buffer_init(&frame_time_buffer, target_frame_clocks)
+    ring_buffer_init(&frame_time_buffer, target_frame_clocks, perm_arena_alloc)
 
     current_time, previous_time, delta_time, averager_res, accumulator : i64
     previous_time = i64(SDL.GetPerformanceCounter())

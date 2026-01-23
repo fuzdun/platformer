@@ -49,6 +49,12 @@ Connection :: struct {
     dist: int
 }
 
+init_editor_state :: proc(es: ^Editor_State, level_to_load: string) {
+    es.y_rot = INIT_EDITOR_ROTATION 
+    es.zoom = INIT_EDITOR_ZOOM
+    es.save_dest = level_to_load
+}
+
 get_geometry_dist :: proc(ps: Physics_State, lga: Level_Geometry, lgb: Level_Geometry) -> (s0: [3]f32, s1: [3]f32, shortest_dist := max(f32)) {
     shape_data_a := ps.level_colliders[lga.shape]
     shape_data_b := ps.level_colliders[lgb.shape]

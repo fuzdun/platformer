@@ -1,15 +1,17 @@
 package main
 
+import "base:runtime"
 
 RingBuffer :: struct($N: int, $T: typeid) {
     len: int,
     cap: int,
     insert_at: int,
-    values: [N]T
+    values: ^[N]T
 }
 
-ring_buffer_init :: proc(buffer: ^RingBuffer($N, $T), default: T) {
+ring_buffer_init :: proc(buffer: ^RingBuffer($N, $T), default: T, alloc: runtime.Allocator) {
     buffer.cap = N
+    buffer.values = new([N]T, alloc)
     for &v in buffer.values {
         v = default
     }

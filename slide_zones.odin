@@ -1,5 +1,7 @@
 package main
 
+import "base:runtime"
+
 Obb :: struct {
     id: int,
     center: [3]f32,
@@ -13,3 +15,7 @@ Slide_Zone_State :: struct {
     intersected: map[int]struct{},
 }
 
+init_slide_zone_state :: proc(szs: ^Slide_Zone_State, perm_alloc: runtime.Allocator) {
+    szs.entities = make(#soa[dynamic]Obb, perm_alloc)
+    szs.intersected = make(map[int]struct{}, perm_alloc)
+}

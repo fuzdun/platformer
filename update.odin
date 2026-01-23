@@ -11,6 +11,25 @@ import rnd "core:math/rand"
 
 INFINITE_HOP :: false
 
+Intra_Update_Attributes :: struct {
+    input_x: f32,
+    input_z: f32,
+    input_dir: [2]f32,
+    got_dir_input: bool,
+    got_fwd_input: bool,
+    on_surface: bool,
+    normalized_contact_ray: [3]f32,
+    small_hopped: bool,
+    bunny_hopped: bool,
+    ground_jumped: bool,
+    slope_jumped: bool,
+    wall_jumped: bool,
+    jumped: bool,
+    grounded: bool,
+    right_vec: [3]f32,
+    fwd_vec: [3]f32,
+    move_spd: f32
+}
 
 game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: ^Physics_State, rs: ^Render_State, cs: ^Camera_State, ts: ^Time_State, szs: ^Slide_Zone_State, elapsed_time: f32, delta_time: f32) {
     cts := pls.contact_state
@@ -19,73 +38,16 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // EXTRAPOLATE STATE
     // #####################################################
 
-    // directional input
-    // -------------------------------------------
-
     checkpointed := pls.position.y < -100
 
-    input_x: f32 = 0.0
-    input_z: f32 = 0.0
-    if is.left_pressed do input_x -= 1
-    if is.right_pressed do input_x += 1
-    if is.up_pressed do input_z -= 1
-    if is.down_pressed do input_z += 1
-    input_dir: [2]f32
-    if is.hor_axis != 0 || is.vert_axis != 0 {
-        input_dir = la.normalize0([2]f32{is.hor_axis, -is.vert_axis})
-    } else {
-        input_dir = la.normalize0([2]f32{input_x, input_z})
-    }
-    got_dir_input := input_dir != 0
-
-    // surface contact
-    // -------------------------------------------
-    on_surface := cts.state == .ON_GROUND || cts.state == .ON_SLOPE || cts.state == .ON_WALL
-    normalized_contact_ray := la.normalize(cts.contact_ray) 
-
-    // jump
-    // -------------------------------------------
     new_jump_pressed_time := pls.jump_pressed_time
     if (is.z_pressed && !pls.jump_held) {
         new_jump_pressed_time = elapsed_time
     }
 
-    jump_pressed_surface_touch_time_diff := abs(cts.touch_time - new_jump_pressed_time)
-    jump_pressed_slide_end_time_diff := abs(pls.slide_state.slide_end_time - new_jump_pressed_time)
-    time_since_jump_pressed := elapsed_time - new_jump_pressed_time 
+    attrs := extrapolate_state_attributes(is, pls^, new_jump_pressed_time, elapsed_time)
+    using attrs
 
-    small_hopped := jump_pressed_surface_touch_time_diff < BUNNY_WINDOW || 
-        (
-            jump_pressed_slide_end_time_diff < BUNNY_WINDOW &&
-            time_since_jump_pressed < BUNNY_WINDOW
-        )
- 
-    got_bunny_hop_input := on_surface && pls.spin_state.spinning
-
-    new_dash_hop_debounce_t := pls.dash_hop_debounce_t
-
-    bunny_hopped := elapsed_time - pls.dash_hop_debounce_t > BUNNY_DASH_DEBOUNCE && got_bunny_hop_input && (pls.hops_remaining > 0 || INFINITE_HOP)
-    if bunny_hopped || small_hopped {
-        new_jump_pressed_time = 0
-        new_dash_hop_debounce_t = elapsed_time
-    }
-
-    should_jump := is.z_pressed && pls.can_press_jump || bunny_hopped || small_hopped
-
-    ground_jump_coyote_time_active := elapsed_time - cts.left_ground < COYOTE_TIME
-    slope_jump_coyote_time_active  := elapsed_time - cts.left_slope  < COYOTE_TIME
-    wall_jump_coyote_time_active   := elapsed_time - cts.left_wall   < COYOTE_TIME
-
-    ground_jumped := should_jump && (cts.state == .ON_GROUND || ground_jump_coyote_time_active)
-    slope_jumped  := should_jump && (cts.state == .ON_SLOPE  || slope_jump_coyote_time_active) 
-    wall_jumped   := should_jump && (cts.state == .ON_WALL   || wall_jump_coyote_time_active)
-
-    jumped := ground_jumped || slope_jumped || wall_jumped
-
-    new_can_press_jump := jumped ? false : pls.can_press_jump || !is.z_pressed && on_surface 
-
-    // wall stick
-    // -------------------------------------------
     new_wall_detach_held_t := pls.wall_detach_held_t
     if cts.state == .ON_WALL {
         if la.dot([3]f32{input_dir.x, 0, input_dir.y}, normalized_contact_ray) >= 0 {
@@ -98,39 +60,19 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_wall_detach_held_t = 0
     }
 
+
+    // NEXT, CREATE FUNCTION FOR PRE-COLLISION VELOCITY UPDATE
+
+
     // #####################################################
     // HANDLE INPUT, UPDATE PLAYER VELOCITY
     // #####################################################
 
     new_velocity := pls.velocity
 
-
     // apply directional input to velocity
     // -------------------------------------------
-    got_fwd_input := la.dot(la.normalize0(new_velocity.xz), input_dir) > 0.80
-    grounded := cts.state == .ON_GROUND || cts.state == .ON_SLOPE
-    right_vec := grounded ? pls.ground_x : [3]f32{1, 0, 0}
-    fwd_vec := grounded ? pls.ground_z : [3]f32{0, 0, -1}
     if !(elapsed_time < pls.hurt_t + DAMAGE_LEN) {
-        move_spd := SLOW_ACCEL
-        if cts.state == .ON_SLOPE {
-            // move_spd = SLOPE_SPEED
-        } else if cts.state == .IN_AIR {
-            if pls.spin_state.spinning {
-                // move_spd = AIR_SPIN_ACCEL
-            } else {
-                // move_spd = AIR_ACCEL
-            }
-        }
-        if got_fwd_input {
-            flat_speed := la.length(new_velocity.xz)
-            if flat_speed > FAST_CUTOFF {
-                move_spd = FAST_ACCEL
-
-            } else if flat_speed > MED_CUTOFF {
-                move_spd = MED_ACCEL
-            }
-        }
         if is.left_pressed {
             new_velocity -= move_spd * delta_time * right_vec
         }
@@ -159,13 +101,18 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     // clamp velocity to max speed
     // -------------------------------------------
-    clamped_velocity_xz: [2]f32 = 0.0
     if got_fwd_input {
-        clamped_velocity_xz = la.clamp_length(new_velocity.xz, MAX_PLAYER_SPEED) 
-        new_velocity.xz = math.lerp(new_velocity.xz, clamped_velocity_xz, f32(0.01))
+        new_velocity.xz = math.lerp(
+            new_velocity.xz,
+            la.clamp_length(new_velocity.xz, MAX_PLAYER_SPEED),
+            f32(0.01)
+        )
     } else {
-        clamped_velocity_xz = la.clamp_length(new_velocity.xz, FAST_CUTOFF) 
-        new_velocity.xz = math.lerp(new_velocity.xz, clamped_velocity_xz, f32(0.1))
+        new_velocity.xz = math.lerp(
+            new_velocity.xz,
+            la.clamp_length(new_velocity.xz, FAST_CUTOFF),
+            f32(0.1)
+        )
     }
     new_velocity.y = math.clamp(new_velocity.y, -MAX_FALL_SPEED, MAX_FALL_SPEED)
 
@@ -290,12 +237,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         delta_time
     );
 
-    // fmt.println(tim.since(physics_map_start))
-    
-    // fmt.println(len(phs.static_collider_vertices))
-
-    // get_particle_collision(rs.player_spin_particles.values[:], rs.player_spin_particle_info.values[:], lgs^, phs.level_colliders, phs.static_collider_vertices, delta_time)
-
     // handle restart player position
     // -------------------------------------------
     if is.r_pressed {
@@ -343,13 +284,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     if bunny_hopped {
         new_time_mult = BUNNY_HOP_TIME_MULT - (1.0 - pls.spin_state.spin_amt) * BUNNY_SPIN_TIME_VARIANCE
     }
-    bounced := false
-    for id in collision_ids {
-        if .Bouncy in lgs[id].attributes {
-            new_time_mult = 1.5
-            bounced = true
-        }
-    }
 
     // update dash state
     // -------------------------------------------
@@ -390,8 +324,13 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         }
     }
 
-    if bounced {
-        new_dash_state.can_dash = true
+    // bounced := false
+    for id in collision_ids {
+        if .Bouncy in lgs[id].attributes {
+            new_time_mult = 1.5
+            new_dash_state.can_dash = true
+            break
+        }
     }
 
     // update slide state
@@ -571,6 +510,16 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     new_time_remaining := pls.time_remaining
     new_time_remaining = max(0, new_time_remaining - delta_time)
+
+    // prevent multiple jumps from single input 
+    // -------------------------------------------
+    new_dash_hop_debounce_t := pls.dash_hop_debounce_t
+    if bunny_hopped || small_hopped {
+        new_dash_hop_debounce_t = elapsed_time
+        new_jump_pressed_time = 0
+    }
+    new_can_press_jump := jumped ? false : pls.can_press_jump || !is.z_pressed && on_surface 
+
     // #####################################################
     // MUTATE PLAYER STATE 
     // #####################################################
@@ -730,22 +679,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     player_flat_vel := la.normalize0([3]f32{collision_adjusted_velocity.x, 0, collision_adjusted_velocity.z})
     player_flat_vel_ortho := la.cross(player_flat_vel, [3]f32{0, 1, 0})
 
-    if pls.dash_state.dashing {
-        // for idx in 0..<10 {
-        //     spawn_angle := rnd.float32() * math.PI * 2.0
-        //     spawn_vector := math.sin(spawn_angle) * player_flat_vel_ortho + math.cos(spawn_angle) * [3]f32{0, 1, 0} 
-        //     particle_info: Particle_Info = {
-        //         (spawn_vector * 20.0 * rnd.float32() + 0.2) + player_flat_vel * DASH_SPD * 0.5,
-        //         1.2,
-        //         f32(elapsed_time),
-        //         (rnd.float32() * 800) + 3000
-        //     }
-        //     spawn_pos := pls.position.xyz + la.normalize0([3]f32{spawn_vector.x, 0.1, spawn_vector.z}) * 0.5
-        //     rs.player_spin_particles.particle_info[rs.player_spin_particles.particles.insert_at] = particle_info
-        //     ring_buffer_push(&rs.player_spin_particles.particles, Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
-        // }
-    }
-
     if bunny_hopped || small_hopped {
         particle_count := small_hopped ? 200 : 1500
         for idx in 0..<particle_count {
@@ -775,11 +708,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         }
         sorted_pp := make([][4]f32, particle_count, context.temp_allocator)
         copy_slice(sorted_pp, pp)
-        // context.user_ptr = &cs.position
-        // z_sort := proc(a: [4]f32, b: [4]f32) -> bool {
-        //     cam_pos := (cast(^[3]f32) context.user_ptr)^
-        //     return la.length2(a.xyz - cam_pos) > la.length2(b.xyz - cam_pos)
-        // }
 
         buffer_size: i32
         gl.BindBuffer(gl.COPY_READ_BUFFER, rs.trail_particle_vbo)
