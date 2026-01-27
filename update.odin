@@ -11,42 +11,43 @@ import rnd "core:math/rand"
 
 INFINITE_HOP :: false
 
-Intra_Update_Attributes :: struct {
-    input_x: f32,
-    input_z: f32,
-    input_dir: [2]f32,
-    got_dir_input: bool,
-    got_fwd_input: bool,
-    on_surface: bool,
-    normalized_contact_ray: [3]f32,
-    small_hopped: bool,
-    bunny_hopped: bool,
-    ground_jumped: bool,
-    slope_jumped: bool,
-    wall_jumped: bool,
-    jumped: bool,
-    grounded: bool,
-    right_vec: [3]f32,
-    fwd_vec: [3]f32,
-    move_spd: f32
-}
-
 game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_State, phs: ^Physics_State, rs: ^Render_State, cs: ^Camera_State, ts: ^Time_State, szs: ^Slide_Zone_State, elapsed_time: f32, delta_time: f32) {
     cts := pls.contact_state
 
-    // #####################################################
-    // EXTRAPOLATE STATE
-    // #####################################################
-
-    checkpointed := pls.position.y < -100
-
     new_jump_pressed_time := pls.jump_pressed_time
-    if (is.z_pressed && !pls.jump_held) {
+    if is.z_pressed && !pls.jump_held {
         new_jump_pressed_time = elapsed_time
     }
 
-    attrs := extrapolate_state_attributes(is, pls^, new_jump_pressed_time, elapsed_time)
-    using attrs
+    using attrs := get_player_state_attributes(pls^, is, szs^, new_jump_pressed_time, elapsed_time)
+
+    new_dash_state := pls.dash_state
+    new_slide_state := pls.slide_state
+    new_spin_state := pls.spin_state
+
+    if pls.mode == .Normal {
+        can_dash := (pls.dash_enabled && cts.state == .IN_AIR && pls.velocity != 0 && !is_hurt)
+        if is.x_pressed && can_dash {
+            pls.mode = .Dashing
+            dash_input := input_dir
+            if dash_input == 0 {
+                dash_input = la.normalize0(pls.velocity.xz)
+            }
+            new_dash_state.dash_start_pos = pls.position
+            new_dash_state.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
+            new_dash_state.dash_time = elapsed_time
+            new_dash_state.dash_spd = clamp(la.length(pls.velocity.xz) * 1.5, MIN_DASH_SPD, MAX_DASH_SPD)
+        }
+
+    } else if pls.mode == .Dashing {
+        new_dash_state.dash_dir = la.lerp(pls.dash_state.dash_dir, [3]f32{input_dir.x, 0, input_dir.y}, 0.03)
+        if is_hurt || on_surface || elapsed_time - pls.dash_state.dash_time > DASH_LEN {
+            pls.mode = .Normal
+        }         
+
+    } else if pls.mode == .Sliding {
+
+    }
 
     new_wall_detach_held_t := pls.wall_detach_held_t
     if cts.state == .ON_WALL {
@@ -60,153 +61,31 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_wall_detach_held_t = 0
     }
 
+    new_velocity := pre_collision_velocity_update(
+        pls.velocity,
+        is,
+        pls^,
+        attrs,
+        elapsed_time,
+        delta_time,
+        new_wall_detach_held_t
+    )
 
-    // NEXT, CREATE FUNCTION FOR PRE-COLLISION VELOCITY UPDATE
 
 
-    // #####################################################
-    // HANDLE INPUT, UPDATE PLAYER VELOCITY
-    // #####################################################
 
-    new_velocity := pls.velocity
 
-    // apply directional input to velocity
+
+
+
+
+
+
+
+    // apply jump to contact state
     // -------------------------------------------
-    if !(elapsed_time < pls.hurt_t + DAMAGE_LEN) {
-        if is.left_pressed {
-            new_velocity -= move_spd * delta_time * right_vec
-        }
-        if is.right_pressed {
-            new_velocity += move_spd * delta_time * right_vec
-        }
-        if is.up_pressed {
-            new_velocity += move_spd * delta_time * fwd_vec
-        }
-        if is.down_pressed {
-            new_velocity -= move_spd * delta_time * fwd_vec
-        }
-        if is.hor_axis != 0 {
-            new_velocity += move_spd * delta_time * is.hor_axis * right_vec
-        }
-        if is.vert_axis != 0 {
-            new_velocity += move_spd * delta_time * is.vert_axis * fwd_vec
-        }
-    }
-
-    // apply directional input to dash direction
-    // -------------------------------------------
-    if pls.dash_state.dashing {
-        pls.dash_state.dash_dir = la.lerp(pls.dash_state.dash_dir, [3]f32{input_dir.x, 0, input_dir.y}, 0.05)
-    }
-
-    // clamp velocity to max speed
-    // -------------------------------------------
-    if got_fwd_input {
-        new_velocity.xz = math.lerp(
-            new_velocity.xz,
-            la.clamp_length(new_velocity.xz, MAX_PLAYER_SPEED),
-            f32(0.01)
-        )
-    } else {
-        new_velocity.xz = math.lerp(
-            new_velocity.xz,
-            la.clamp_length(new_velocity.xz, FAST_CUTOFF),
-            f32(0.1)
-        )
-    }
-    new_velocity.y = math.clamp(new_velocity.y, -MAX_FALL_SPEED, MAX_FALL_SPEED)
-
-    // apply friction to velocity 
-    // -------------------------------------------
-    // if cts.state == .ON_GROUND && !got_dir_input {
-    if !got_dir_input {
-        if la.length(pls.velocity.xz) > FAST_CUTOFF {
-            new_velocity *= math.pow(FAST_FRICTION, delta_time)
-        } else if !on_surface {
-            new_velocity *= math.pow(IDLE_FRICTION, delta_time)
-        }
-    } else if on_surface {
-            new_velocity *= math.pow(GROUND_FRICTION, delta_time)
-    }
-
-    // apply gravity to velocity
-    // -------------------------------------------
-    if cts.state != .ON_GROUND {
-        down: [3]f32 = {0, -1, 0}
-        grav_force := GRAV
-        if cts.state == .ON_SLOPE {
-            grav_force = SLOPE_GRAV
-        }
-        if cts.state == .ON_WALL {
-            grav_force = WALL_GRAV
-        }
-        if cts.state == .ON_WALL || cts.state == .ON_SLOPE {
-            down -= la.dot(normalized_contact_ray, down) * normalized_contact_ray
-        }
-        new_velocity += down * grav_force * delta_time
-    }
-
-    // apply wall stick to velocity
-    // -------------------------------------------
-    if cts.state == .ON_WALL && new_wall_detach_held_t < WALL_DETACH_LEN {
-        new_velocity -= la.dot(new_velocity, normalized_contact_ray) * normalized_contact_ray
-    } 
-
-    // apply dash to velocity
-    // -------------------------------------------
-    if pls.dash_state.dashing {
-        new_velocity = pls.dash_state.dash_dir * pls.dash_state.dash_spd
-    }
-
-    // apply slide to velocity
-    // -------------------------------------------
-    if pls.slide_state.sliding {
-        new_velocity = pls.slide_state.slide_dir * (len(szs.intersected) > 0 ? SLIDE_SPD * 2 : SLIDE_SPD) 
-    }
-
-    // apply slope to velocity
-    // -------------------------------------------
-    if cts.state == .ON_GROUND || cts.state == .ON_SLOPE {
-        new_velocity -= la.dot(new_velocity, normalized_contact_ray) * normalized_contact_ray
-    }
-
-    // apply jump to velocity
-    // -------------------------------------------
-    if ground_jumped {
-        new_velocity.y = P_JUMP_SPEED
-    } else if slope_jumped {
-        new_velocity += -normalized_contact_ray * SLOPE_JUMP_FORCE * (small_hopped ? 0.25 : 1.0)
-        new_velocity.y = SLOPE_V_JUMP_FORCE
-    } else if wall_jumped {
-        new_velocity.y = P_JUMP_SPEED
-        new_velocity += -normalized_contact_ray * WALL_JUMP_FORCE 
-    }
-    if bunny_hopped {
-        if ground_jumped {
-            new_velocity.y = GROUND_BUNNY_V_SPEED - (1.0 - pls.spin_state.spin_amt) * BUNNY_SPIN_VARIANCE
-
-        }
-        new_velocity.xz += la.normalize0(new_velocity.xz) * GROUND_BUNNY_H_SPEED
-    } else if small_hopped && ground_jumped {
-        new_velocity.y = SMALL_HOP_V_SPEED
-    }
-
-
-    // apply restart to velocity
-    // -------------------------------------------
-    if is.r_pressed  {
-        new_velocity = [3]f32{0, 0, 0}
-    }
-
-    if checkpointed  {
-        new_velocity = [3]f32{0, 0, -40}
-    }
-
     new_cts := pls.contact_state
-
-    // apply jump to player state
-    // -------------------------------------------
-    if !pls.slide_state.sliding && jumped {
+    if !pls.slide_state.sliding && jump_triggered {
         new_cts.state = .IN_AIR
     }
 
@@ -214,7 +93,6 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // APPLY PLAYER VELOCITY, HANDLE COLLISIONS
     // #####################################################
     
-    // physics_map_start := tim.now()
     physics_map := build_physics_map(lgs^, phs.level_colliders, elapsed_time)
 
     spin_particle_collisions := get_particle_collisions(rs.player_spin_particles, physics_map)
@@ -229,7 +107,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_cts,
         pls.position,
         new_velocity,
-        pls.dash_state.dashing,
+        pls.mode == .Dashing,
         pls.slide_state.sliding,
         lgs^,
         physics_map,
@@ -243,7 +121,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_position = INIT_PLAYER_POS
     }
 
-    if checkpointed {
+    if sent_to_checkpoint {
         new_position = INIT_PLAYER_POS - [3]f32{0, 0, f32(CHUNK_DEPTH * pls.current_sector)}
     }
 
@@ -276,59 +154,26 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     }
 
     new_time_mult := ts.time_mult
+    //if new_velocity.y < 0 || on_surface {
+    //    new_time_mult = math.lerp(ts.time_mult, f32(1.0), f32(0.08))
+    //} else {
+    //    new_time_mult = math.lerp(ts.time_mult, f32(1.0), f32(0.04))
+    //}
     if new_velocity.y < 0 || on_surface {
-        new_time_mult = math.lerp(ts.time_mult, f32(1.0), f32(0.08))
+        new_time_mult = math.lerp(ts.time_mult, f32(1.0), f32(0.06))
     } else {
-        new_time_mult = math.lerp(ts.time_mult, f32(1.0), f32(0.04))
+        new_time_mult = math.lerp(ts.time_mult, f32(1.0), f32(0.03))
     }
-    if bunny_hopped {
+    if bunny_hop_triggered {
         new_time_mult = BUNNY_HOP_TIME_MULT - (1.0 - pls.spin_state.spin_amt) * BUNNY_SPIN_TIME_VARIANCE
     }
 
-    // update dash state
-    // -------------------------------------------
-    new_dash_state := pls.dash_state
-    if pls.dash_state.dashing {
-        new_dash_state.dash_total += delta_time * 1000.0
-    }
-    dash_activated := is.x_pressed && pls.dash_state.can_dash
-    can_dash := (!on_surface && collision_adjusted_velocity != 0 &&
-                 elapsed_time > pls.hurt_t + DAMAGE_LEN && !pls.slide_state.sliding)
-    hurt := elapsed_time < pls.hurt_t + DAMAGE_LEN
-    dash_expired := pls.dash_state.dash_total > DASH_LEN
-    if dash_activated && can_dash {
-        dash_input := input_dir
-        if dash_input == 0 {
-            dash_input = la.normalize0(collision_adjusted_velocity.xz)
-        }
-        new_dash_dir := [3]f32{dash_input.x, 0, dash_input.y}
-        new_dash_state = {
-            dashing = true,
-            dash_start_pos = new_position,
-            dash_dir = new_dash_dir,
-            dash_end_pos = new_position + DASH_DIST * new_dash_dir,
-            dash_time = elapsed_time,
-            dash_total = 0,
-            can_dash = false,
-            dash_spd = clamp(la.length(collision_adjusted_velocity.xz) * 1.5, MIN_DASH_SPD, MAX_DASH_SPD)
-        }
-    } else {
-        if hurt || on_surface || dash_expired {
-            new_dash_state.dashing = false
-            new_dash_state.dash_total = 0
-        }         
-        if !pls.dash_state.can_dash {
-            state := collision_adjusted_cts.state
-            touched_ground:= state == .ON_GROUND || state == .ON_SLOPE || bunny_hopped
-            new_dash_state.can_dash = !pls.dash_state.dashing && touched_ground
-        }
-    }
 
     // bounced := false
     for id in collision_ids {
         if .Bouncy in lgs[id].attributes {
             new_time_mult = 1.5
-            new_dash_state.can_dash = true
+            new_dash_state.dash_enabled = true
             break
         }
     }
@@ -405,7 +250,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // update hops
     // -------------------------------------------
     new_hops_remaining := pls.hops_remaining
-    if bunny_hopped {
+    if bunny_hop_triggered {
         new_hops_remaining -= 1
     }
     new_hops_recharge := pls.hops_recharge
@@ -441,19 +286,19 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     // update crunch_time
     // -------------------------------------------
-    new_crunch_time := bunny_hopped ? elapsed_time : pls.crunch_time
+    new_crunch_time := bunny_hop_triggered ? elapsed_time : pls.crunch_time
 
     // update crunch pt
     // -------------------------------------------
     new_crunch_pt := pls.crunch_pt
-    if bunny_hopped {
+    if bunny_hop_triggered {
         new_crunch_pt = pls.position
     }
 
     // update screen ripple
     // -------------------------------------------
     new_screen_ripple_pt := pls.screen_ripple_pt
-    if bunny_hopped {
+    if bunny_hop_triggered {
         proj_mat := construct_camera_matrix(cs^)
         // proj_mat := construct_camera_matrix(cs^, 0)
         proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{
@@ -468,7 +313,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // update particle displacement
     // -------------------------------------------
     new_tgt_particle_displacement := pls.tgt_particle_displacement
-    if jumped {
+    if jump_triggered {
         new_tgt_particle_displacement = new_velocity
     }
     if collision_adjusted_cts.state != .ON_GROUND {
@@ -502,10 +347,15 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     new_intensity := pls.intensity
     flat_speed := la.length(collision_adjusted_velocity.xz)
     tgt_intensity := clamp((flat_speed - INTENSITY_MOD_MIN_SPD) / (INTENSITY_MOD_MAX_SPD - INTENSITY_MOD_MIN_SPD), 0, 1)
+    //if tgt_intensity > new_intensity {
+    //    new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.006))
+    //} else {
+    //    new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.016))
+    //}
     if tgt_intensity > new_intensity {
-        new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.006))
+        new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.004))
     } else {
-        new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.016))
+        new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.0010))
     }
 
     new_time_remaining := pls.time_remaining
@@ -513,12 +363,16 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
 
     // prevent multiple jumps from single input 
     // -------------------------------------------
-    new_dash_hop_debounce_t := pls.dash_hop_debounce_t
-    if bunny_hopped || small_hopped {
-        new_dash_hop_debounce_t = elapsed_time
+    if small_hop_triggered {
         new_jump_pressed_time = 0
     }
-    new_can_press_jump := jumped ? false : pls.can_press_jump || !is.z_pressed && on_surface 
+    collided_cts := collision_adjusted_cts.state
+
+    new_jump_enabled := jump_triggered ? false : pls.jump_enabled || !is.z_pressed && on_surface 
+
+    post_collision_touched_ground := collided_cts == .ON_GROUND || collided_cts == .ON_SLOPE ||
+                                     bunny_hop_triggered || small_hop_triggered
+    new_dash_enabled := pls.dash_enabled || post_collision_touched_ground
 
     // #####################################################
     // MUTATE PLAYER STATE 
@@ -543,7 +397,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
         new_checkpoint_t = elapsed_time 
     }
 
-    if is.r_pressed || checkpointed {
+    if is.r_pressed || sent_to_checkpoint {
         new_hops_remaining = 0
         new_hops_recharge = 0
     }
@@ -579,8 +433,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     pls.spin_state                = new_spin_state
     pls.hurt_t                    = new_hurt_t
     pls.broke_t                   = new_broke_t
-    pls.can_press_jump            = new_can_press_jump
-    pls.dash_hop_debounce_t       = new_dash_hop_debounce_t
+    pls.jump_enabled              = new_jump_enabled
+    pls.dash_enabled              = new_dash_enabled
     pls.spike_compression         = new_spike_compression
     pls.screen_ripple_pt          = new_screen_ripple_pt
     pls.ground_x                  = new_ground_x
@@ -603,7 +457,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
             idx += 1
         }
     }
-    if bunny_hopped {
+    if bunny_hop_triggered {
         new_splash := cs.position + la.normalize0(new_position - cs.position) * 10000.0;
         append(&pls.screen_splashes, [4]f32{
             new_splash.x,
@@ -620,14 +474,14 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     // MUTATE LEVEL GEOMETRY
     // #####################################################
 
-    if is.r_pressed || checkpointed {
+    if is.r_pressed || sent_to_checkpoint {
         for &lg in lgs {
             lg.shatter_data.crack_time = 0
             lg.shatter_data.smash_time = 0
         }
     }
 
-    if bunny_hopped {
+    if bunny_hop_triggered {
        last_touched := collision_adjusted_cts.last_touched
        lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
     }
@@ -679,8 +533,8 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     player_flat_vel := la.normalize0([3]f32{collision_adjusted_velocity.x, 0, collision_adjusted_velocity.z})
     player_flat_vel_ortho := la.cross(player_flat_vel, [3]f32{0, 1, 0})
 
-    if bunny_hopped || small_hopped {
-        particle_count := small_hopped ? 200 : 1500
+    if bunny_hop_triggered || small_hop_triggered {
+        particle_count := small_hop_triggered ? 200 : 1500
         for idx in 0..<particle_count {
             spawn_angle := rnd.float32() * math.PI * 2.0
             spawn_vector := (math.sin(spawn_angle) * surface_ortho1 + math.cos(spawn_angle) * surface_ortho2 - normalized_contact_ray * (rnd.float32() * 0.5 + 0.25)) * 2.5
@@ -756,7 +610,7 @@ game_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Player_St
     fov_mod := MAX_FOV_MOD * pls.intensity//get_intensity_mod(la.length(collision_adjusted_velocity.xz))
     cs.fov = math.lerp(cs.fov, FOV + fov_mod, f32(0.1))
 
-    if is.r_pressed || checkpointed {
+    if is.r_pressed || sent_to_checkpoint {
         cs.position = new_position + camera_mode.pos_offset
         cs.target = new_target + [3]f32{0, camera_mode.tgt_y_offset, 0}
     }

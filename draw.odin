@@ -327,9 +327,10 @@ draw :: proc(
         gl.LineWidth(2)
 
         dash_line_start := pls.dash_state.dash_start_pos + pls.dash_state.dash_dir * 4.5;
+        dash_line_end := pls.dash_state.dash_start_pos + pls.dash_state.dash_dir * DASH_DIST
         dash_line: [2]Line_Vertex = {
             {dash_line_start, 0, {1.0, 0.0, 1.0}},
-            {pls.dash_state.dash_end_pos, 1, {1.0, 0.0, 1.0}}
+            {dash_line_end, 1, {1.0, 0.0, 1.0}}
         }
         gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
         gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.STATIC_DRAW)

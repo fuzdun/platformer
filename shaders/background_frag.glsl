@@ -111,7 +111,7 @@ void main() {
         vec4 proj_pt = projection * vec4(cpt.xyz, 1.0);
         vec2 pt = (proj_pt / proj_pt.w).xy;
         float standard_crunch_pt_dist = length(standard_uv - pt);
-        float radial_transparency = smoothstep(0, 0.1, standard_crunch_pt_dist) - smoothstep(RADIUS, RADIUS + 0.1, standard_crunch_pt_dist);
+        float radial_transparency = smoothstep(0.0, 0.1, standard_crunch_pt_dist) - smoothstep(RADIUS, RADIUS + 0.1, standard_crunch_pt_dist);
         vec2 boxed_crunch_pt_diff = boxed_uv - pt;
         float time_t = max((i_time - cpt.w), 0.01) /(1200.0 - 600 * intensity);
         float noise_sample = noise(i_time / 1000.0 + i + normalize(boxed_crunch_pt_diff) + time_t * vec2(0.25, 0.25));

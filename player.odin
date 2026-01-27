@@ -135,13 +135,9 @@ Contact_State :: struct {
 }
 
 Dash_State :: struct {
-    dashing: bool,
     dash_start_pos: [3]f32,
-    dash_end_pos: [3]f32,
     dash_dir: [3]f32,
     dash_time: f32,
-    dash_total: f32,
-    can_dash: bool,
     dash_spd: f32
 }
 
@@ -163,7 +159,14 @@ Spin_State :: struct {
     spin_amt: f32,
 }
 
+Player_Mode :: enum {
+    Normal,
+    Dashing,
+    Sliding,
+}
+
 Player_State :: struct {
+    mode: Player_Mode,
     contact_state: Contact_State,
     dash_state: Dash_State,
     slide_state: Slide_State,
@@ -171,7 +174,6 @@ Player_State :: struct {
 
     touch_pt: [3]f32,
     bunny_hop_y: f32,
-    dash_hop_debounce_t: f32,
     hops_remaining: int,
     hops_recharge: f32,
 
@@ -189,7 +191,9 @@ Player_State :: struct {
     ground_x: [3]f32,
     ground_z: [3]f32,
 
-    can_press_jump: bool,
+    jump_enabled: bool,
+    dash_enabled: bool,
+
     jump_pressed_time: f32,
     jump_held: bool,
     wall_detach_held_t: f32,
@@ -215,10 +219,10 @@ Player_State :: struct {
 init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
     pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
-    pls.dash_state.can_dash = true
+    pls.dash_enabled = true
     pls.slide_state.slide_end_time = -SLIDE_COOLDOWN
     pls.slide_state.can_slide = true
-    pls.can_press_jump = false
+    pls.jump_enabled = false
     pls.ground_x = {1, 0, 0}
     pls.ground_z = {0, 0, -1}
     pls.contact_state.touch_time = -1000.0

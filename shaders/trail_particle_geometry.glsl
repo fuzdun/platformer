@@ -6,7 +6,7 @@ layout (triangle_strip, max_vertices = 4) out;
 uniform vec3 camera_dir;
 uniform float delta_time;
 
-#define PARTICLE_W 0.15
+#define PARTICLE_W 0.35
 #define TRAIL_MAG 2.0
 
 in VS_OUT {
