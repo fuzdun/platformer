@@ -13,7 +13,6 @@ Action_Triggers :: struct {
     wall_jump: bool,
 
     small_hop: bool,
-    small_hop_time: f32,
     bunny_hop: bool,
 
     spin: bool,
@@ -42,17 +41,12 @@ get_player_action_triggers :: proc(
     }
     out.jump_held = input.jump_pressed
 
-    // NEED TO HANDLE EXCESS SMALL HOPS WHEN HITTING ANOTHER COLLIDER IMMEDIATELY AFTER PREVIOUS HOP
-    handle_touch_hop := pls.last_hop != cts.touch_time
-    if handle_touch_hop && abs(cts.touch_time - out.jump_pressed_time) < BUNNY_WINDOW {
+    hop_valid := out.jump_pressed_time > pls.last_hop + BUNNY_WINDOW * 2
+    if hop_valid && (
+        abs(cts.touch_time - out.jump_pressed_time) < BUNNY_WINDOW ||
+        abs(pls.slide_state.slide_end_time - out.jump_pressed_time) < BUNNY_WINDOW
+    ) {
         out.small_hop = true
-        out.small_hop_time = cts.touch_time
-    }
-
-    handle_slide_hop := pls.last_hop != pls.slide_state.slide_end_time
-    if handle_slide_hop && abs(pls.slide_state.slide_end_time - out.jump_pressed_time) < BUNNY_WINDOW {
-        out.small_hop = true
-        out.small_hop_time = pls.slide_state.slide_end_time
     }
 
     out.bunny_hop = pls.mode == .Normal && on_surface && pls.spin_state.spin_amt > 0 &&

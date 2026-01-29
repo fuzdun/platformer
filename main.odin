@@ -172,25 +172,24 @@ main :: proc () {
     phs: Physics_State;
     shs: Shader_State;
     rs:  Render_State;
+    bs:  Buffer_State;
     pls: Player_State;
     sr:  Shape_Resources;
     szs: Slide_Zone_State;
 
     init_player_state(&pls, perm_arena_alloc)
+    init_render_state(&rs, perm_arena_alloc)
     init_camera_state(&cs)
     init_editor_state(&es, level_to_load)
     init_slide_zone_state(&szs, perm_arena_alloc)
     init_time_state(&ts)
 
     // player icosphere mesh----------------
-
-    add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices, perm_arena_alloc)
+    add_player_sphere_data(&sr.player_vertices, &sr.player_fill_indices, &sr.player_outline_indices, perm_arena_alloc)
 
     // player spin particles----------------
-    particle_buffer_init(&rs.player_spin_particles, perm_arena_alloc)
-    // ring_buffer_init(&rs.player_spin_particles, Particle{})
-    // rs.player_spin_particle_info = make(#soa[]Particle_Info, rs.player_spin_particles.cap)
-    // ring_buffer_init(&rs.player_spin_particle_info, Spin_Particle_Info{})
+    particle_buffer_init(&rs.player_burst_particles, perm_arena_alloc)
+
 
     // #####################################################
     // LOAD BLENDER RESOURCES 
@@ -202,7 +201,7 @@ main :: proc () {
         }
     }
 
-    for &v in sr[.SPIN_TRAIL].vertices {
+    for &v in sr.level_geometry[.SPIN_TRAIL].vertices {
         v.pos.yz *= 10.0
         v.pos.x *= .5
     }
@@ -295,18 +294,18 @@ main :: proc () {
     // INIT TEXT RENDERING
     // #####################################################
 
-    ft.init_free_type(&rs.ft_lib)
-    ft.new_face(rs.ft_lib, "fonts/0xProtoNerdFont-Bold.ttf", 0, &rs.face)
-    rs.char_tex_map = make(map[rune]Char_Tex, perm_arena_alloc)
-    ft.set_pixel_sizes(rs.face, 0, 256)
+    ft.init_free_type(&bs.ft_lib)
+    ft.new_face(bs.ft_lib, "fonts/0xProtoNerdFont-Bold.ttf", 0, &bs.face)
+    bs.char_tex_map = make(map[rune]Char_Tex, perm_arena_alloc)
+    ft.set_pixel_sizes(bs.face, 0, 256)
     gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
     
     for c in 0..<128 {
         char_load_err: ft.Error
         when ODIN_OS == .Windows {
-            char_load_err = ft.load_char(rs.face, u32(c), {ft.Load_Flag.Render})
+            char_load_err = ft.load_char(bs.face, u32(c), {ft.Load_Flag.Render})
         } else {
-            char_load_err = ft.load_char(rs.face, u64(c), {ft.Load_Flag.Render})
+            char_load_err = ft.load_char(bs.face, u64(c), {ft.Load_Flag.Render})
         }
         if char_load_err != nil {
             fmt.eprintln(char_load_err)
@@ -318,12 +317,12 @@ main :: proc () {
             gl.TEXTURE_2D,
             0,
             gl.RED,
-            i32(rs.face.glyph.bitmap.width),
-            i32(rs.face.glyph.bitmap.rows),
+            i32(bs.face.glyph.bitmap.width),
+            i32(bs.face.glyph.bitmap.rows),
             0,
             gl.RED,
             gl.UNSIGNED_BYTE,
-            rs.face.glyph.bitmap.buffer
+            bs.face.glyph.bitmap.buffer
         )
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -331,11 +330,11 @@ main :: proc () {
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         ct: Char_Tex = {
             id = new_tex,
-            size = {i32(rs.face.glyph.bitmap.width), i32(rs.face.glyph.bitmap.rows)},
-            bearing = {i32(rs.face.glyph.bitmap_left), i32(rs.face.glyph.bitmap_top)},
-            next = u32(rs.face.glyph.advance.x)
+            size = {i32(bs.face.glyph.bitmap.width), i32(bs.face.glyph.bitmap.rows)},
+            bearing = {i32(bs.face.glyph.bitmap_left), i32(bs.face.glyph.bitmap_top)},
+            next = u32(bs.face.glyph.advance.x)
         }
-        rs.char_tex_map[rune(c)] = ct
+        bs.char_tex_map[rune(c)] = ct
     } 
 
     // #####################################################
@@ -343,74 +342,74 @@ main :: proc () {
     // #####################################################
 
     // init buffers / VAOs ----------------
-    gl.GenFramebuffers(1, &rs.postprocessing_fbo)
-    gl.GenTextures(1, &rs.postprocessing_tcb)
-    gl.GenRenderbuffers(1, &rs.postprocessing_rbo)
+    gl.GenFramebuffers(1, &bs.postprocessing_fbo)
+    gl.GenTextures(1, &bs.postprocessing_tcb)
+    gl.GenRenderbuffers(1, &bs.postprocessing_rbo)
 
-    gl.BindFramebuffer(gl.FRAMEBUFFER, rs.postprocessing_fbo)
-    gl.BindTexture(gl.TEXTURE_2D, rs.postprocessing_tcb)  
+    gl.BindFramebuffer(gl.FRAMEBUFFER, bs.postprocessing_fbo)
+    gl.BindTexture(gl.TEXTURE_2D, bs.postprocessing_tcb)  
     gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, WIDTH, HEIGHT, 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     gl.BindTexture(gl.TEXTURE_2D, 0)
-    gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, rs.postprocessing_tcb, 0)
-    gl.BindRenderbuffer(gl.RENDERBUFFER, rs.postprocessing_rbo)
+    gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, bs.postprocessing_tcb, 0)
+    gl.BindRenderbuffer(gl.RENDERBUFFER, bs.postprocessing_rbo)
     gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, WIDTH, HEIGHT)
     gl.BindRenderbuffer(gl.RENDERBUFFER, 0)
-    gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, rs.postprocessing_rbo)
+    gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, bs.postprocessing_rbo)
 
     if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
         fmt.println("framebuffer gen error")
     }
     gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 
-    gl.GenBuffers(1, &rs.standard_ebo)
-    gl.GenBuffers(1, &rs.player_fill_ebo)
-    gl.GenBuffers(1, &rs.player_outline_ebo)
-    gl.GenBuffers(1, &rs.spin_trails_ebo)
+    gl.GenBuffers(1, &bs.standard_ebo)
+    gl.GenBuffers(1, &bs.player_fill_ebo)
+    gl.GenBuffers(1, &bs.player_outline_ebo)
+    gl.GenBuffers(1, &bs.spin_trails_ebo)
 
-    gl.GenBuffers(1, &rs.indirect_buffer)
+    gl.GenBuffers(1, &bs.indirect_buffer)
     
-    gl.GenBuffers(1, &rs.common_ubo)
-    gl.GenBuffers(1, &rs.dash_ubo)
-    gl.GenBuffers(1, &rs.ppos_ubo)
-    gl.GenBuffers(1, &rs.tess_ubo)
-    gl.GenBuffers(1, &rs.transforms_ubo)
-    gl.GenBuffers(1, &rs.z_widths_ubo)
-    gl.GenBuffers(1, &rs.shatter_ubo)
-    gl.GenBuffers(1, &rs.transparencies_ubo)
-    gl.GenBuffers(1, &rs.intensity_ubo)
+    gl.GenBuffers(1, &bs.common_ubo)
+    gl.GenBuffers(1, &bs.dash_ubo)
+    gl.GenBuffers(1, &bs.ppos_ubo)
+    gl.GenBuffers(1, &bs.tess_ubo)
+    gl.GenBuffers(1, &bs.transforms_ubo)
+    gl.GenBuffers(1, &bs.z_widths_ubo)
+    gl.GenBuffers(1, &bs.shatter_ubo)
+    gl.GenBuffers(1, &bs.transparencies_ubo)
+    gl.GenBuffers(1, &bs.intensity_ubo)
 
-    gl.GenBuffers(1, &rs.standard_vbo)
-    gl.GenBuffers(1, &rs.player_vbo)
-    gl.GenBuffers(1, &rs.particle_vbo)
-    gl.GenBuffers(1, &rs.particle_pos_vbo)
-    gl.GenBuffers(1, &rs.prev_particle_pos_vbo)
-    gl.GenBuffers(1, &rs.trail_particle_vbo)
-    gl.GenBuffers(1, &rs.prev_trail_particle_vbo)
-    gl.GenBuffers(1, &rs.trail_particle_velocity_vbo)
-    gl.GenBuffers(1, &rs.prev_trail_particle_velocity_vbo)
-    gl.GenBuffers(1, &rs.background_vbo)
-    gl.GenBuffers(1, &rs.text_vbo)
-    gl.GenBuffers(1, &rs.editor_lines_vbo)
-    gl.GenBuffers(1, &rs.spin_trails_vbo)
+    gl.GenBuffers(1, &bs.standard_vbo)
+    gl.GenBuffers(1, &bs.player_vbo)
+    gl.GenBuffers(1, &bs.particle_vbo)
+    gl.GenBuffers(1, &bs.particle_pos_vbo)
+    gl.GenBuffers(1, &bs.prev_particle_pos_vbo)
+    gl.GenBuffers(1, &bs.trail_particle_vbo)
+    gl.GenBuffers(1, &bs.prev_trail_particle_vbo)
+    gl.GenBuffers(1, &bs.trail_particle_velocity_vbo)
+    gl.GenBuffers(1, &bs.prev_trail_particle_velocity_vbo)
+    gl.GenBuffers(1, &bs.background_vbo)
+    gl.GenBuffers(1, &bs.text_vbo)
+    gl.GenBuffers(1, &bs.editor_lines_vbo)
+    gl.GenBuffers(1, &bs.spin_trails_vbo)
 
-    gl.GenVertexArrays(1, &rs.standard_vao)
-    gl.GenVertexArrays(1, &rs.particle_vao)
-    gl.GenVertexArrays(1, &rs.trail_particle_vao)
-    gl.GenVertexArrays(1, &rs.background_vao)
-    gl.GenVertexArrays(1, &rs.lines_vao)
-    gl.GenVertexArrays(1, &rs.player_vao)
-    gl.GenVertexArrays(1, &rs.text_vao)
-    gl.GenVertexArrays(1, &rs.spin_trails_vao)
+    gl.GenVertexArrays(1, &bs.standard_vao)
+    gl.GenVertexArrays(1, &bs.particle_vao)
+    gl.GenVertexArrays(1, &bs.trail_particle_vao)
+    gl.GenVertexArrays(1, &bs.background_vao)
+    gl.GenVertexArrays(1, &bs.lines_vao)
+    gl.GenVertexArrays(1, &bs.player_vao)
+    gl.GenVertexArrays(1, &bs.text_vao)
+    gl.GenVertexArrays(1, &bs.spin_trails_vao)
 
-    gl.GenTextures(1, &rs.dither_tex)
+    gl.GenTextures(1, &bs.dither_tex)
 
-    gl.BindVertexArray(rs.standard_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
+    gl.BindVertexArray(bs.standard_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.standard_vbo)
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.standard_ebo)
     gl.PatchParameteri(gl.PATCH_VERTICES, 3);
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.standard_vbo)
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
     gl.EnableVertexAttribArray(2)
@@ -418,8 +417,8 @@ main :: proc () {
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, uv))
     gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, normal))
 
-    gl.BindVertexArray(rs.player_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.player_vbo)
+    gl.BindVertexArray(bs.player_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.player_vbo)
     gl.PatchParameteri(gl.PATCH_VERTICES, 3);
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
@@ -428,16 +427,16 @@ main :: proc () {
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, uv))
     gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, normal))
 
-    gl.BindVertexArray(rs.particle_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
+    gl.BindVertexArray(bs.particle_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.particle_vbo)
     gl.EnableVertexAttribArray(0)
     gl.EnableVertexAttribArray(1)
     gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, position))
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.particle_pos_vbo)
     gl.EnableVertexAttribArray(2)
     gl.VertexAttribPointer(2, 4, gl.FLOAT, false, 0, 0)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_particle_pos_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.prev_particle_pos_vbo)
     gl.EnableVertexAttribArray(3)
     gl.VertexAttribPointer(3, 4, gl.FLOAT, false, 0, 0)
     gl.VertexAttribDivisor(0, 0)
@@ -445,35 +444,35 @@ main :: proc () {
     gl.VertexAttribDivisor(2, 1)
     gl.VertexAttribDivisor(3, 1)
     particle_vertices := PARTICLE_VERTICES
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.particle_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(particle_vertices[0]) * len(particle_vertices), &particle_vertices[0], gl.STATIC_DRAW) 
-    particles := rs.player_spin_particles.particles
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.particle_pos_vbo)
+    particles := rs.player_burst_particles.particles
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.particle_pos_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(particles.values[0]) * PLAYER_SPIN_PARTICLE_COUNT, &particles.values[0], gl.STATIC_DRAW) 
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_particle_pos_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.prev_particle_pos_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(particles.values[0]) * PLAYER_SPIN_PARTICLE_COUNT, &particles.values[0], gl.STATIC_DRAW) 
 
-    gl.BindVertexArray(rs.trail_particle_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.trail_particle_vbo)
+    gl.BindVertexArray(bs.trail_particle_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.trail_particle_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(glm.vec4) * PLAYER_SPIN_PARTICLE_COUNT, nil, gl.STATIC_DRAW) 
     gl.EnableVertexAttribArray(0)
     gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(glm.vec4), 0)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_trail_particle_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.prev_trail_particle_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(glm.vec4) * PLAYER_SPIN_PARTICLE_COUNT, nil, gl.STATIC_DRAW) 
     gl.EnableVertexAttribArray(1)
     gl.VertexAttribPointer(1, 4, gl.FLOAT, false, size_of(glm.vec4), 0)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.trail_particle_velocity_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.trail_particle_velocity_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(glm.vec3) * PLAYER_SPIN_PARTICLE_COUNT, nil, gl.STATIC_DRAW) 
     gl.EnableVertexAttribArray(2)
     gl.VertexAttribPointer(2, 3, gl.FLOAT, false, size_of(glm.vec3), 0)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.prev_trail_particle_velocity_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.prev_trail_particle_velocity_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(glm.vec3) * PLAYER_SPIN_PARTICLE_COUNT, nil, gl.STATIC_DRAW) 
     gl.EnableVertexAttribArray(3)
     gl.VertexAttribPointer(3, 3, gl.FLOAT, false, size_of(glm.vec3), 0)
 
     bv := BACKGROUND_VERTICES
-    gl.BindVertexArray(rs.background_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.background_vbo)
+    gl.BindVertexArray(bs.background_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.background_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(bv[0]) * len(bv), &bv[0], gl.STATIC_DRAW)
     gl.EnableVertexAttribArray(0)
     gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, position))
@@ -481,28 +480,28 @@ main :: proc () {
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex), offset_of(Quad_Vertex, uv))
 
 
-    stv := sr[.SPIN_TRAIL].vertices
-    sti := sr[.SPIN_TRAIL].indices
-    gl.BindVertexArray(rs.spin_trails_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.spin_trails_vbo)
+    stv := sr.level_geometry[.SPIN_TRAIL].vertices
+    sti := sr.level_geometry[.SPIN_TRAIL].indices
+    gl.BindVertexArray(bs.spin_trails_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.spin_trails_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(stv[0]) * len(stv), &stv[0], gl.STATIC_DRAW)
     gl.EnableVertexAttribArray(0)
     gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
     gl.EnableVertexAttribArray(1)
     gl.VertexAttribPointer(1, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, normal))
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.spin_trails_ebo)
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.spin_trails_ebo)
     gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(sti[0]) * len(sti), raw_data(sti), gl.STATIC_DRAW)
 
-    gl.BindVertexArray(rs.text_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.text_vbo)
+    gl.BindVertexArray(bs.text_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.text_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(Quad_Vertex4) * 4, nil, gl.DYNAMIC_DRAW);
     gl.EnableVertexAttribArray(0)
     gl.VertexAttribPointer(0, 4, gl.FLOAT, false, size_of(Quad_Vertex4), offset_of(Quad_Vertex4, position))
     gl.EnableVertexAttribArray(1)
     gl.VertexAttribPointer(1, 2, gl.FLOAT, false, size_of(Quad_Vertex4), offset_of(Quad_Vertex4, uv))
 
-    gl.BindVertexArray(rs.lines_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
+    gl.BindVertexArray(bs.lines_vao)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.editor_lines_vbo)
     gl.EnableVertexAttribArray(0)
     gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Line_Vertex), offset_of(Line_Vertex, position))
     gl.EnableVertexAttribArray(1)
@@ -513,47 +512,47 @@ main :: proc () {
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     gl.BindVertexArray(0)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.common_ubo)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.common_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Common_Ubo), nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 0, rs.common_ubo, 0, size_of(Common_Ubo))
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 0, bs.common_ubo, 0, size_of(Common_Ubo))
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.dash_ubo)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.dash_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Dash_Ubo), nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 1, rs.dash_ubo, 0, size_of(Dash_Ubo))
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 1, bs.dash_ubo, 0, size_of(Dash_Ubo))
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.ppos_ubo)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.ppos_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec4), nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 2, rs.ppos_ubo, 0, size_of(glm.vec4))
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 2, bs.ppos_ubo, 0, size_of(glm.vec4))
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.tess_ubo)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.tess_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Tess_Ubo), nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 3, rs.tess_ubo, 0, size_of(Tess_Ubo))
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 3, bs.tess_ubo, 0, size_of(Tess_Ubo))
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transforms_ubo)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.transforms_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 4, rs.transforms_ubo, 0, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 4, bs.transforms_ubo, 0, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.z_widths_ubo)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.z_widths_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Z_Width_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 5, rs.z_widths_ubo, 0, size_of(Z_Width_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 5, bs.z_widths_ubo, 0, size_of(Z_Width_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.shatter_ubo)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.shatter_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Shatter_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 6, rs.shatter_ubo, 0, size_of(Shatter_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 6, bs.shatter_ubo, 0, size_of(Shatter_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.transparencies_ubo)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.transparencies_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 7, rs.transparencies_ubo, 0, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 7, bs.transparencies_ubo, 0, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, rs.intensity_ubo)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.intensity_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(f32), nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 8, rs.intensity_ubo, 0, size_of(f32))
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 8, bs.intensity_ubo, 0, size_of(f32))
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 
     // load blue noise dither texture -----
     if dither_bin, read_success := os.read_entire_file("textures/blue_noise_64.png", perm_arena_alloc); read_success {
-        gl.BindTexture(gl.TEXTURE_2D, rs.dither_tex)
+        gl.BindTexture(gl.TEXTURE_2D, bs.dither_tex)
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
@@ -565,25 +564,24 @@ main :: proc () {
     element_array_vertices := make([dynamic]Vertex, context.temp_allocator)
     element_array_indices := make([dynamic]u32, context.temp_allocator)
     for shape in SHAPE {
-        sd := sr[shape]
-        rs.vertex_offsets[int(shape)] = u32(len(element_array_vertices))
-        rs.index_offsets[int(shape)] = u32(len(element_array_indices))
+        sd := sr.level_geometry[shape]
+        sr.vertex_offsets[int(shape)] = u32(len(element_array_vertices))
+        sr.index_offsets[int(shape)] = u32(len(element_array_indices))
         append(&element_array_indices, ..sd.indices)
         append(&element_array_vertices, ..sd.vertices)
     }
-    append(&element_array_indices, ..rs.player_geometry.indices)
-    append(&element_array_vertices, ..rs.player_geometry.vertices)
-    pv := rs.player_geometry.vertices 
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.standard_vbo)
+
+    pv := sr.player_vertices 
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.standard_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(element_array_vertices[0]) * len(element_array_vertices), raw_data(element_array_vertices), gl.STATIC_DRAW) 
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.standard_ebo)
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.standard_ebo)
     gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(element_array_indices[0]) * len(element_array_indices), raw_data(element_array_indices), gl.STATIC_DRAW)
 
-    pfi := rs.player_fill_indices
-    poi := rs.player_outline_indices
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_outline_ebo)
+    pfi := sr.player_fill_indices
+    poi := sr.player_outline_indices
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.player_outline_ebo)
     gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(poi[0]) * len(poi), raw_data(poi), gl.STATIC_DRAW)
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, rs.player_fill_ebo)
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.player_fill_ebo)
     gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(pfi[0]) * len(pfi), raw_data(pfi), gl.STATIC_DRAW)
 
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -677,19 +675,16 @@ main :: proc () {
             if EDIT {
                 editor_update(&dynamic_lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
-                game_update(&lgs, is, &pls, &phs, &rs, &cs, &ts, &szs, f32(elapsed_time), FIXED_DELTA_TIME * ts.time_mult)
+                game_update(&lgs, is, &pls, &phs, &rs, bs, &cs, &ts, &szs, f32(elapsed_time), FIXED_DELTA_TIME * ts.time_mult)
             }
             accumulator -= target_frame_clocks 
         }
 
         interpolated_time := f64(accumulator) / f64(target_frame_clocks)
-        // fmt.println("=======")
-        // fmt.println(previous_interpolated_time)
-        // fmt.println(interpolated_time)
 
         // render--------------------------
         draw_slice := EDIT ? dynamic_lgs[:] : lgs[:]
-        draw(draw_slice, sr, pls, &rs, &shs, &phs, &cs, is, es, szs, elapsed_time, interpolated_time, FIXED_DELTA_TIME)
+        draw(draw_slice, sr, pls, &rs, bs, &shs, &phs, &cs, is, es, szs, elapsed_time, interpolated_time, FIXED_DELTA_TIME)
         when ODIN_OS != .Windows {
             if EDIT {
                 update_imgui(&es, &dynamic_lgs)
@@ -706,8 +701,8 @@ main :: proc () {
             imgui.destroy_context()
         }
     }
-    ft.done_face(rs.face)
-    ft.done_free_type(rs.ft_lib)
+    ft.done_face(bs.face)
+    ft.done_free_type(bs.ft_lib)
     vmem.arena_destroy(&perm_arena)
 }
 

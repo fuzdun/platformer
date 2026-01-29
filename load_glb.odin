@@ -76,7 +76,7 @@ load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, ps: ^Physics_State, p
     json.unmarshal(json_data, &js, json.DEFAULT_SPECIFICATION, temp_arena_alloc)
 
     collider_mesh_idx := len(js.scenes[0].nodes) == 2 ? 1 : 0
-    sr[shape] = read_mesh_data_from_binary(js, bin_data, 0, false, perm_arena).(Shape_Data)
+    sr.level_geometry[shape] = read_mesh_data_from_binary(js, bin_data, 0, false, perm_arena).(Shape_Data)
     ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true, perm_arena).(Mesh)
 
     vmem.arena_destroy(&temp_arena)

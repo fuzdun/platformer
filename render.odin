@@ -1,10 +1,10 @@
 package main
 
+import "base:runtime"
 import "core:sort"
 import "core:math"
 import "core:slice"
 import "core:fmt"
-import "base:runtime"
 import str "core:strings"
 import gl "vendor:OpenGL"
 import la "core:math/linalg"
@@ -49,128 +49,23 @@ Level_Geometry_Render_Type_Name :: [Level_Geometry_Render_Type]string {
 
 NUM_RENDER_GROUPS :: len(SHAPE) * len(Level_Geometry_Render_Type) 
 
-SHAPE_FILENAME := [SHAPE]string {
-    .CUBE = "basic_cube",
-    .CYLINDER = "cylinder",
-    .ICO = "icosphere",
-    .DASH_BARRIER = "dash_barrier",
-    .SLIDE_ZONE = "slide_zone",
-    .ICE_CREAM = "ice_cream_cone",
-    .CHAIR = "chair",
-    .BOUNCY = "basic_cube",
-    .FRANK = "frank",
-    .SPIN_TRAIL = "spin_trail"
-}
-
-SHAPE_NAME := [SHAPE]string {
-    .CUBE = "CUBE",
-    .CYLINDER = "CYLINDER",
-    .ICO = "ICO",
-    .DASH_BARRIER = "DASH_BARRIER",
-    .SLIDE_ZONE = "SLIDE_ZONE",
-    .ICE_CREAM = "ICE_CREAM",
-    .CHAIR = "CHAIR",
-    .BOUNCY = "BOUNCY",
-    .FRANK = "FRANK",
-    .SPIN_TRAIL = "SPIN_TRAIL"
-}
-
-TEXT_VERTICES :: [4]Quad_Vertex4 {
-    {{-1, -1, 0, 1}, {0, 0}},
-    {{1, -1, 0, 1}, {1, 0}},
-    {{-1, 1, 0, 1}, {0, 1}},
-    {{1, 1, 0, 1}, {1, 1}}
-}
-
-BACKGROUND_VERTICES :: [4]Quad_Vertex {
-    {{-1, -1, -1}, {0, 0}},
-    {{1, -1, -1}, {1, 0}},
-    {{-1, 1, -1}, {0, 1}},
-    {{1, 1, -1}, {1, 1}},
-}
-
-PARTICLE_VERTICES :: [4]Quad_Vertex {
-    {{-0.7, -0.7, 0.0}, {0, 0}},
-    {{0.7, -0.7, 0.0}, {1, 0}},
-    {{-0.7, 0.7, 0.0}, {0, 1}},
-    {{0.7, 0.7, 0.0}, {1, 1}},
-}
 
 Render_State :: struct {
-    postprocessing_fbo: u32,
-    postprocessing_tcb: u32,
-    postprocessing_rbo: u32,
+    player_burst_particles: Particle_Buffer(PLAYER_SPIN_PARTICLE_COUNT),
 
-    ft_lib: ft.Library,
-    face: ft.Face,
+    player_trail_sample: [3]glm.vec3,
+    prev_player_trail_sample: [3]glm.vec3,
+    player_trail: RingBuffer(TRAIL_SIZE, [3]f32),
 
-    char_tex_map: map[rune]Char_Tex,
+    player_vertex_displacment: [3]f32,
+    tgt_player_vertex_displacement: [3]f32,
 
-    standard_vao: u32,
-    particle_vao: u32,
-    trail_particle_vao: u32,
-    background_vao: u32,
-    lines_vao: u32,
-    text_vao: u32,
-    player_vao: u32,
-    spin_trails_vao: u32,
+    player_spike_compression: f32,
 
-    standard_ebo: u32,
-    background_ebo: u32,
-    player_fill_ebo: u32,
-    player_outline_ebo: u32,
-    spin_trails_ebo: u32,
-
-    standard_vbo: u32,
-    player_vbo: u32,
-    particle_vbo: u32,
-    prev_particle_pos_vbo: u32,
-    trail_particle_vbo: u32,
-    prev_trail_particle_vbo: u32,
-    trail_particle_velocity_vbo: u32,
-    prev_trail_particle_velocity_vbo: u32,
-    particle_pos_vbo: u32,
-    background_vbo: u32,
-    editor_lines_vbo: u32,
-    text_vbo: u32,
-    spin_trails_vbo: u32,
-
-    indirect_buffer: u32,
-
-    common_ubo: u32,
-    dash_ubo: u32,
-    ppos_ubo: u32,
-    tess_ubo: u32,
-    transforms_ubo: u32,
-    z_widths_ubo: u32,
-    shatter_ubo: u32,
-    crack_time_ubo: u32,
-    transparencies_ubo: u32,
-    intensity_ubo: u32,
-
-    dither_tex: u32,
-
-    player_geometry: Shape_Data,
-    player_outline_indices: []u32,
-    player_fill_indices: []u32,
-
-    vertex_offsets: Vertex_Offsets,
-    index_offsets: Index_Offsets,
-
-    player_spin_particles: Particle_Buffer(PLAYER_SPIN_PARTICLE_COUNT)
-}
-
-Char_Tex :: struct {
-    id: u32,
-    size: glm.ivec2,
-    bearing: glm.ivec2,
-    next: u32
-}
-
-Vertex :: struct{
-    pos: glm.vec3,
-    uv: glm.vec2,
-    normal: glm.vec3
+    crunch_pt: [3]f32,
+    crunch_time: f32,
+    screen_splashes: [dynamic][4]f32,
+    screen_ripple_pt: [2]f32,
 }
 
 Quad_Vertex :: struct {
@@ -188,15 +83,6 @@ Line_Vertex :: struct {
     t: f32,
     color: glm.vec3
 }
-
-Shape_Data :: struct {
-    vertices: []Vertex,
-    indices: []u32
-}
-
-Vertex_Offsets :: [len(SHAPE)]u32
-
-Index_Offsets :: [len(SHAPE)]u32
 
 Break_Data :: struct {
     time: f32,
@@ -238,22 +124,18 @@ Transparency_Ubo :: struct #align(16) {
 Render_Groups :: [Level_Geometry_Render_Type][dynamic]gl.DrawElementsIndirectCommand 
 
 init_render_state :: proc(rs: ^Render_State, perm_alloc: runtime.Allocator) {
-    add_player_sphere_data(&rs.player_geometry.vertices, &rs.player_fill_indices, &rs.player_outline_indices, perm_alloc)
-    particle_buffer_init(&rs.player_spin_particles, perm_alloc)
-}
-
-free_render_state :: proc(rs: ^Render_State) {
-    ft.done_face(rs.face)
-    ft.done_free_type(rs.ft_lib)
-    delete(rs.char_tex_map)
-    delete(rs.player_geometry.vertices)
-    delete(rs.player_geometry.indices)
-    delete(rs.player_fill_indices)
-    delete(rs.player_outline_indices)
+    rs.player_spike_compression = 1.0
+    rs.crunch_time = -10000.0;
+    rs.screen_splashes = make([dynamic][4]f32, perm_alloc)
+    ring_buffer_init(&rs.player_trail, [3]f32{0, 0, 0}, perm_alloc)
 }
 
 lg_render_group :: proc(lg: Level_Geometry) -> int {
     return int(lg.render_type) * len(SHAPE) + int(lg.shape)
+}
+
+interpolated_trail :: proc(rs: Render_State, t: f32) -> [3]glm.vec3 {
+    return math.lerp(rs.prev_player_trail_sample, rs.player_trail_sample, t)
 }
 
 editor_sort_lgs :: proc(lgs: ^#soa[dynamic]Level_Geometry, current_selection: int = 0) -> (new_selection: int = 0) {
@@ -308,12 +190,12 @@ offsets_to_render_commands :: proc(offsets: []int, lg_count: int, rs: Render_Sta
         if count == 0 do continue
         shape := SHAPE(idx % len(SHAPE))
         render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(SHAPE))))
-        sd := sr[shape] 
+        sd := sr.level_geometry[shape] 
         command: gl.DrawElementsIndirectCommand = {
             u32(len(sd.indices)),
             count,
-            rs.index_offsets[shape],
-            rs.vertex_offsets[shape],
+            sr.index_offsets[shape],
+            sr.vertex_offsets[shape],
             u32(g_off)
         }
         append(&render_groups[render_type], command)
@@ -321,12 +203,12 @@ offsets_to_render_commands :: proc(offsets: []int, lg_count: int, rs: Render_Sta
     return render_groups
 }
 
-render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
+render_text :: proc(shst: ^Shader_State, rs: ^Render_State, bs: Buffer_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
     x: f32 = 0
     trans_mat: = la.matrix4_translate(pos)
     set_matrix_uniform(shst, "transform", &trans_mat)
     for c in str.trim_null(text) {
-        char_tex := rs.char_tex_map[c]
+        char_tex := bs.char_tex_map[c]
         x_off := x + f32(char_tex.bearing.x) * scale
         y_off := -f32(char_tex.size.y - char_tex.bearing.y) * scale
         w := f32(char_tex.size.x) * scale
@@ -342,7 +224,7 @@ render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [
             v.position.xyz = cam_right * v.position.x + cam_up * v.position.y
         }
         gl.BindTexture(gl.TEXTURE_2D, char_tex.id)
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.text_vbo)
+        gl.BindBuffer(gl.ARRAY_BUFFER, bs.text_vbo)
         gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(vertices), &vertices[0])
         gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
     
@@ -350,13 +232,13 @@ render_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [
     } 
 }
 
-render_screen_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string, pos: [3]f32, proj: glm.mat4, scale: f32) {
+render_screen_text :: proc(shst: ^Shader_State, bs: Buffer_State, text: string, pos: [3]f32, proj: glm.mat4, scale: f32) {
     screen_pos := proj * [4]f32 {pos.x, pos.y, pos.z, 1}
     screen_pos /= screen_pos.w
     x := screen_pos.x
     y := screen_pos.y + .05
     for c in str.trim_null(text) {
-        char_tex := rs.char_tex_map[c]
+        char_tex := bs.char_tex_map[c]
         x_off := x + (f32(char_tex.bearing.x) * scale) / WIDTH
         y_off := y + (-f32(char_tex.size.y - char_tex.bearing.y) * scale) / HEIGHT
         w := (f32(char_tex.size.x) * scale) / WIDTH
@@ -369,16 +251,16 @@ render_screen_text :: proc(shst: ^Shader_State, rs: ^Render_State, text: string,
             {{x_off + w, y_off + h, 0, 1}, {1, 0}},
         }
         gl.BindTexture(gl.TEXTURE_2D, char_tex.id)
-        gl.BindBuffer(gl.ARRAY_BUFFER, rs.text_vbo)
+        gl.BindBuffer(gl.ARRAY_BUFFER, bs.text_vbo)
         gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(vertices), &vertices[0])
         gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
         x += (f32(char_tex.next >> 6) * scale) / WIDTH
     } 
 }
 
-draw_indirect_render_queue :: proc(rs: Render_State, queue: []gl.DrawElementsIndirectCommand, mode: u32) {
+draw_indirect_render_queue :: proc(bs: Buffer_State, queue: []gl.DrawElementsIndirectCommand, mode: u32) {
     if len(queue) > 0 {
-        gl.BindBuffer(gl.DRAW_INDIRECT_BUFFER, rs.indirect_buffer)
+        gl.BindBuffer(gl.DRAW_INDIRECT_BUFFER, bs.indirect_buffer)
         gl.BufferData(gl.DRAW_INDIRECT_BUFFER, size_of(queue[0]) * len(queue), raw_data(queue), gl.DYNAMIC_DRAW)
         gl.MultiDrawElementsIndirect(mode, gl.UNSIGNED_INT, nil, i32(len(queue)), 0)
     }

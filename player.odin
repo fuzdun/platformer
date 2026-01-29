@@ -177,11 +177,6 @@ Player_State :: struct {
     hurt_t: f32,
     broke_t: f32,
 
-    crunch_pt: [3]f32,
-    screen_splashes: [dynamic][4]f32,
-    screen_ripple_pt: [2]f32,
-    crunch_time: f32,
-
     position: [3]f32,
     velocity: [3]f32,
 
@@ -204,15 +199,6 @@ Player_State :: struct {
 
     prev_position: [3]f32,
 
-    trail_sample: [3]glm.vec3,
-    prev_trail_sample: [3]glm.vec3,
-    trail: RingBuffer(TRAIL_SIZE, [3]f32),
-
-    particle_displacement: [3]f32,
-    tgt_particle_displacement: [3]f32,
-
-    spike_compression: f32,
-
     intensity: f32,
     score: int,
     time_remaining: f32,
@@ -226,19 +212,14 @@ init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
     pls.dash_enabled = true
     pls.slide_enabled = true
     pls.slide_state.slide_end_time = -SLIDE_COOLDOWN
-    //pls.slide_state.can_slide = true
     pls.jump_enabled = false
     pls.ground_x = {1, 0, 0}
     pls.ground_z = {0, 0, -1}
     pls.contact_state.touch_time = -1000.0
-    pls.spike_compression = 1.0
-    pls.crunch_time = -10000.0;
-    pls.screen_splashes = make([dynamic][4]f32, perm_alloc)
     pls.hurt_t = -5000.0
     pls.broke_t = -5000.0
     pls.time_remaining = TIME_LIMIT
     pls.last_checkpoint_t = -5000
-    ring_buffer_init(&pls.trail, [3]f32{0, 0, 0}, perm_alloc)
 }
 
 free_player_state :: proc(ps: ^Player_State) {}
@@ -253,10 +234,6 @@ Player_States :: enum {
 
 interpolated_player_pos :: proc(ps: Player_State, t: f32) -> [3]f32 {
     return math.lerp(ps.prev_position, ps.position, t) 
-}
-
-interpolated_trail :: proc(ps: Player_State, t: f32) -> [3]glm.vec3 {
-    return math.lerp(ps.prev_trail_sample, ps.trail_sample, t)
 }
 
 interpolated_player_matrix :: proc(ps: Player_State, t: f32) -> matrix[4, 4]f32 {

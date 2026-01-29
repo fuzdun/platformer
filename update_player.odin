@@ -30,8 +30,21 @@ update_player :: proc(
     // #####################################################
 
     cts := pls.contact_state
+    on_ground := cts.state == .ON_GROUND || cts.state == .ON_SLOPE
     on_surface := cts.state == .ON_GROUND || cts.state == .ON_SLOPE || cts.state == .ON_WALL
     normalized_contact_ray := la.normalize(cts.contact_ray) 
+
+    // update ground movement vectors
+    // -------------------------------------------
+    new_ground_x := pls.ground_x
+    new_ground_z := pls.ground_z
+    if on_ground {
+        contact_ray := cts.contact_ray
+        x := [3]f32{1, 0, 0}
+        z := [3]f32{0, 0, -1}
+        new_ground_x = la.normalize0(x + la.dot(x, contact_ray) * contact_ray)
+        new_ground_z = la.normalize0(z + la.dot(z, contact_ray) * contact_ray)
+    }
 
     // spin
     // -------------------------------------------
@@ -77,6 +90,19 @@ update_player :: proc(
         }
     }
 
+    // update hops
+    // -------------------------------------------
+    new_hops_remaining := pls.hops_remaining
+    if triggers.bunny_hop {
+        new_hops_remaining -= 1
+    }
+    new_hops_recharge := pls.hops_recharge
+    new_hops_recharge += 0.40 * delta_time * pls.intensity
+    if new_hops_recharge >= 1 {
+        new_hops_recharge -= 1.0
+        new_hops_remaining = min(3, new_hops_remaining + 1)
+    }
+
     // other 
     // -------------------------------------------
     is_hurt := elapsed_time < pls.hurt_t + DAMAGE_LEN
@@ -90,9 +116,9 @@ update_player :: proc(
 
     new_mode := pls.mode
 
-    new_jump_enabled := pls.jump_enabled
-    new_dash_enabled := pls.dash_enabled
-    new_slide_enabled := pls.slide_enabled
+    new_jump_enabled  := pls.jump_enabled  || (!pls.jump_held && on_ground)
+    new_slide_enabled := pls.slide_enabled || pls.slide_state.slide_end_time + SLIDE_COOLDOWN < elapsed_time
+    new_dash_enabled  := pls.dash_enabled  || on_ground || triggers.bunny_hop || triggers.small_hop
 
     if triggers.jump {
         new_jump_enabled = false
@@ -104,11 +130,6 @@ update_player :: proc(
     // normal mode 
     // -------------------------------------------
     if pls.mode == .Normal {
-
-        // handle dash activation 
-        // -------------------------------------------
-        //can_dash := (pls.dash_enabled && cts.state == .IN_AIR && pls.velocity != 0 && !is_hurt)
-        //if is.x_pressed && can_dash {
         if triggers.dash {
             new_mode = .Dashing
             dash_input := triggers.move
@@ -121,11 +142,6 @@ update_player :: proc(
             new_dash_state.dash_spd = clamp(la.length(pls.velocity.xz) * 1.5, MIN_DASH_SPD, MAX_DASH_SPD)
             new_dash_enabled = false
         }
-
-        // handle slide activation 
-        // -------------------------------------------
-        //can_slide := on_surface && new_slide_enabled && pls.velocity != 0
-        //if is.x_pressed && can_slide {
         if triggers.slide {
             new_mode = .Sliding
             surface_normal := la.normalize0(la.cross(pls.ground_x, pls.ground_z))
@@ -144,13 +160,7 @@ update_player :: proc(
     // dashing mode 
     // -------------------------------------------
     } else if pls.mode == .Dashing {
-
-        // adjust dash direction 
-        // -------------------------------------------
         new_dash_state.dash_dir = la.lerp(pls.dash_state.dash_dir, [3]f32{triggers.move.x, 0, triggers.move.y}, 0.03)
-
-        // check for end of dash 
-        // -------------------------------------------
         if is_hurt || on_surface || elapsed_time - pls.dash_state.dash_time > DASH_LEN {
             new_mode = .Normal
         }         
@@ -158,15 +168,9 @@ update_player :: proc(
     // sliding mode 
     // -------------------------------------------
     } else if pls.mode == .Sliding {
-
-        // update slide offset
-        // -------------------------------------------
         if new_mode == .Sliding && len(szs.intersected) > 0 {
             new_slide_state.mid_slide_time = elapsed_time
         }
-
-        // check for end of slide 
-        // -------------------------------------------
         time_since_slide_start := elapsed_time - new_slide_state.slide_time
         slide_start_to_zone_exit := new_slide_state.mid_slide_time - new_slide_state.slide_time
         time_since_exit_zone := time_since_slide_start - slide_start_to_zone_exit
@@ -293,7 +297,9 @@ update_player :: proc(
     // APPLY VELOCITY, HANDLE COLLISIONS
     // #####################################################
 
-    collision_adjusted_cts, new_position, collision_adjusted_velocity, collision_ids, contact_ids := apply_velocity(
+    collision_adjusted_cts, new_position,
+    collision_adjusted_velocity, collision_ids,
+    contact_ids, touched_ground := apply_velocity(
         new_cts,
         pls.position,
         new_velocity,
@@ -309,43 +315,6 @@ update_player :: proc(
     // #####################################################
     // POST COLLISION 
     // #####################################################
-
-    // update ground movement vectors
-    // -------------------------------------------
-    new_ground_x := pls.ground_x
-    new_ground_z := pls.ground_z
-    if collision_adjusted_cts.state == .ON_GROUND || collision_adjusted_cts.state == .ON_SLOPE {
-        contact_ray := collision_adjusted_cts.contact_ray
-        x := [3]f32{1, 0, 0}
-        z := [3]f32{0, 0, -1}
-        new_ground_x = la.normalize0(x + la.dot(x, contact_ray) * contact_ray)
-        new_ground_z = la.normalize0(z + la.dot(z, contact_ray) * contact_ray)
-    }
-
-    // apply bounce to velocity
-    // -------------------------------------------
-    for id in collision_ids {
-        if .Bouncy in lgs[id].attributes {
-            new_normalized_contact_ray := la.normalize0(collision_adjusted_cts.contact_ray)
-            bounced_velocity_dir := la.normalize0(collision_adjusted_velocity) - new_normalized_contact_ray
-            collision_adjusted_velocity = bounced_velocity_dir * BOUNCE_VELOCITY
-            collision_adjusted_cts.state = .IN_AIR
-            
-        }
-    }
-
-    // update hops
-    // -------------------------------------------
-    new_hops_remaining := pls.hops_remaining
-    if triggers.bunny_hop {
-        new_hops_remaining -= 1
-    }
-    new_hops_recharge := pls.hops_recharge
-    new_hops_recharge += 0.40 * delta_time * pls.intensity
-    if new_hops_recharge >= 1 {
-        new_hops_recharge -= 1.0
-        new_hops_remaining = min(3, new_hops_remaining + 1)
-    }
 
     // MOVE THIS!!!!!!!!!
     // update time mult
@@ -378,58 +347,17 @@ update_player :: proc(
             }
         }
         if .Bouncy in lgs[id].attributes {
+            new_normalized_contact_ray := la.normalize0(collision_adjusted_cts.contact_ray)
+            bounced_velocity_dir := la.normalize0(collision_adjusted_velocity) - new_normalized_contact_ray
+            collision_adjusted_velocity = bounced_velocity_dir * BOUNCE_VELOCITY
+            collision_adjusted_cts.state = .IN_AIR
             new_time_mult = 1.5
-            new_dash_enabled = true
             break
         }
     }
 
-    // update crunch_time
-    // -------------------------------------------
-    new_crunch_time := triggers.bunny_hop ? elapsed_time : pls.crunch_time
-
-    // update crunch pt
-    // -------------------------------------------
-    new_crunch_pt := pls.crunch_pt
-    if triggers.bunny_hop {
-        new_crunch_pt = pls.position
-    }
-
-    // update screen ripple
-    // -------------------------------------------
-    new_screen_ripple_pt := pls.screen_ripple_pt
-    if triggers.bunny_hop {
-        proj_mat := construct_camera_matrix(cs^)
-        // proj_mat := construct_camera_matrix(cs^, 0)
-        proj_ppos := la.matrix_mul_vector(proj_mat, [4]f32{
-            new_crunch_pt.x,
-            new_crunch_pt.y,
-            new_crunch_pt.z,
-            1
-        })
-        new_screen_ripple_pt = ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
-    }
-
-    // update particle displacement
-    // -------------------------------------------
-    new_tgt_particle_displacement := pls.tgt_particle_displacement
-    if triggers.jump {
-        new_tgt_particle_displacement = new_velocity
-    }
-    if collision_adjusted_cts.state != .ON_GROUND {
-        new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, new_velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
-    } else {
-        new_tgt_particle_displacement = la.lerp(new_tgt_particle_displacement, [3]f32{0, 0, 0}, TGT_PARTICLE_DISPLACEMENT_LERP)
-    }
-    new_particle_displacement := la.lerp(pls.particle_displacement, new_tgt_particle_displacement, PARTICLE_DISPLACEMENT_LERP)
-
-    // update spike compression
-    // -------------------------------------------
-    new_spike_compression := pls.spike_compression
-    if cts.state == .ON_GROUND {
-        new_spike_compression = math.lerp(pls.spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
-    } else {
-        new_spike_compression = math.lerp(pls.spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
+    if touched_ground {
+        new_dash_enabled = true
     }
 
     when MOVE {
@@ -439,7 +367,6 @@ update_player :: proc(
             move_geometry(lgs, phs, &new_position, collision_adjusted_cts, lg_idx)
         }
     }
-
 
     new_score := pls.score
     new_score += int(pls.intensity * pls.intensity * 10.0)
@@ -462,11 +389,6 @@ update_player :: proc(
     new_time_remaining = max(0, new_time_remaining - delta_time)
 
     collided_cts := collision_adjusted_cts.state
-
-    new_jump_enabled = new_jump_enabled || !pls.jump_held && collided_cts == .ON_GROUND || collided_cts == .ON_SLOPE 
-    new_slide_enabled = new_slide_enabled || pls.slide_state.slide_end_time + SLIDE_COOLDOWN < elapsed_time
-    new_dash_enabled = new_dash_enabled || collided_cts == .ON_GROUND || collided_cts == .ON_SLOPE ||
-                       triggers.bunny_hop || triggers.small_hop
 
     // MOVE THIS !!!!!!!!!!!!!!!!!!
     // sector / checkpoints
@@ -511,7 +433,7 @@ update_player :: proc(
     // -------------------------------------------
     new_last_hop := pls.last_hop
     if triggers.small_hop {
-        new_last_hop = triggers.small_hop_time
+        new_last_hop = elapsed_time
     }
 
 
@@ -522,29 +444,16 @@ update_player :: proc(
     // prev frame values
     // -------------------------------------------
     pls.prev_position = pls.position
-    pls.prev_trail_sample = pls.trail_sample
     pls.jump_held = triggers.jump_held
-    pls.trail_sample = {
-        ring_buffer_at(pls.trail, -4),
-        ring_buffer_at(pls.trail, -8),
-        ring_buffer_at(pls.trail, -12),
-    }
 
     // overwrite state properties
     //--------------------------------------------
-    ring_buffer_push(&pls.trail, new_position)
-
     pls.velocity                  = collision_adjusted_velocity
     pls.position                  = new_position
     pls.mode                      = new_mode
     pls.contact_state             = collision_adjusted_cts
     pls.jump_pressed_time         = triggers.jump_pressed_time
     pls.wall_detach_held_t        = triggers.wall_detach_held
-    pls.crunch_time               = new_crunch_time
-
-    pls.crunch_pt                 = new_crunch_pt
-    pls.tgt_particle_displacement = new_tgt_particle_displacement
-    pls.particle_displacement     = new_particle_displacement
     pls.dash_state                = new_dash_state
     pls.slide_state               = new_slide_state
     pls.spin_state                = new_spin_state
@@ -552,8 +461,6 @@ update_player :: proc(
     pls.broke_t                   = new_broke_t
     pls.jump_enabled              = new_jump_enabled
     pls.dash_enabled              = new_dash_enabled
-    pls.spike_compression         = new_spike_compression
-    pls.screen_ripple_pt          = new_screen_ripple_pt
     pls.ground_x                  = new_ground_x
     pls.ground_z                  = new_ground_z
     pls.intensity                 = new_intensity
@@ -566,27 +473,27 @@ update_player :: proc(
     pls.last_checkpoint_t         = new_checkpoint_t
 
     // screen splashes---------------------
-    idx := 0
-    for _ in 0 ..<len(pls.screen_splashes) {
-        splash := pls.screen_splashes[idx]
-        if elapsed_time - splash[3] > 10000 {
-            ordered_remove(&pls.screen_splashes, idx)
-        } else {
-            idx += 1
-        }
-    }
-    if triggers.bunny_hop {
-        new_splash := cs.position + la.normalize0(new_position - cs.position) * 10000.0;
-        append(&pls.screen_splashes, [4]f32{
-            new_splash.x,
-            new_splash.y,
-            new_splash.z,
-            new_crunch_time
-        })
-    }
-    if len(pls.screen_splashes) > 5 {
-        ordered_remove(&pls.screen_splashes, 0);
-    }
+    //idx := 0
+    //for _ in 0 ..<len(pls.screen_splashes) {
+    //    splash := pls.screen_splashes[idx]
+    //    if elapsed_time - splash[3] > 10000 {
+    //        ordered_remove(&pls.screen_splashes, idx)
+    //    } else {
+    //        idx += 1
+    //    }
+    //}
+    //if triggers.bunny_hop {
+    //    new_splash := cs.position + la.normalize0(new_position - cs.position) * 10000.0;
+    //    append(&pls.screen_splashes, [4]f32{
+    //        new_splash.x,
+    //        new_splash.y,
+    //        new_splash.z,
+    //        new_crunch_time
+    //    })
+    //}
+    //if len(pls.screen_splashes) > 5 {
+    //    ordered_remove(&pls.screen_splashes, 0);
+    //}
 
 
     // #####################################################

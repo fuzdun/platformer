@@ -4,27 +4,27 @@ import glm "core:math/linalg/glsl"
 import "core:strconv"
 import "core:fmt"
 
-draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, is: Input_State, lgs: Level_Geometry_State, rg: Render_Groups, proj_mat: glm.mat4) {
+draw_editor :: proc(rs: ^Render_State, bs: Buffer_State, shs: ^Shader_State, es: Editor_State, is: Input_State, lgs: Level_Geometry_State, rg: Render_Groups, proj_mat: glm.mat4) {
     gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
     gl.ClearColor(0, 0, 0, 1)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.Enable(gl.DEPTH_TEST)
 
-    gl.BindVertexArray(rs.standard_vao)
+    gl.BindVertexArray(bs.standard_vao)
 
     // draw geometry (w/ outlines)
     use_shader(shs, rs, .Editor_Geometry)
     set_int_uniform(shs, "selected_index", i32(es.selected_entity))
 
-    draw_indirect_render_queue(rs^, rg[.Standard][:], gl.TRIANGLES)
-    draw_indirect_render_queue(rs^, rg[.Dash_Barrier][:], gl.TRIANGLES)
-    draw_indirect_render_queue(rs^, rg[.Wireframe][:], gl.TRIANGLES)
-    draw_indirect_render_queue(rs^, rg[.Slide_Zone][:], gl.TRIANGLES)
-    draw_indirect_render_queue(rs^, rg[.Bouncy][:], gl.TRIANGLES)
+    draw_indirect_render_queue(bs, rg[.Standard][:], gl.TRIANGLES)
+    draw_indirect_render_queue(bs, rg[.Dash_Barrier][:], gl.TRIANGLES)
+    draw_indirect_render_queue(bs, rg[.Wireframe][:], gl.TRIANGLES)
+    draw_indirect_render_queue(bs, rg[.Slide_Zone][:], gl.TRIANGLES)
+    draw_indirect_render_queue(bs, rg[.Bouncy][:], gl.TRIANGLES)
 
     // draw geometry connections
     lines := make([dynamic]Line_Vertex); defer delete(lines)
-    gl.BindVertexArray(rs.text_vao)
+    gl.BindVertexArray(bs.text_vao)
     use_shader(shs, rs, .Text)
     gl.Enable(gl.BLEND)
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -40,7 +40,7 @@ draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, is:
             avg_pos := el.poss[0] + (el.poss[1] - el.poss[0]) / 2
             dist_txt_buf: [3]byte            
             strconv.itoa(dist_txt_buf[:], el.dist)
-            render_screen_text(shs, rs, string(dist_txt_buf[:]), avg_pos, proj_mat, scale)
+            render_screen_text(shs, bs, string(dist_txt_buf[:]), avg_pos, proj_mat, scale)
         }
     }
 
@@ -48,7 +48,7 @@ draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, is:
         for lg, lg_idx in lgs {
             buf: [4]byte
             idx_string := strconv.itoa(buf[:], lg_idx)
-            render_screen_text(shs, rs, idx_string, lg.transform.position, proj_mat, 0.3)
+            render_screen_text(shs, bs, idx_string, lg.transform.position, proj_mat, 0.3)
         }
     }
 
@@ -112,17 +112,17 @@ draw_editor :: proc(rs: ^Render_State, shs: ^Shader_State, es: Editor_State, is:
     }
 
     gl.Disable(gl.BLEND)
-    gl.BindVertexArray(rs.lines_vao)
+    gl.BindVertexArray(bs.lines_vao)
 
     use_shader(shs, rs, .Static_Line)
     gl.LineWidth(2.5)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.editor_lines_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(lines[0]) * len(lines), &lines[0], gl.DYNAMIC_DRAW)
     gl.DrawArrays(gl.LINES, 0, i32(len(lines)))
 
     use_shader(shs, rs, .Grid_Line)
     gl.LineWidth(1.5)
-    gl.BindBuffer(gl.ARRAY_BUFFER, rs.editor_lines_vbo)
+    gl.BindBuffer(gl.ARRAY_BUFFER, bs.editor_lines_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(grid_lines[0]) * len(grid_lines), &grid_lines[0], gl.DYNAMIC_DRAW)
     set_vec3_uniform(shs, "edit_pos", 1, &epos)
     gl.DrawArrays(gl.LINES, 0, i32(len(grid_lines)))

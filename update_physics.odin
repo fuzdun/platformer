@@ -7,145 +7,6 @@ import la "core:math/linalg"
 NORMAL_Y_MIN_GROUND :: 0.85
 NORMAL_Y_MIN_SLOPE :: 0.2
 
-//get_collisions_and_update_contact_state :: proc(
-//    lgs: #soa[]Level_Geometry,
-//    position: [3]f32,
-//    velocity: [3]f32,
-//    level_colliders: [SHAPE]Mesh,
-//    static_collider_vertices: [dynamic][3]f32,
-//    cs: Contact_State,
-//    sliding: bool,
-//    et: f32,
-//    dt: f32,
-//) -> (
-//    collided: bool,
-//    collision: Collision,
-//    contacts: [dynamic]int,
-//    new_cs: Contact_State
-//){
-//    earliest_coll_t: f32 = 1000.0
-//    contacts = make([dynamic]int, context.temp_allocator)
-//    player_velocity := velocity * dt
-//    player_velocity_len := la.length(player_velocity)
-//    player_velocity_normal := la.normalize(player_velocity)
-//    ppos_end := position + player_velocity
-//
-//    tv_offset := 0
-//
-//    //if len(static_collider_vertices) == 0 {
-//    //if true {
-//    //    return
-//    //}
-//    //}
-//
-//    for lg, id in lgs {
-//        if len(static_collider_vertices) == 0 {
-//            continue
-//        }
-//        coll := level_colliders[lg.collider] 
-//        // check for destroyed geometry
-//        if (lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
-//            //check has collider
-//            if .Collider in lg.attributes {
-//                // check AABB collision
-//                if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, lg.aabb) {
-//                    vertices := static_collider_vertices[tv_offset:tv_offset + len(coll.vertices)] 
-//                    l := len(coll.indices)
-//                    for i := 0; i <= l - 3; i += 3 {
-//                        t0 := vertices[coll.indices[i]]
-//                        t1 := vertices[coll.indices[i+1]]
-//                        t2 := vertices[coll.indices[i+2]]
-//                        // check for triangle collision and surface contact
-//                        did_collide, t, normal, contact := player_triangle_collision(
-//                            position,
-//                            PLAYER_SPHERE_RADIUS,
-//                            t0, t1, t2,
-//                            player_velocity,
-//                            player_velocity_len,
-//                            player_velocity_normal,
-//                            ppos_end,
-//                            cs.contact_ray,
-//                            CONTACT_RAY_LEN2,
-//                        )
-//                        // update closest collision
-//                        if did_collide && t < earliest_coll_t {
-//                            collided = true
-//                            earliest_coll_t = t
-//                            collision = Collision{id, normal, t}
-//                        }
-//                        // add contact
-//                        if contact {
-//                            append(&contacts, id)
-//                        }
-//                    }
-//                }
-//            }         
-//        }
-//        tv_offset += len(coll.vertices)
-//    }
-//
-//    best_plane_normal := collided ? collision.normal : {100, 100, 100}
-//    ignore_contact := sliding && (.Slide_Zone in lgs[collision.id].attributes)
-//
-//    // update contact state
-//    new_surface_contact_state := cs.state
-//    if !(collided && .Hazardous in lgs[collision.id].attributes) {
-//        on_surface := (cs.state == .ON_GROUND || cs.state == .ON_WALL || cs.state == .ON_SLOPE)
-//        // left surface
-//        if len(contacts) == 0 && on_surface {
-//            new_surface_contact_state = .IN_AIR
-//        // else, update state based on contact angle
-//        } else if collided {
-//            if best_plane_normal.y >= NORMAL_Y_MIN_GROUND {
-//                new_surface_contact_state = .ON_GROUND
-//            } else if best_plane_normal.y >= NORMAL_Y_MIN_SLOPE {
-//                new_surface_contact_state = .ON_SLOPE
-//            } else {
-//                new_surface_contact_state = .ON_WALL
-//            }
-//        }
-//    }
-//
-//    // update touch time
-//    new_touch_time := cs.touch_time
-//    if new_surface_contact_state != cs.state && new_surface_contact_state != .IN_AIR {
-//        new_touch_time = et
-//    }
-//
-//    // update left ground
-//    new_left_ground := cs.left_ground
-//    if new_surface_contact_state == .ON_GROUND {
-//        new_left_ground = et
-//    }
-//
-//    // update left_slope
-//    new_left_slope := cs.left_slope
-//    if new_surface_contact_state == .ON_SLOPE {
-//        new_left_slope = et
-//    }
-//
-//    // update left_wall
-//    new_left_wall := cs.left_wall
-//    if new_surface_contact_state == .ON_WALL {
-//        new_left_wall = et
-//    }
-//
-//    // update contact ray
-//    new_contact_ray := cs.contact_ray
-//    if !ignore_contact && best_plane_normal.y < 100.0 {
-//        new_contact_ray = -best_plane_normal * CONTACT_RAY_LEN
-//    }
-//
-//    new_cs = cs
-//    new_cs.state = new_surface_contact_state
-//    new_cs.touch_time = new_touch_time
-//    new_cs.left_ground = new_left_ground
-//    new_cs.left_slope = new_left_slope
-//    new_cs.left_wall = new_left_wall
-//    new_cs.contact_ray = new_contact_ray
-//    new_cs.last_touched = cs.last_touched
-//    return
-//}
 
 get_particle_collisions :: proc(
     particles: $T/Particle_Buffer,
@@ -186,7 +47,8 @@ get_collisions_and_update_contact_state :: proc(
     collided: bool,
     collision: Collision,
     contacts: [dynamic]int,
-    new_cs: Contact_State
+    new_cs: Contact_State,
+    touched_ground: bool
 ){
     earliest_coll_t: f32 = 1000.0
     contacts = make([dynamic]int, context.temp_allocator)
@@ -199,49 +61,42 @@ get_collisions_and_update_contact_state :: proc(
     segment := physics_map[segment_idx]
 
     for collider in segment {
-        // check for collider + destroyed geometry
         lg := lgs[collider.id]
-        //if .Collider in lg.attributes && (lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
-            // check AABB collision
-            if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, collider.aabb) {
-                for i := 0; i < len(collider.indices); i += 3 {
-                    triangle_indices := collider.indices[i:i+3]
-                    t0 := collider.vertices[triangle_indices[0]]
-                    t1 := collider.vertices[triangle_indices[1]]
-                    t2 := collider.vertices[triangle_indices[2]]
-                    // check for triangle collision and surface contact
-                    did_collide, t, normal, contact := player_triangle_collision(
-                        position,
-                        PLAYER_SPHERE_RADIUS,
-                        t0, t1, t2,
-                        player_velocity,
-                        player_velocity_len,
-                        player_velocity_normal,
-                        ppos_end,
-                        cs.contact_ray,
-                        CONTACT_RAY_LEN2,
-                    )
-                    // update closest collision
-                    if did_collide && t < earliest_coll_t {
-                        collided = true
-                        earliest_coll_t = t
-                        collision = Collision{collider.id, normal, t}
-                    }
-                    // add contact
-                    if contact {
-                        append(&contacts, collider.id)
-                    }
+        // check AABB collision
+        if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, collider.aabb) {
+            for i := 0; i < len(collider.indices); i += 3 {
+                triangle_indices := collider.indices[i:i+3]
+                t0 := collider.vertices[triangle_indices[0]]
+                t1 := collider.vertices[triangle_indices[1]]
+                t2 := collider.vertices[triangle_indices[2]]
+                // check for triangle collision and surface contact
+                did_collide, t, normal, contact := player_triangle_collision(
+                    position,
+                    PLAYER_SPHERE_RADIUS,
+                    t0, t1, t2,
+                    player_velocity,
+                    player_velocity_len,
+                    player_velocity_normal,
+                    ppos_end,
+                    cs.contact_ray,
+                    CONTACT_RAY_LEN2,
+                )
+                // update closest collision
+                if did_collide && t < earliest_coll_t {
+                    collided = true
+                    earliest_coll_t = t
+                    collision = Collision{collider.id, normal, t}
+                }
+                // add contact
+                if contact {
+                    append(&contacts, collider.id)
                 }
             }
-        //}         
+        }
     }
-    //tv_offset += len(coll.vertices)
 
     best_plane_normal := collided ? collision.normal : {100, 100, 100}
     ignore_contact := sliding && (.Slide_Zone in lgs[collision.id].attributes)
-    //if collided {
-        //fmt.println(lgs[collision.id].attributes)
-    //}
 
     // update contact state
     new_surface_contact_state := cs.state
@@ -254,8 +109,10 @@ get_collisions_and_update_contact_state :: proc(
         } else if collided {
             if best_plane_normal.y >= NORMAL_Y_MIN_GROUND {
                 new_surface_contact_state = .ON_GROUND
+                touched_ground = true
             } else if best_plane_normal.y >= NORMAL_Y_MIN_SLOPE {
                 new_surface_contact_state = .ON_SLOPE
+                touched_ground = true
             } else {
                 new_surface_contact_state = .ON_WALL
             }
@@ -319,7 +176,8 @@ apply_velocity :: proc(
     new_position: [3]f32,
     new_velocity: [3]f32,
     collision_ids: map[int]struct{},
-    contact_ids: map[int]struct{}
+    contact_ids: map[int]struct{},
+    touched_ground: bool
 ) {
     new_position = position
     new_velocity = velocity
@@ -328,7 +186,7 @@ apply_velocity :: proc(
     collided: bool
     collision: Collision
     contacts: [dynamic]int
-    collided, collision, contacts, new_contact_state = get_collisions_and_update_contact_state(
+    collided, collision, contacts, new_contact_state, touched_ground = get_collisions_and_update_contact_state(
         entities[:], position, velocity,
         physics_map, contact_state, sliding,
         elapsed_time, delta_time
@@ -362,7 +220,7 @@ apply_velocity :: proc(
                 velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal
             }
             new_velocity = (velocity_normal * remaining_vel) / delta_time
-            collided, collision, contacts, new_contact_state = get_collisions_and_update_contact_state(
+            collided, collision, contacts, new_contact_state, touched_ground = get_collisions_and_update_contact_state(
                 entities[:], new_position, new_velocity,
                 physics_map, new_contact_state, sliding,
                 elapsed_time, delta_time
