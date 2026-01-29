@@ -44,7 +44,7 @@ SLOPE_JUMP_FORCE :: 25
 
 // forces
 IDLE_FRICTION :: 0.85
-GROUND_FRICTION :: 0.95
+GROUND_FRICTION :: 0.20
 FAST_FRICTION: f32: 0.75
 // GRAV: f32: 150
 GRAV: f32: 300
@@ -54,7 +54,7 @@ SLOPE_GRAV: f32: 150
 // input
 COYOTE_TIME ::  150
 BUNNY_DASH_DEBOUNCE: f32: 100
-BUNNY_WINDOW: f32: 100
+BUNNY_WINDOW: f32: 150
 WALL_DETACH_LEN :: 300
 
 // dash
@@ -142,18 +142,15 @@ Dash_State :: struct {
 }
 
 Slide_State :: struct {
-    sliding: bool,
     slide_time: f32,
-    slide_total: f32,
     mid_slide_time: f32,
     slide_dir: [3]f32,
     slide_start_pos: [3]f32,
     slide_end_time: f32,
-    can_slide: bool
 }
 
 Spin_State :: struct {
-    spinning: bool,
+    //spinning: bool,
     spin_time: f32,
     spin_dir: [2]f32,
     spin_amt: f32,
@@ -193,10 +190,17 @@ Player_State :: struct {
 
     jump_enabled: bool,
     dash_enabled: bool,
+    slide_enabled: bool,
 
-    jump_pressed_time: f32,
     jump_held: bool,
+    jump_pressed_time: f32,
+    last_hop: f32,
     wall_detach_held_t: f32,
+
+    spinning: bool,
+    spin_time: f32,
+    spin_dir: [2]f32,
+    spin_amt: f32,
 
     prev_position: [3]f32,
 
@@ -220,8 +224,9 @@ init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
     pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
     pls.dash_enabled = true
+    pls.slide_enabled = true
     pls.slide_state.slide_end_time = -SLIDE_COOLDOWN
-    pls.slide_state.can_slide = true
+    //pls.slide_state.can_slide = true
     pls.jump_enabled = false
     pls.ground_x = {1, 0, 0}
     pls.ground_z = {0, 0, -1}
@@ -266,12 +271,12 @@ animate_player_vertices_sliding :: proc(vertices: []Vertex, contact_ray: [3]f32,
     spin_mat := la.matrix4_rotate_f32(f32(time) / 150, up)
     slide_t := slide_total
     end_slide_t := (slide_total - slide_off) - (SLIDE_LEN - SLIDE_ANIM_EASE_LEN)
-    compression_t := clamp(slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0) - clamp(end_slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0)
+    expansion_t := clamp(slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0) - clamp(end_slide_t / SLIDE_ANIM_EASE_LEN, 0.0, 1.0)
     for &v, idx in vertices {
         vertical_fact := la.dot(up, v.pos)
-        v.pos -= up * vertical_fact * easeout_cubic(compression_t) * abs(vertical_fact) * 1.2
+        v.pos -= up * vertical_fact * easeout_cubic(expansion_t) * abs(vertical_fact) * 1.2
         if v.uv.x == 1.0 {
-            v.pos *= (1.0 + (compression_t) * 4.0)
+            v.pos *= (1.0 + (expansion_t) * 4.0)
         }
         v.pos = la.matrix_mul_vector(spin_mat, [4]f32{v.pos[0], v.pos[1], v.pos[2], 0.0}).xyz
         v.pos *= 1.2

@@ -158,9 +158,12 @@ draw :: proc(
         inverse_view := glm.inverse(only_view_matrix(cs, f32(interp_t)))
         inverse_proj := glm.inverse(only_projection_matrix(cs, f32(interp_t)))
         slide_middle := SLIDE_LEN / 2.0
+        slide_total := f32(time) - pls.slide_state.slide_time 
+    
+    
         slide_off := pls.slide_state.mid_slide_time - pls.slide_state.slide_time
-        start_slide_t := clamp(pls.slide_state.slide_total / slide_middle, 0, 1) * 0.5
-        end_slide_t := clamp(((pls.slide_state.slide_total - slide_off) - (slide_middle)) / slide_middle, 0, 1) * 0.5
+        start_slide_t := clamp(slide_total / slide_middle, 0, 1) * 0.5
+        end_slide_t := clamp(((slide_total - slide_off) - (slide_middle)) / slide_middle, 0, 1) * 0.5
         slide_t := start_slide_t + end_slide_t
         camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
         camera_right_worldspace = la.normalize(camera_right_worldspace)
@@ -261,18 +264,18 @@ draw :: proc(
         offset_vertices := make([]Vertex, len(rs.player_geometry.vertices), context.temp_allocator)
         copy(offset_vertices, rs.player_geometry.vertices[:])
 
-        if !(pls.contact_state.state == .ON_WALL) && !pls.slide_state.sliding {
+        if !(pls.contact_state.state == .ON_WALL) && !(pls.mode == .Sliding) {
             apply_player_vertices_roll_rotation(offset_vertices[:], pls.velocity, f32(time))
         }
-        if pls.slide_state.sliding {
+        if pls.mode == .Sliding {
             slide_off := pls.slide_state.mid_slide_time - pls.slide_state.slide_time
-            animate_player_vertices_sliding(offset_vertices[:], pls.contact_state.contact_ray, pls.slide_state.slide_total, slide_off, f32(time))
-        } else if pls.contact_state.state == .ON_GROUND && !pls.slide_state.sliding {
+            animate_player_vertices_sliding(offset_vertices[:], pls.contact_state.contact_ray, slide_total, slide_off, f32(time))
+        } else if pls.contact_state.state == .ON_GROUND && !(pls.mode == .Sliding) {
             animate_player_vertices_rolling(offset_vertices[:], pls.contact_state.state, pls.velocity, pls.spike_compression, f32(time))
         } else if pls.contact_state.state == .IN_AIR {
             animate_player_vertices_jumping(offset_vertices[:])
         }
-        apply_player_vertices_physics_displacement(offset_vertices[:], pls.particle_displacement, pls.slide_state.sliding)
+        apply_player_vertices_physics_displacement(offset_vertices[:], pls.particle_displacement, pls.mode == .Sliding)
 
         // get current player color 
         // -------------------------------------------
@@ -310,7 +313,7 @@ draw :: proc(
         } else {
             gl.LineWidth(2)
         }
-        if pls.slide_state.sliding {
+        if pls.mode == .Sliding {
             gl.LineWidth(0.5)
         }
 
@@ -418,7 +421,7 @@ draw :: proc(
         set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         set_float_uniform(shs, "spin_amt", pls.spin_state.spin_amt)
 
-        if pls.spin_state.spinning {
+        if pls.spin_state.spin_amt > 0 {
             gl.DrawElements(gl.TRIANGLES, i32(len(sr[.SPIN_TRAIL].indices)), gl.UNSIGNED_INT, nil)
         }
         
