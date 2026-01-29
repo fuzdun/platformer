@@ -1,5 +1,6 @@
 package main
 
+import "constants"
 import "core:math"
 import "core:fmt"
 import "core:slice"
@@ -12,18 +13,20 @@ import rnd "core:math/rand"
 INFINITE_HOP :: true
 
 update_player :: proc(
-    lgs: ^Level_Geometry_State,
+    lgs: #soa[]Level_Geometry,
     pls: ^Player_State,
     phs: ^Physics_State,
     rs: ^Render_State,
     cs: ^Camera_State,
-    ts: ^Time_State,
     szs: ^Slide_Zone_State,
+    gs: Game_State,
     triggers: Action_Triggers,
     physics_map: []Physics_Segment,
     elapsed_time: f32,
     delta_time: f32
-) {
+) -> (collisions: Collision_Log) {
+    using constants
+
 
     // #####################################################
     // PRE VELOCITY
@@ -32,6 +35,8 @@ update_player :: proc(
     cts := pls.contact_state
     on_ground := cts.state == .ON_GROUND || cts.state == .ON_SLOPE
     on_surface := cts.state == .ON_GROUND || cts.state == .ON_SLOPE || cts.state == .ON_WALL
+    is_hurt := elapsed_time < pls.hurt_t + DAMAGE_LEN
+    in_slide_zone := len(szs.intersected) > 0
     normalized_contact_ray := la.normalize(cts.contact_ray) 
 
     // update ground movement vectors
@@ -97,18 +102,11 @@ update_player :: proc(
         new_hops_remaining -= 1
     }
     new_hops_recharge := pls.hops_recharge
-    new_hops_recharge += 0.40 * delta_time * pls.intensity
+    new_hops_recharge += 0.40 * delta_time * gs.intensity
     if new_hops_recharge >= 1 {
         new_hops_recharge -= 1.0
         new_hops_remaining = min(3, new_hops_remaining + 1)
     }
-
-    // other 
-    // -------------------------------------------
-    is_hurt := elapsed_time < pls.hurt_t + DAMAGE_LEN
-    in_slide_zone := len(szs.intersected) > 0
-    sent_to_checkpoint := pls.position.y < -100
-
 
     // #####################################################
     // MODE
@@ -180,6 +178,12 @@ update_player :: proc(
         }
     }
 
+    // prevent extra hops
+    // -------------------------------------------
+    new_last_hop := pls.last_hop
+    if triggers.small_hop {
+        new_last_hop = elapsed_time
+    }
 
     // #####################################################
     // VELOCITY
@@ -305,7 +309,7 @@ update_player :: proc(
         new_velocity,
         new_mode == .Dashing,
         new_mode == .Sliding,
-        lgs^,
+        lgs,
         physics_map,
         elapsed_time,
         delta_time
@@ -319,21 +323,10 @@ update_player :: proc(
     // MOVE THIS!!!!!!!!!
     // update time mult
     // -------------------------------------------
-    new_time_mult := ts.time_mult
-    if new_velocity.y < 0 || on_surface {
-        new_time_mult = math.lerp(ts.time_mult, f32(1.0), f32(0.06))
-    } else {
-        new_time_mult = math.lerp(ts.time_mult, f32(1.0), f32(0.03))
-    }
-    if triggers.bunny_hop {
-        new_time_mult = BUNNY_HOP_TIME_MULT - (1.0 - pls.spin_state.spin_amt) * BUNNY_SPIN_TIME_VARIANCE
-    }
-
     // handle collision effects
     // -------------------------------------------
     new_hurt_t := pls.hurt_t
     new_broke_t := pls.broke_t
-
     for id in collision_ids {
         attr := lgs[id].attributes
         dash_req_satisfied := new_mode == .Dashing && .Dash_Breakable in attr
@@ -351,7 +344,6 @@ update_player :: proc(
             bounced_velocity_dir := la.normalize0(collision_adjusted_velocity) - new_normalized_contact_ray
             collision_adjusted_velocity = bounced_velocity_dir * BOUNCE_VELOCITY
             collision_adjusted_cts.state = .IN_AIR
-            new_time_mult = 1.5
             break
         }
     }
@@ -360,80 +352,30 @@ update_player :: proc(
         new_dash_enabled = true
     }
 
-    when MOVE {
-        // test moving geometry
-        // ---------------------------------------
-        for _, lg_idx in lgs {
-            move_geometry(lgs, phs, &new_position, collision_adjusted_cts, lg_idx)
-        }
-    }
-
-    new_score := pls.score
-    new_score += int(pls.intensity * pls.intensity * 10.0)
-
-    new_intensity := pls.intensity
-    flat_speed := la.length(collision_adjusted_velocity.xz)
-    tgt_intensity := clamp((flat_speed - INTENSITY_MOD_MIN_SPD) / (INTENSITY_MOD_MAX_SPD - INTENSITY_MOD_MIN_SPD), 0, 1)
-    //if tgt_intensity > new_intensity {
-    //    new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.006))
-    //} else {
-    //    new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.016))
-    //}
-    if tgt_intensity > new_intensity {
-        new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.004))
-    } else {
-        new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.0010))
-    }
-
-    new_time_remaining := pls.time_remaining
-    new_time_remaining = max(0, new_time_remaining - delta_time)
-
     collided_cts := collision_adjusted_cts.state
 
-    // MOVE THIS !!!!!!!!!!!!!!!!!!
-    // sector / checkpoints
-    // -------------------------------------------
-    new_sector := pls.current_sector
-    new_checkpoint_t := pls.last_checkpoint_t
-    if -new_position.z > f32(CHUNK_DEPTH * (pls.current_sector + CHECKPOINT_SIZE)) {
-        new_sector += CHECKPOINT_SIZE
-        new_time_remaining += 3.0
-        new_checkpoint_t = elapsed_time 
-    }
-
-
-    // MOVE THIS !! (the parts not related to player state)
-    // restart / checkpoint / end round overrides
+    // handle checkpoint / restart
     // -------------------------------------------
     if triggers.restart  {
         collision_adjusted_velocity = [3]f32{0, 0, 0}
         new_position = INIT_PLAYER_POS
-        new_sector = 0
-        new_time_remaining = TIME_LIMIT
-        new_score = 0
     }
 
-    if sent_to_checkpoint {
+    if triggers.checkpoint {
         collision_adjusted_velocity = [3]f32{0, 0, -40}
-        new_position = INIT_PLAYER_POS - [3]f32{0, 0, f32(CHUNK_DEPTH * pls.current_sector)}
+        new_position = INIT_PLAYER_POS - [3]f32{0, 0, f32(CHUNK_DEPTH * gs.current_sector)}
     }
 
-    if triggers.restart || sent_to_checkpoint {
+    if triggers.restart || triggers.checkpoint {
         new_hops_remaining = 0
         new_hops_recharge = 0
     }
 
-    if new_time_remaining == 0 {
+    // handle round end
+    // -------------------------------------------
+    if gs.time_remaining == 0 {
         new_position = [3]f32{5000, 5000, 5000}
         collision_adjusted_velocity = 0
-        new_intensity = 0
-    }
-
-    // prevent extra hops
-    // -------------------------------------------
-    new_last_hop := pls.last_hop
-    if triggers.small_hop {
-        new_last_hop = elapsed_time
     }
 
 
@@ -463,133 +405,10 @@ update_player :: proc(
     pls.dash_enabled              = new_dash_enabled
     pls.ground_x                  = new_ground_x
     pls.ground_z                  = new_ground_z
-    pls.intensity                 = new_intensity
     pls.hops_recharge             = new_hops_recharge
     pls.hops_remaining            = new_hops_remaining
     pls.last_hop                  = new_last_hop
-    pls.score                     = new_score
-    pls.time_remaining            = new_time_remaining
-    pls.current_sector            = new_sector
-    pls.last_checkpoint_t         = new_checkpoint_t
 
-    // screen splashes---------------------
-    //idx := 0
-    //for _ in 0 ..<len(pls.screen_splashes) {
-    //    splash := pls.screen_splashes[idx]
-    //    if elapsed_time - splash[3] > 10000 {
-    //        ordered_remove(&pls.screen_splashes, idx)
-    //    } else {
-    //        idx += 1
-    //    }
-    //}
-    //if triggers.bunny_hop {
-    //    new_splash := cs.position + la.normalize0(new_position - cs.position) * 10000.0;
-    //    append(&pls.screen_splashes, [4]f32{
-    //        new_splash.x,
-    //        new_splash.y,
-    //        new_splash.z,
-    //        new_crunch_time
-    //    })
-    //}
-    //if len(pls.screen_splashes) > 5 {
-    //    ordered_remove(&pls.screen_splashes, 0);
-    //}
-
-
-    // #####################################################
-    // MUTATE LEVEL GEOMETRY
-    // #####################################################
-
-    if triggers.restart || sent_to_checkpoint {
-        for &lg in lgs {
-            lg.shatter_data.crack_time = 0
-            lg.shatter_data.smash_time = 0
-        }
-    }
-
-    if triggers.bunny_hop {
-       last_touched := collision_adjusted_cts.last_touched
-       lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
-    }
-
-    for id in collision_ids {
-        lg := &lgs[id]
-        if .Dash_Breakable in lg.attributes && new_mode == .Dashing {
-            lg.shatter_data.smash_time = lg.shatter_data.smash_time == 0.0 ? elapsed_time : lg.shatter_data.smash_time 
-            lg.shatter_data.smash_dir = la.normalize(collision_adjusted_velocity)
-            lg.shatter_data.smash_pos = new_position
-        } else if .Slide_Zone in lg.attributes && new_mode == .Sliding {
-            // do nothing
-        } else if .Breakable in lg.attributes {
-            lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.shatter_data.crack_time
-        } else if .Crackable in lg.attributes {
-            lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.shatter_data.crack_time
-        }
-    }
-
-    for &sz in szs.entities {
-        lgs[sz.id].transparency = sz.transparency_t
-    }
-
-
-    // #####################################################
-    // MUTATE SLIDE ZONES
-    // #####################################################
-
-    clear(&szs.intersected)
-    for sz in szs.entities {
-        if lgs[sz.id].shatter_data.crack_time != 0 {
-            continue
-        }
-        if hit, _ := sphere_obb_intersection(sz, new_position, PLAYER_SPHERE_RADIUS); hit {
-            szs.intersected[sz.id] = {}
-        }
-    }
-
-    for &sz in szs.entities {
-        if sz.id in szs.intersected {
-            sz.transparency_t = clamp(sz.transparency_t - 5.0 * delta_time, 0.1, 1.0)
-        } else {
-            sz.transparency_t = clamp(sz.transparency_t + 5.0 * delta_time, 0.1, 1.0)
-        }
-    }
-
-    player_flat_vel := la.normalize0([3]f32{collision_adjusted_velocity.x, 0, collision_adjusted_velocity.z})
-    player_flat_vel_ortho := la.cross(player_flat_vel, [3]f32{0, 1, 0})
-
-
-    // #####################################################
-    // MUTATE TIME STATE
-    // #####################################################
-
-    ts.time_mult = new_time_mult 
-
-
-    // #####################################################
-    // MUTATE CAMERA STATE
-    // #####################################################
-
-    cs.prev_position = cs.position
-    cs.prev_target = cs.target
-    camera_mode := on_surface ? GROUND_CAMERA : AERIAL_CAMERA
-    pos_lerp := la.length(collision_adjusted_velocity.xz) > FAST_CUTOFF ? camera_mode.high_speed_pos_lerp : camera_mode.pos_lerp
-    new_pos_tgt_y := new_position.y + camera_mode.pos_offset.y
-    new_pos_tgt_z := new_position.z + camera_mode.pos_offset.z
-    new_pos_tgt_x := new_position.x + camera_mode.pos_offset.x
-    new_pos_tgt : [3]f32 = {new_pos_tgt_x, new_pos_tgt_y, new_pos_tgt_z}
-    cs.position = math.lerp(cs.position, new_pos_tgt, f32(pos_lerp))
-
-    new_target := new_position
-    cs.target.y = math.lerp(cs.target.y, new_target.y + camera_mode.tgt_y_offset, camera_mode.y_angle_lerp)
-    cs.target.x = math.lerp(cs.target.x, new_target.x, camera_mode.x_angle_lerp)
-    cs.target.z = math.lerp(cs.target.z, new_target.z, camera_mode.z_angle_lerp)
-
-    fov_mod := MAX_FOV_MOD * pls.intensity//get_intensity_mod(la.length(collision_adjusted_velocity.xz))
-    cs.fov = math.lerp(cs.fov, FOV + fov_mod, f32(0.1))
-
-    if triggers.restart || sent_to_checkpoint {
-        cs.position = new_position + camera_mode.pos_offset
-        cs.target = new_target + [3]f32{0, camera_mode.tgt_y_offset, 0}
-    }
+    return collision_ids
 }
 

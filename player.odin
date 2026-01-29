@@ -1,128 +1,12 @@
 package main
 
+import "constants"
 import "base:runtime"
 import "core:math"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 
-
-// init
-INIT_PLAYER_POS :: [3]f32 { 250, 30, 0 }
-// INIT_PLAYER_POS :: [3]f32 { 0, 0, 400 }
-
-// move speed
-MAX_PLAYER_SPEED: f32: 90.0
-MAX_FALL_SPEED: f32: 350.0
-AIR_ACCEL :: 100.0
-AIR_SPIN_ACCEL :: 75.0
-SLOPE_SPEED :: 80.0 
-SLOW_ACCEL: f32: 175.0
-MED_ACCEL: f32: 20.0
-FAST_ACCEL: f32: 10.0
-FAST_CUTOFF: f32: 75.0
-MED_CUTOFF: f32: 40.0
-GROUND_BUNNY_V_SPEED: f32: 250 // 1.25x higher than normal jump
-SMALL_HOP_V_SPEED: f32: 150 // 1.25x higher than normal jump
-BUNNY_SPIN_VARIANCE: f32: 150
-GROUND_BUNNY_H_SPEED: f32: 0
-MIN_BUNNY_XZ_VEL: f32: 20.0
-BUNNY_HOP_TIME_MULT :: 2.2
-BUNNY_SPIN_TIME_VARIANCE :: 0.5
-
-DAMAGE_VELOCITY: f32: 1.0
-DAMAGE_LEN: f32: 500.0
-
-// BREAK_BOOST_VELOCITY: f32: 5.0
-BREAK_BOOST_LEN: f32: 250
-BOUNCE_VELOCITY: f32: 200.0
-
-// jump
-P_JUMP_SPEED: f32: 150.0
-WALL_JUMP_FORCE :: 150
-SLOPE_V_JUMP_FORCE :: 160 
-SLOPE_JUMP_FORCE :: 25
-
-// forces
-IDLE_FRICTION :: 0.85
-GROUND_FRICTION :: 0.20
-FAST_FRICTION: f32: 0.75
-// GRAV: f32: 150
-GRAV: f32: 300
-WALL_GRAV: f32: 200 
-SLOPE_GRAV: f32: 150 
-
-// input
-COYOTE_TIME ::  150
-BUNNY_DASH_DEBOUNCE: f32: 100
-BUNNY_WINDOW: f32: 150
-WALL_DETACH_LEN :: 300
-
-// dash
-MIN_DASH_SPD: f32: 80.0
-MAX_DASH_SPD: f32: 150.0
-DASH_LEN: f32: 360.0 
-DASH_DIST: f32: 15.0
-
-// slide
-SLIDE_LEN: f32: 450.0 
-SLIDE_SPD: f32: 120
-// SLIDE_SPD: f32: 20
-SLIDE_COOLDOWN: f32: 600
-SLIDE_ANIM_EASE_LEN: f32: 100
-
-// physics
-CONTACT_RAY_LEN ::  2.0
-CONTACT_RAY_LEN2 :: CONTACT_RAY_LEN * CONTACT_RAY_LEN
-GROUND_BUFFER: f32 = 0.1 
-
-// rendering
-PARTICLE_DISPLACEMENT_LERP :: 0.25
-TGT_PARTICLE_DISPLACEMENT_LERP :: 0.4
-PLAYER_PARTICLE_STACK_COUNT :: 8 
-PLAYER_PARTICLE_SECTOR_COUNT :: 16
-PLAYER_PARTICLE_COUNT :: PLAYER_PARTICLE_STACK_COUNT * PLAYER_PARTICLE_SECTOR_COUNT + 2
-PLAYER_SPIN_PARTICLE_ARM_COUNT :: 15 
-PLAYER_SPIN_PARTICLE_ARM_LEN :: 10
-// PLAYER_SPIN_PARTICLE_COUNT :: PLAYER_SPIN_PARTICLE_ARM_COUNT * PLAYER_SPIN_PARTICLE_ARM_LEN
-//PLAYER_SPIN_PARTICLE_COUNT :: 3360
-PLAYER_SPIN_PARTICLE_COUNT :: 4500
-PLAYER_SPIN_TAIL_INTERVAL :: f32(math.PI) * 2.0 / PLAYER_SPIN_PARTICLE_ARM_COUNT
-
-// trail history
-TRAIL_SIZE :: 50 
-
-// sphere attributes
-CORE_RADIUS :: 1.0
-PLAYER_SPHERE_RADIUS :: 1.0
-PLAYER_SPHERE_SQ_RADIUS :: PLAYER_SPHERE_RADIUS * PLAYER_SPHERE_RADIUS
-SPHERE_SECTOR_COUNT :: 30 
-SPHERE_STACK_COUNT :: 20 
-SPHERE_V_COUNT :: (SPHERE_STACK_COUNT + 1) * (SPHERE_SECTOR_COUNT + 1)
-SPHERE_I_COUNT :: (SPHERE_STACK_COUNT - 1) * SPHERE_SECTOR_COUNT * 6 
-
-ICOSPHERE_SUBDIVISION :: 3 
-ICOSPHERE_V_COUNT :: f32(ICOSPHERE_SUBDIVISION + 1) * f32(ICOSPHERE_SUBDIVISION + 2) / 2.0
-
-MIN_SPIKE_COMPRESSION: f32: 0.4
-MAX_SPIKE_COMPRESSION: f32: 0.8
-SPIKE_COMPRESSION_LERP: f32: 0.10
-
-// geometry crack timing
-CRACK_DELAY :: 1000
-BREAK_DELAY :: 750
-
-// intensity
-// MAX_INTENSITY_MOD :: .65
-INTENSITY_MOD_MIN_SPD :: 60
-INTENSITY_MOD_MAX_SPD :: 110
-
-MAX_FOV_MOD :: .75
-TIME_LIMIT :: 40.0
-CHECKPOINT_TIME_BOOST :: 4.0
-CHECKPOINT_SIZE :: 1.0
-
 SPIN_TRAILS_VERTICES: [4]Quad_Vertex : {} 
-
 
 Contact_State :: struct {
     state: Player_States,
@@ -198,15 +82,10 @@ Player_State :: struct {
     spin_amt: f32,
 
     prev_position: [3]f32,
-
-    intensity: f32,
-    score: int,
-    time_remaining: f32,
-    current_sector: int,
-    last_checkpoint_t: f32
 }
 
 init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
+    using constants
     pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
     pls.dash_enabled = true
@@ -218,8 +97,6 @@ init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
     pls.contact_state.touch_time = -1000.0
     pls.hurt_t = -5000.0
     pls.broke_t = -5000.0
-    pls.time_remaining = TIME_LIMIT
-    pls.last_checkpoint_t = -5000
 }
 
 free_player_state :: proc(ps: ^Player_State) {}
@@ -244,6 +121,7 @@ interpolated_player_matrix :: proc(ps: Player_State, t: f32) -> matrix[4, 4]f32 
 }
 
 animate_player_vertices_sliding :: proc(vertices: []Vertex, contact_ray: [3]f32, slide_total: f32, slide_off: f32, time: f32) {
+    using constants
     up := la.normalize(contact_ray)
     spin_mat := la.matrix4_rotate_f32(f32(time) / 150, up)
     slide_t := slide_total

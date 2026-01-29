@@ -1,5 +1,6 @@
 package main
 
+import "constants"
 import "base:runtime"
 import "core:sort"
 import "core:math"
@@ -51,11 +52,9 @@ NUM_RENDER_GROUPS :: len(SHAPE) * len(Level_Geometry_Render_Type)
 
 
 Render_State :: struct {
-    player_burst_particles: Particle_Buffer(PLAYER_SPIN_PARTICLE_COUNT),
-
     player_trail_sample: [3]glm.vec3,
     prev_player_trail_sample: [3]glm.vec3,
-    player_trail: RingBuffer(TRAIL_SIZE, [3]f32),
+    player_trail: RingBuffer(constants.TRAIL_SIZE, [3]f32),
 
     player_vertex_displacment: [3]f32,
     tgt_player_vertex_displacement: [3]f32,
@@ -163,7 +162,7 @@ editor_sort_lgs :: proc(lgs: ^#soa[dynamic]Level_Geometry, current_selection: in
 }
 
 sort_lgs :: proc(lgs: []Level_Geometry, alloc: runtime.Allocator) -> Level_Geometry_State {
-    sorted_lgs := make(#soa[]Level_Geometry, len(lgs), alloc)
+    sorted_lgs := make(#soa[dynamic]Level_Geometry, len(lgs), alloc)
     group_counts: [NUM_RENDER_GROUPS]int
     for lg, idx in lgs {
         group_counts[lg_render_group(lg)] += 1

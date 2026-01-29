@@ -1,5 +1,6 @@
 package main
 
+import "constants"
 import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
@@ -14,6 +15,8 @@ Collision :: struct{
     normal: [3]f32,
     t: f32
 }
+
+Collision_Log :: map[int]struct{}
 
 Particle_Collision :: struct{
     id: int,
@@ -36,14 +39,12 @@ Physics_Segment :: [dynamic]Collider
 
 Entity_Map :: [][dynamic]int
 
-PHYSICS_SEGMENT_COUNT :: 10
-PHYSICS_SEGMENT_SIZE :: 500.0
-
 build_entity_map :: proc() {
-     
+    // to be used when separating physics colliders into spatial segments
 }
 
 build_physics_map :: proc(lgs: Level_Geometry_State, colliders: [SHAPE]Mesh, et: f32) -> (physics_map: []Physics_Segment) {
+    using constants
     physics_map = make([]Physics_Segment, PHYSICS_SEGMENT_COUNT, context.temp_allocator)
     for segment_idx in 0..<5 {
         physics_map[segment_idx] = make(Physics_Segment, context.temp_allocator)
@@ -231,6 +232,7 @@ closest_line_pt :: proc(l0: [3]f32, l1: [3]f32, p: [3]f32) -> [3]f32{
 }
 
 ray_sphere_intersection :: proc(origin: [3]f32, dir: [3]f32, ppos: [3]f32) -> (t: f32, q: [3]f32, ok: bool) {
+    using constants
     m := origin - ppos 
     b := la.dot(m, dir)
     c := la.dot(m, m) - PLAYER_SPHERE_SQ_RADIUS

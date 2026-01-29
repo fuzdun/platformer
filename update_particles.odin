@@ -7,20 +7,20 @@ import gl "vendor:OpenGL"
 
 
 update_particles :: proc(
-    rs: ^Render_State,
+    ptcls: ^Particle_State,
     bs: Buffer_State,
     physics_map: []Physics_Segment,
     triggers: Action_Triggers,
-    cts: Contact_State,
-    player_pos: [3]f32,
+    pls: Player_State,
     elapsed_time: f32,
     delta_time: f32
 ) {
-    spin_particle_collisions := get_particle_collisions(rs.player_burst_particles, physics_map)
+    cts := pls.contact_state
+    spin_particle_collisions := get_particle_collisions(ptcls.player_burst_particles, physics_map)
     for spc in spin_particle_collisions {
-        particle := &rs.player_burst_particles.particles.values[spc.id]
-        particle_info := &rs.player_burst_particles.particle_info[spc.id]
-        particle.xyz -= particle_info.vel * FIXED_DELTA_TIME
+        particle := &ptcls.player_burst_particles.particles.values[spc.id]
+        particle_info := &ptcls.player_burst_particles.particle_info[spc.id]
+        particle.xyz -= particle_info.vel * delta_time
         particle_info.vel -= la.dot(spc.normal, particle_info.vel) * spc.normal * 1.5
     }
 
@@ -39,16 +39,16 @@ update_particles :: proc(
                 f32(elapsed_time),
                 (rnd.float32() * 800) + 3000
             }
-            spawn_pos := player_pos + la.normalize0([3]f32{spawn_vector.x, 0.1, spawn_vector.z}) * 0.5
-            rs.player_burst_particles.particle_info[rs.player_burst_particles.particles.insert_at] = particle_info
-            ring_buffer_push(&rs.player_burst_particles.particles, Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
+            spawn_pos := pls.position + la.normalize0([3]f32{spawn_vector.x, 0.1, spawn_vector.z}) * 0.5
+            ptcls.player_burst_particles.particle_info[ptcls.player_burst_particles.particles.insert_at] = particle_info
+            ring_buffer_push(&ptcls.player_burst_particles.particles, Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
         }
     }
 
-    particle_count := rs.player_burst_particles.particles.len
+    particle_count := ptcls.player_burst_particles.particles.len
     if particle_count > 0 {
-        pp := rs.player_burst_particles.particles.values[:particle_count]
-        pi := rs.player_burst_particles.particle_info[:particle_count]
+        pp := ptcls.player_burst_particles.particles.values[:particle_count]
+        pi := ptcls.player_burst_particles.particle_info[:particle_count]
         for p_idx in 0..<particle_count {
             pp[p_idx].xyz += pi[p_idx].vel * delta_time
             part := pi[p_idx] 
@@ -67,7 +67,7 @@ update_particles :: proc(
         gl.BindBuffer(gl.ARRAY_BUFFER, bs.trail_particle_vbo)
         gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(sorted_pp[0]) * particle_count, &sorted_pp[0])
 
-        particle_velocities := rs.player_burst_particles.particle_info.vel
+        particle_velocities := ptcls.player_burst_particles.particle_info.vel
         gl.BindBuffer(gl.COPY_READ_BUFFER, bs.trail_particle_velocity_vbo)
         gl.GetBufferParameteriv(gl.COPY_READ_BUFFER, gl.BUFFER_SIZE, &buffer_size)
         gl.BindBuffer(gl.COPY_WRITE_BUFFER, bs.prev_trail_particle_velocity_vbo)

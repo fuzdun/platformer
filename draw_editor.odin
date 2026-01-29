@@ -1,10 +1,13 @@
 package main
+
+import "constants"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import "core:strconv"
 import "core:fmt"
 
-draw_editor :: proc(rs: ^Render_State, bs: Buffer_State, shs: ^Shader_State, es: Editor_State, is: Input_State, lgs: Level_Geometry_State, rg: Render_Groups, proj_mat: glm.mat4) {
+draw_editor :: proc(rs: ^Render_State, bs: Buffer_State, shs: ^Shader_State, es: Editor_State, is: Input_State, lgs: #soa[]Level_Geometry, rg: Render_Groups, proj_mat: glm.mat4) {
+    using constants
     gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
     gl.ClearColor(0, 0, 0, 1)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)

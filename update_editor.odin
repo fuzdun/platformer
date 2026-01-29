@@ -1,10 +1,13 @@
 package main
 
+import "constants"
 import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
 
 editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, sr: Shape_Resources, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
+    using constants
+
     need_sort := false
 
     // get selected geometry connections

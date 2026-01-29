@@ -1,6 +1,12 @@
 package main
 
+import "constants"
 import "base:runtime"
+
+Particle_State :: struct {
+    player_burst_particles: Particle_Buffer(constants.PLAYER_SPIN_PARTICLE_COUNT),
+
+}
 
 Particle :: [4]f32 // vec3 pos, f32 size
 Particle_Info :: struct #packed {

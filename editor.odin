@@ -1,30 +1,8 @@
 package main
 
+import "constants"
 import "core:math"
 import "core:fmt"
-
-INIT_EDITOR_ZOOM :: 400
-INIT_EDITOR_ROTATION :: -0.25
-
-OBJ_MOVE_SPD :: 100.0
-OBJ_ROT_SPD :: 2.0
-OBJ_SCALE_SPD :: 1.0
-CAM_ROT_SPD :: 0.055
-
-MAX_DRAW_GEOMETRY_DIST :: 300
-MAX_DRAW_GEOMETRY_DIST2 :: MAX_DRAW_GEOMETRY_DIST * MAX_DRAW_GEOMETRY_DIST
-
-GUIDELINE_LEN :: 200
-GUIDELINE_COL: [3]f32 : {0.5, 0, 0.5}
-
-SPAWN_MARKER_LEN :: 20
-SPAWN_MARKER_COL: [3]f32 : {0, 1, 0}
-
-GRID_LINES :: 100
-GRID_LEN :: 10000
-GRID_COL: [3]f32 : {.75, .75, .75}
-
-CHUNK_BORDER_COL :: [3]f32{1, 0, 1}
 
 Editor_State :: struct {
     selected_entity: int,
@@ -50,6 +28,7 @@ Connection :: struct {
 }
 
 init_editor_state :: proc(es: ^Editor_State, level_to_load: string) {
+    using constants
     es.y_rot = INIT_EDITOR_ROTATION 
     es.zoom = INIT_EDITOR_ZOOM
     es.save_dest = level_to_load
@@ -96,7 +75,7 @@ get_geometry_dist :: proc(ps: Physics_State, lga: Level_Geometry, lgb: Level_Geo
     return
 }
 
-editor_save_changes :: proc(lgs:^Level_Geometry_State, is: Input_State, es: ^Editor_State) {
+editor_save_changes :: proc(lgs:^#soa[]Level_Geometry, is: Input_State, es: ^Editor_State) {
     if is.ent_pressed {
         if !es.saved {
             encode_test_level_cbor(lgs^, es.save_dest)

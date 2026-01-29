@@ -1,5 +1,6 @@
 package main
 
+import "constants"
 import "core:math"
 import "base:runtime"
 import "core:fmt"
@@ -9,6 +10,8 @@ ICO_H_ANGLE :: math.PI / 180 * 72
 ICO_V_ANGLE := math.atan(0.5)
 
 add_player_sphere_data :: proc(vertices: ^[]Vertex, fill_indices: ^[]u32, outline_indices: ^[]u32, arena: runtime.Allocator) {
+    using constants
+
     temp_vertices := make([dynamic]Vertex, context.temp_allocator) 
 
     hedron_tmp_vertices: [12][3]f32

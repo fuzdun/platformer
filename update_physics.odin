@@ -1,5 +1,6 @@
 package main
 
+import "constants"
 import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
@@ -50,6 +51,7 @@ get_collisions_and_update_contact_state :: proc(
     new_cs: Contact_State,
     touched_ground: bool
 ){
+    using constants
     earliest_coll_t: f32 = 1000.0
     contacts = make([dynamic]int, context.temp_allocator)
     player_velocity := velocity * dt
@@ -175,10 +177,11 @@ apply_velocity :: proc(
     new_contact_state: Contact_State,
     new_position: [3]f32,
     new_velocity: [3]f32,
-    collision_ids: map[int]struct{},
-    contact_ids: map[int]struct{},
+    collision_ids: Collision_Log,
+    contact_ids: Collision_Log,
     touched_ground: bool
 ) {
+    using constants
     new_position = position
     new_velocity = velocity
     collision_ids = make(map[int]struct{}, context.temp_allocator)

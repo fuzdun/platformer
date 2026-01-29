@@ -1,5 +1,6 @@
 package main
 
+import "constants"
 import "core:sort"
 import "core:fmt"
 import "core:slice"
@@ -11,14 +12,12 @@ import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 import tim "core:time"
 
-FWD_Z_CULL :: 60000
-BCK_Z_CULL :: 100
-
 draw :: proc(
     lgs: #soa[]Level_Geometry, 
     sr: Shape_Resources,
     pls: Player_State,
     rs: ^Render_State,
+    ptcls: ^Particle_State,
     bs: Buffer_State,
     shs: ^Shader_State,
     ps: ^Physics_State,
@@ -26,10 +25,12 @@ draw :: proc(
     is: Input_State,
     es: Editor_State,
     szs: Slide_Zone_State,
+    gs: Game_State,
     time: f64,
     interp_t: f64,
     dt: f32
 ) {
+    using constants
 
     // #####################################################
     //  PREPARE RENDER DATA
@@ -73,7 +74,7 @@ draw :: proc(
 
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
-    intensity := pls.intensity
+    intensity := gs.intensity
 
     z_widths := make([]Z_Width_Ubo, num_culled_lgs, context.temp_allocator)
     for i in 0..<num_culled_lgs {
@@ -137,12 +138,14 @@ draw :: proc(
 
     if EDIT {
 
+
         // #####################################################
         //  DRAW EDITOR
         // #####################################################
 
         draw_editor(rs, bs, shs, es, is, lgs, draw_commands, proj_mat)
     } else {
+
 
         // #####################################################
         //  DRAW GAME
@@ -346,6 +349,7 @@ draw :: proc(
         set_float_uniform(shs, "resolution", f32(20))
         gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
 
+
         // #####################################################
         //  DRAW OTHER
         // #####################################################
@@ -366,10 +370,10 @@ draw :: proc(
         gl.BindBuffer(gl.ARRAY_BUFFER, bs.particle_vbo)
         gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(pv[0]) * len(pv), &pv[0])
 
-        particle_count := rs.player_burst_particles.particles.len
+        particle_count := ptcls.player_burst_particles.particles.len
         if particle_count > 0 {
             sorted_pp := make([][4]f32, particle_count, context.temp_allocator)
-            copy_slice(sorted_pp, rs.player_burst_particles.particles.values[:particle_count])
+            copy_slice(sorted_pp, ptcls.player_burst_particles.particles.values[:particle_count])
             context.user_ptr = &cs.position
             z_sort := proc(a: [4]f32, b: [4]f32) -> bool {
                 cam_pos := (cast(^[3]f32) context.user_ptr)^
@@ -381,10 +385,10 @@ draw :: proc(
         gl.BindVertexArray(bs.trail_particle_vao)
         use_shader(shs, rs, .Trail_Particle)
         set_float_uniform(shs, "interp_t", f32(interp_t))
-        set_float_uniform(shs, "delta_time", FIXED_DELTA_TIME)
+        set_float_uniform(shs, "delta_time", dt)
         // set_float_uniform(shs, "radius", FIXED_DELTA_TIME)
         set_vec3_uniform(shs, "camera_dir", 1, &camera_fwd_worldspace)
-        gl.DrawArrays(gl.POINTS, 0, i32(rs.player_burst_particles.particles.len))
+        gl.DrawArrays(gl.POINTS, 0, i32(ptcls.player_burst_particles.particles.len))
 
 
         // slide zone outline
@@ -429,25 +433,22 @@ draw :: proc(
         gl.BindVertexArray(bs.text_vao)
         use_shader(shs, rs, .Text)
 
-        // spin_count_buf: [4]byte
-        // strconv.itoa(spin_count_buf[:], pls.hops_remaining)
-
         score_buf: [8]byte
-        strconv.itoa(score_buf[:], pls.score)
+        strconv.itoa(score_buf[:], gs.score)
         render_screen_text(shs, bs, string(score_buf[:]), [3]f32{-0.9, 0.75, 0}, la.MATRIX4F32_IDENTITY, .3)
 
-        if pls.time_remaining > 0 {
+        if gs.time_remaining > 0 {
 
             for hop_idx in 0..<pls.hops_remaining {
                 render_screen_text(shs, bs, "S", [3]f32{0.35, 0.075 - (0.075 * f32(hop_idx)), 0}, la.MATRIX4F32_IDENTITY, .3)
             }
 
             time_buf: [4]byte
-            strconv.itoa(time_buf[:], int(pls.time_remaining))
+            strconv.itoa(time_buf[:], int(gs.time_remaining))
             render_screen_text(shs, bs, string(time_buf[:]), [3]f32{0.0, 0.65, 0}, la.MATRIX4F32_IDENTITY, .3)
         }
         
-        if f32(time) - pls.last_checkpoint_t < 2000 {
+        if f32(time) - gs.last_checkpoint_t < 2000 {
             render_screen_text(shs, bs, "checkpoint (+10)", [3]f32{0.1, 0.65, 0}, la.MATRIX4F32_IDENTITY, .2)
         }
 

@@ -1,5 +1,6 @@
 package main
 
+import "constants"
 import "core:fmt"
 import la "core:math/linalg"
 
@@ -23,7 +24,8 @@ Action_Triggers :: struct {
     fwd_move: bool,
     wall_detach_held: f32,
 
-    restart: bool
+    restart: bool,
+    checkpoint: bool
 }
 
 get_player_action_triggers :: proc(
@@ -32,6 +34,7 @@ get_player_action_triggers :: proc(
     elapsed_time: f32,
     delta_time: f32
 ) -> (out: Action_Triggers) {
+    using constants
     cts := pls.contact_state
     on_surface := cts.state == .ON_GROUND || cts.state == .ON_SLOPE || cts.state == .ON_WALL
 
@@ -85,6 +88,6 @@ get_player_action_triggers :: proc(
     out.slide = input.action_pressed &&  pls.slide_enabled && on_surface && pls.velocity != 0
 
     out.restart = input.restart_pressed
-
+    out.checkpoint = pls.position.y < -100
     return
 }
