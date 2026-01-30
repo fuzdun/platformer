@@ -5,7 +5,6 @@ import "base:runtime"
 
 Particle_State :: struct {
     player_burst_particles: Particle_Buffer(constants.PLAYER_SPIN_PARTICLE_COUNT),
-
 }
 
 Particle :: [4]f32 // vec3 pos, f32 size
@@ -23,6 +22,6 @@ Particle_Buffer :: struct($N: int) {
 
 particle_buffer_init :: proc(pb: ^$T/Particle_Buffer, alloc: runtime.Allocator) {
     ring_buffer_init(&pb.particles, Particle{}, alloc)
-    pb.particle_info = make(#soa[]Particle_Info, pb.particles.cap)
+    pb.particle_info = make(#soa[]Particle_Info, pb.particles.cap, alloc)
 }
 

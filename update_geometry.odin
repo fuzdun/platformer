@@ -3,9 +3,25 @@ package main
 import "constants"
 import la "core:math/linalg"
 
-update_geometry :: proc(lgs: ^Level_Geometry_State, szs: ^Slide_Zone_State, pls: Player_State, triggers: Action_Triggers, collisions: Collision_Log, elapsed_time: f32, delta_time: f32){
+update_geometry :: proc(
+    lgs: ^Level_Geometry_State,
+    szs: ^Slide_Zone_State,
+    pls: Player_State,
+    triggers: Action_Triggers,
+    collisions: Collision_Log,
+    elapsed_time: f32,
+    delta_time: f32
+) -> (
+    new_lgs: Level_Geometry_State,
+    new_szs_entities: #soa[dynamic]Obb,
+    new_szs_intersections: map[int]struct{}
+){
     using constants
     cts := pls.contact_state
+
+    new_lgs = dynamic_soa_copy(lgs^)
+    new_szs_entities = dynamic_soa_copy(szs.entities)
+    new_szs_intersections = make(map[int]struct{})
 
 
     // #####################################################
@@ -13,7 +29,7 @@ update_geometry :: proc(lgs: ^Level_Geometry_State, szs: ^Slide_Zone_State, pls:
     // #####################################################
 
     if triggers.restart || triggers.checkpoint {
-        for &lg in lgs {
+        for &lg in new_lgs {
             lg.shatter_data.crack_time = 0
             lg.shatter_data.smash_time = 0
         }
@@ -21,11 +37,11 @@ update_geometry :: proc(lgs: ^Level_Geometry_State, szs: ^Slide_Zone_State, pls:
 
     if triggers.bunny_hop {
        last_touched := cts.last_touched
-       lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
+       new_lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
     }
 
     for id in collisions {
-        lg := &lgs[id]
+        lg := &new_lgs[id]
         if .Dash_Breakable in lg.attributes && pls.mode == .Dashing {
             lg.shatter_data.smash_time = lg.shatter_data.smash_time == 0.0 ? elapsed_time : lg.shatter_data.smash_time 
             lg.shatter_data.smash_dir = la.normalize(pls.velocity)
@@ -42,8 +58,8 @@ update_geometry :: proc(lgs: ^Level_Geometry_State, szs: ^Slide_Zone_State, pls:
     when MOVE {
         // test moving geometry
         // ---------------------------------------
-        for _, lg_idx in lgs {
-            move_geometry(lgs, phs, &new_position, collision_adjusted_cts, lg_idx)
+        for _, lg_idx in new_lgs {
+            move_geometry(new_lgs, phs, &new_position, collision_adjusted_cts, lg_idx)
         }
     }
 
@@ -53,25 +69,29 @@ update_geometry :: proc(lgs: ^Level_Geometry_State, szs: ^Slide_Zone_State, pls:
     // #####################################################
 
     for &sz in szs.entities {
-        lgs[sz.id].transparency = sz.transparency_t
+        new_lgs[sz.id].transparency = sz.transparency_t
     }
 
-    clear(&szs.intersected)
     for sz in szs.entities {
-        if lgs[sz.id].shatter_data.crack_time != 0 {
+        if new_lgs[sz.id].shatter_data.crack_time != 0 {
             continue
         }
         if hit, _ := sphere_obb_intersection(sz, pls.position, PLAYER_SPHERE_RADIUS); hit {
-            szs.intersected[sz.id] = {}
+            new_szs_intersections[sz.id] = {}
         }
     }
 
-    for &sz in szs.entities {
-        if sz.id in szs.intersected {
+    for &sz in new_szs_entities {
+        if sz.id in new_szs_intersections {
             sz.transparency_t = clamp(sz.transparency_t - 5.0 * delta_time, 0.1, 1.0)
         } else {
             sz.transparency_t = clamp(sz.transparency_t + 5.0 * delta_time, 0.1, 1.0)
         }
     }
 
+    //dynamic_soa_swap(lgs, new_lgs)
+    //dynamic_soa_swap(&szs.entities, new_szs_entities)
+    //set_swap(&szs.intersected, new_szs_intersections)
+    return
 }
+

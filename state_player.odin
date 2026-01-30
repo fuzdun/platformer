@@ -53,8 +53,6 @@ Player_State :: struct {
     slide_state: Slide_State,
     spin_state: Spin_State, 
 
-    touch_pt: [3]f32,
-    bunny_hop_y: f32,
     hops_remaining: int,
     hops_recharge: f32,
 
@@ -75,11 +73,6 @@ Player_State :: struct {
     jump_pressed_time: f32,
     last_hop: f32,
     wall_detach_held_t: f32,
-
-    spinning: bool,
-    spin_time: f32,
-    spin_dir: [2]f32,
-    spin_amt: f32,
 
     prev_position: [3]f32,
 }

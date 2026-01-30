@@ -6,7 +6,7 @@ import la "core:math/linalg"
 
 Action_Triggers :: struct {
     jump: bool,
-    jump_held: bool,
+    jump_button_pressed: bool,
     jump_pressed_time: f32,
 
     ground_jump: bool,
@@ -24,6 +24,8 @@ Action_Triggers :: struct {
     fwd_move: bool,
     wall_detach_held: f32,
 
+    slide_zone: bool,
+
     restart: bool,
     checkpoint: bool
 }
@@ -31,6 +33,7 @@ Action_Triggers :: struct {
 get_player_action_triggers :: proc(
     input: Input_Attributes,
     pls: Player_State,
+    szs: Slide_Zone_State,
     elapsed_time: f32,
     delta_time: f32
 ) -> (out: Action_Triggers) {
@@ -42,7 +45,7 @@ get_player_action_triggers :: proc(
     if input.jump_pressed && !pls.jump_held {
         out.jump_pressed_time = elapsed_time
     }
-    out.jump_held = input.jump_pressed
+    out.jump_button_pressed = input.jump_pressed
 
     hop_valid := out.jump_pressed_time > pls.last_hop + BUNNY_WINDOW * 2
     if hop_valid && (
@@ -86,6 +89,8 @@ get_player_action_triggers :: proc(
     out.spin = input.spin_pressed && !on_surface
     out.dash = input.action_pressed && pls.dash_enabled && !on_surface && pls.velocity != 0
     out.slide = input.action_pressed &&  pls.slide_enabled && on_surface && pls.velocity != 0
+
+    out.slide_zone = len(szs.intersected) > 0
 
     out.restart = input.restart_pressed
     out.checkpoint = pls.position.y < -100

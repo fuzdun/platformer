@@ -14,17 +14,13 @@ INFINITE_HOP :: true
 
 update_player :: proc(
     lgs: #soa[]Level_Geometry,
-    pls: ^Player_State,
-    phs: ^Physics_State,
-    rs: ^Render_State,
-    cs: ^Camera_State,
-    szs: ^Slide_Zone_State,
+    pls: Player_State,
     gs: Game_State,
     triggers: Action_Triggers,
     physics_map: []Physics_Segment,
     elapsed_time: f32,
     delta_time: f32
-) -> (collisions: Collision_Log) {
+) -> (collisions: Collision_Log, new_pls: Player_State) {
     using constants
 
 
@@ -36,7 +32,6 @@ update_player :: proc(
     on_ground := cts.state == .ON_GROUND || cts.state == .ON_SLOPE
     on_surface := cts.state == .ON_GROUND || cts.state == .ON_SLOPE || cts.state == .ON_WALL
     is_hurt := elapsed_time < pls.hurt_t + DAMAGE_LEN
-    in_slide_zone := len(szs.intersected) > 0
     normalized_contact_ray := la.normalize(cts.contact_ray) 
 
     // update ground movement vectors
@@ -108,13 +103,14 @@ update_player :: proc(
         new_hops_remaining = min(3, new_hops_remaining + 1)
     }
 
+
     // #####################################################
     // MODE
     // #####################################################
 
     new_mode := pls.mode
 
-    new_jump_enabled  := pls.jump_enabled  || (!pls.jump_held && on_ground)
+    new_jump_enabled  := pls.jump_enabled  || (!triggers.jump_button_pressed && on_ground)
     new_slide_enabled := pls.slide_enabled || pls.slide_state.slide_end_time + SLIDE_COOLDOWN < elapsed_time
     new_dash_enabled  := pls.dash_enabled  || on_ground || triggers.bunny_hop || triggers.small_hop
 
@@ -166,13 +162,13 @@ update_player :: proc(
     // sliding mode 
     // -------------------------------------------
     } else if pls.mode == .Sliding {
-        if new_mode == .Sliding && len(szs.intersected) > 0 {
+        if new_mode == .Sliding && triggers.slide_zone {
             new_slide_state.mid_slide_time = elapsed_time
         }
         time_since_slide_start := elapsed_time - new_slide_state.slide_time
         slide_start_to_zone_exit := new_slide_state.mid_slide_time - new_slide_state.slide_time
         time_since_exit_zone := time_since_slide_start - slide_start_to_zone_exit
-        if (!on_surface && len(szs.intersected) == 0) || time_since_exit_zone > SLIDE_LEN {
+        if (!on_surface && !triggers.slide_zone) || time_since_exit_zone > SLIDE_LEN {
             new_mode = .Normal
             new_slide_state.slide_end_time = elapsed_time
         }
@@ -184,6 +180,7 @@ update_player :: proc(
     if triggers.small_hop {
         new_last_hop = elapsed_time
     }
+
 
     // #####################################################
     // VELOCITY
@@ -280,7 +277,7 @@ update_player :: proc(
     // set velocity if sliding 
     // -------------------------------------------
     } else if new_mode == .Sliding {
-        new_velocity = pls.slide_state.slide_dir * (in_slide_zone ? SLIDE_SPD * 2 : SLIDE_SPD) 
+        new_velocity = pls.slide_state.slide_dir * (triggers.slide_zone ? SLIDE_SPD * 2 : SLIDE_SPD) 
     }
 
     //slope adjustment (if no jump)
@@ -314,15 +311,12 @@ update_player :: proc(
         elapsed_time,
         delta_time
     );
-
+    
 
     // #####################################################
     // POST COLLISION 
     // #####################################################
 
-    // MOVE THIS!!!!!!!!!
-    // update time mult
-    // -------------------------------------------
     // handle collision effects
     // -------------------------------------------
     new_hurt_t := pls.hurt_t
@@ -383,32 +377,28 @@ update_player :: proc(
     // MUTATE PLAYER STATE 
     // #####################################################
 
-    // prev frame values
-    // -------------------------------------------
-    pls.prev_position = pls.position
-    pls.jump_held = triggers.jump_held
+    new_pls.mode               = new_mode
+    new_pls.velocity           = collision_adjusted_velocity
+    new_pls.position           = new_position
+    new_pls.contact_state      = collision_adjusted_cts
+    new_pls.jump_pressed_time  = triggers.jump_pressed_time
+    new_pls.wall_detach_held_t = triggers.wall_detach_held
+    new_pls.dash_state         = new_dash_state
+    new_pls.slide_state        = new_slide_state
+    new_pls.spin_state         = new_spin_state
+    new_pls.hurt_t             = new_hurt_t
+    new_pls.broke_t            = new_broke_t
+    new_pls.jump_enabled       = new_jump_enabled
+    new_pls.dash_enabled       = new_dash_enabled
+    new_pls.slide_enabled      = new_slide_enabled
+    new_pls.ground_x           = new_ground_x
+    new_pls.ground_z           = new_ground_z
+    new_pls.hops_recharge      = new_hops_recharge
+    new_pls.hops_remaining     = new_hops_remaining
+    new_pls.last_hop           = new_last_hop
+    new_pls.jump_held          = triggers.jump_button_pressed
+    new_pls.prev_position      = pls.position
 
-    // overwrite state properties
-    //--------------------------------------------
-    pls.velocity                  = collision_adjusted_velocity
-    pls.position                  = new_position
-    pls.mode                      = new_mode
-    pls.contact_state             = collision_adjusted_cts
-    pls.jump_pressed_time         = triggers.jump_pressed_time
-    pls.wall_detach_held_t        = triggers.wall_detach_held
-    pls.dash_state                = new_dash_state
-    pls.slide_state               = new_slide_state
-    pls.spin_state                = new_spin_state
-    pls.hurt_t                    = new_hurt_t
-    pls.broke_t                   = new_broke_t
-    pls.jump_enabled              = new_jump_enabled
-    pls.dash_enabled              = new_dash_enabled
-    pls.ground_x                  = new_ground_x
-    pls.ground_z                  = new_ground_z
-    pls.hops_recharge             = new_hops_recharge
-    pls.hops_remaining            = new_hops_remaining
-    pls.last_hop                  = new_last_hop
-
-    return collision_ids
+    return collision_ids, new_pls
 }
 

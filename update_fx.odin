@@ -56,6 +56,11 @@ update_fx :: proc(rs: ^Render_State, pls: Player_State, cs: Camera_State, trigge
         new_screen_ripple_pt = ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
     }
 
+
+    // #####################################################
+    // MUTATE FX STATE 
+    // #####################################################
+
     // screen splashes
     // --------------------------------------------
     splash_idx := 0
@@ -79,10 +84,6 @@ update_fx :: proc(rs: ^Render_State, pls: Player_State, cs: Camera_State, trigge
     if len(rs.screen_splashes) > 5 {
         ordered_remove(&rs.screen_splashes, 0);
     }
-
-    // #####################################################
-    // MUTATE FX STATE 
-    // #####################################################
 
     // prev frame values
     // -------------------------------------------
