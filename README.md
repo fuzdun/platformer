@@ -9,6 +9,7 @@ Currently in active development, playable soon. Planned for release sometime in 
 
 [**-> HQ gameplay video link <-**](https://www.youtube.com/watch?v=MdrWbIgeKYo)
 
+![new version](https://github.com/user-attachments/assets/0cd59551-723f-42a9-aefe-d8d4a63fd785)
 ![Timeline 4](https://github.com/user-attachments/assets/de699d07-460b-4c2e-a940-681eac079e86)
 ![Timeline 1](https://github.com/user-attachments/assets/74829cde-0cf5-45ed-8282-42893d7f4c58)
 ![Timeline 3](https://github.com/user-attachments/assets/5a107310-0667-4620-89d4-cd8145e99831)
