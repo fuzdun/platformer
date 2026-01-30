@@ -33,7 +33,7 @@ update_particles :: proc(
     }
 
     if triggers.bunny_hop || triggers.small_hop {
-        particle_count := triggers.small_hop ? 200 : 1500
+        particle_count := triggers.small_hop ? 200 : 1000
         for idx in 0..<particle_count {
             spawn_angle := rnd.float32() * math.PI * 2.0
             spawn_vector := (math.sin(spawn_angle) * surface_ortho1 + math.cos(spawn_angle) * surface_ortho2 - normalized_contact_ray * (rnd.float32() * 0.5 + 0.25)) * 2.5

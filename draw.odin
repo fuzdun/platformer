@@ -435,22 +435,22 @@ draw :: proc(
 
         score_buf: [8]byte
         strconv.itoa(score_buf[:], gs.score)
-        render_screen_text(shs, bs, string(score_buf[:]), [3]f32{-0.9, 0.75, 0}, la.MATRIX4F32_IDENTITY, .3)
-
-        if gs.time_remaining > 0 {
-
-            for hop_idx in 0..<pls.hops_remaining {
-                render_screen_text(shs, bs, "S", [3]f32{0.35, 0.075 - (0.075 * f32(hop_idx)), 0}, la.MATRIX4F32_IDENTITY, .3)
-            }
-
-            time_buf: [4]byte
-            strconv.itoa(time_buf[:], int(gs.time_remaining))
-            render_screen_text(shs, bs, string(time_buf[:]), [3]f32{0.0, 0.65, 0}, la.MATRIX4F32_IDENTITY, .3)
-        }
-        
-        if f32(time) - gs.last_checkpoint_t < 2000 {
-            render_screen_text(shs, bs, "checkpoint (+10)", [3]f32{0.1, 0.65, 0}, la.MATRIX4F32_IDENTITY, .2)
-        }
+        //render_screen_text(shs, bs, string(score_buf[:]), [3]f32{-0.9, 0.75, 0}, la.MATRIX4F32_IDENTITY, .3)
+        //
+        //if gs.time_remaining > 0 {
+        //
+        //    for hop_idx in 0..<pls.hops_remaining {
+        //        render_screen_text(shs, bs, "S", [3]f32{0.35, 0.075 - (0.075 * f32(hop_idx)), 0}, la.MATRIX4F32_IDENTITY, .3)
+        //    }
+        //
+        //    time_buf: [4]byte
+        //    strconv.itoa(time_buf[:], int(gs.time_remaining))
+        //    render_screen_text(shs, bs, string(time_buf[:]), [3]f32{0.0, 0.65, 0}, la.MATRIX4F32_IDENTITY, .3)
+        //}
+        //
+        //if f32(time) - gs.last_checkpoint_t < 2000 {
+        //    render_screen_text(shs, bs, "checkpoint (+10)", [3]f32{0.1, 0.65, 0}, la.MATRIX4F32_IDENTITY, .2)
+        //}
 
         // post-processing
         // -------------------------------------------

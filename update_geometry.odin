@@ -63,6 +63,7 @@ update_geometry :: proc(
         lgs[sz.id].transparency = sz.transparency_t
     }
 
+    clear(&szs.intersected)
     for sz in szs.entities {
         if lgs[sz.id].shatter_data.crack_time != 0 {
             continue
