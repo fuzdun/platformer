@@ -374,10 +374,15 @@ update_player :: proc(
 
 
     // #####################################################
-    // MUTATE PLAYER STATE 
+    // MUTATE STATE 
     // #####################################################
+
+    // prev frame values
+    // -------------------------------------------
     pls.prev_position      = pls.position
 
+    // update state values
+    // -------------------------------------------
     pls.mode               = new_mode
     pls.velocity           = collision_adjusted_velocity
     pls.position           = new_position

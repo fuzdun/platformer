@@ -15,16 +15,12 @@ update_geometry :: proc(
     using constants
     cts := pls.contact_state
 
-    new_lgs := dynamic_soa_copy(lgs^)
-    new_szs_entities := dynamic_soa_copy(szs.entities)
-    new_szs_intersections := make(map[int]struct{})
-
     // #####################################################
     // STANDARD LEVEL GEOMETRY
     // #####################################################
 
     if triggers.restart || triggers.checkpoint {
-        for &lg in new_lgs {
+        for &lg in lgs {
             lg.shatter_data.crack_time = 0
             lg.shatter_data.smash_time = 0
         }
@@ -32,11 +28,11 @@ update_geometry :: proc(
 
     if triggers.bunny_hop {
        last_touched := cts.last_touched
-       new_lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
+       lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
     }
 
     for id in collisions {
-        lg := &new_lgs[id]
+        lg := &lgs[id]
         if .Dash_Breakable in lg.attributes && pls.mode == .Dashing {
             lg.shatter_data.smash_time = lg.shatter_data.smash_time == 0.0 ? elapsed_time : lg.shatter_data.smash_time 
             lg.shatter_data.smash_dir = la.normalize(pls.velocity)
@@ -64,28 +60,24 @@ update_geometry :: proc(
     // #####################################################
 
     for &sz in szs.entities {
-        new_lgs[sz.id].transparency = sz.transparency_t
+        lgs[sz.id].transparency = sz.transparency_t
     }
 
     for sz in szs.entities {
-        if new_lgs[sz.id].shatter_data.crack_time != 0 {
+        if lgs[sz.id].shatter_data.crack_time != 0 {
             continue
         }
         if hit, _ := sphere_obb_intersection(sz, pls.position, PLAYER_SPHERE_RADIUS); hit {
-            new_szs_intersections[sz.id] = {}
+            szs.intersected[sz.id] = {}
         }
     }
 
-    for &sz in new_szs_entities {
-        if sz.id in new_szs_intersections {
+    for &sz in szs.entities {
+        if sz.id in szs.intersected {
             sz.transparency_t = clamp(sz.transparency_t - 5.0 * delta_time, 0.1, 1.0)
         } else {
             sz.transparency_t = clamp(sz.transparency_t + 5.0 * delta_time, 0.1, 1.0)
         }
     }
-
-    dynamic_soa_swap(lgs, new_lgs)
-    dynamic_soa_swap(&szs.entities, new_szs_entities)
-    set_swap(&szs.intersected, new_szs_intersections)
 }
 

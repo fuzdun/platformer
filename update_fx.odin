@@ -58,22 +58,33 @@ update_fx :: proc(rs: ^Render_State, pls: Player_State, cs: Camera_State, trigge
         new_screen_ripple_pt = ((proj_ppos / proj_ppos.w) / 2.0 + 0.5).xy
     }
 
+    // trail
+    // --------------------------------------------
+    new_player_trail_sample := [3]glm.vec3{
+        ring_buffer_at(rs.player_trail, -4),
+        ring_buffer_at(rs.player_trail, -8),
+        ring_buffer_at(rs.player_trail, -12),
+    }
+
+
+    // #####################################################
+    // MUTATE STATE 
+    // #####################################################
+
     // screen splashes
     // --------------------------------------------
-    new_screen_splashes := make([dynamic][4]f32, len(rs.screen_splashes))
-    copy(new_screen_splashes[:], rs.screen_splashes[:])
     splash_idx := 0
-    for _ in 0 ..<len(new_screen_splashes) {
-        splash := new_screen_splashes[splash_idx]
+    for _ in 0 ..<len(rs.screen_splashes) {
+        splash := rs.screen_splashes[splash_idx]
         if elapsed_time - splash[3] > 10000 {
-            ordered_remove(&new_screen_splashes, splash_idx)
+            ordered_remove(&rs.screen_splashes, splash_idx)
         } else {
             splash_idx += 1
         }
     }
     if triggers.bunny_hop {
         new_splash := cs.position + la.normalize0(pls.position - cs.position) * 10000.0;
-        append(&new_screen_splashes, [4]f32{
+        append(&rs.screen_splashes, [4]f32{
             new_splash.x,
             new_splash.y,
             new_splash.z,
@@ -85,29 +96,15 @@ update_fx :: proc(rs: ^Render_State, pls: Player_State, cs: Camera_State, trigge
     }
 
     // trail
-    // --------------------------------------------
-    new_player_trail_sample := [3]glm.vec3{
-        ring_buffer_at(rs.player_trail, -4),
-        ring_buffer_at(rs.player_trail, -8),
-        ring_buffer_at(rs.player_trail, -12),
-    }
-
-    new_player_trail := ring_buffer_copy(rs.player_trail)
-    ring_buffer_push(&new_player_trail, pls.position)
-
-
-    // #####################################################
-    // MUTATE FX STATE 
-    // #####################################################
+    // -------------------------------------------
+    ring_buffer_push(&rs.player_trail, pls.position)
 
     // prev frame values
     // -------------------------------------------
     rs.prev_player_trail_sample = rs.player_trail_sample
 
-    // overwrite state properties
-    //--------------------------------------------
-    ring_buffer_swap(&rs.player_trail,      new_player_trail)
-    dynamic_array_swap(&rs.screen_splashes, new_screen_splashes)
+    // update state values
+    // -------------------------------------------
     rs.crunch_time                        = new_crunch_time
     rs.crunch_pt                          = new_crunch_pt
     rs.tgt_player_vertex_displacement     = new_tgt_player_vertex_displacement

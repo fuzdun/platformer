@@ -24,12 +24,10 @@ update_particles :: proc(
     surface_ortho1 := la.vector3_orthogonal(normalized_contact_ray)
     surface_ortho2 := la.cross(normalized_contact_ray, surface_ortho1)
 
-    new_player_burst_particles := particle_buffer_copy(ptcls.player_burst_particles, context.allocator)
-
     spin_particle_collisions := get_particle_collisions(ptcls.player_burst_particles, physics_map)
     for spc in spin_particle_collisions {
-        particle := &new_player_burst_particles.particles.values[spc.id]
-        particle_info := &new_player_burst_particles.particle_info[spc.id]
+        particle := &ptcls.player_burst_particles.particles.values[spc.id]
+        particle_info := &ptcls.player_burst_particles.particle_info[spc.id]
         particle.xyz -= particle_info.vel * delta_time
         particle_info.vel -= la.dot(spc.normal, particle_info.vel) * spc.normal * 1.5
     }
@@ -46,15 +44,15 @@ update_particles :: proc(
                 (rnd.float32() * 800) + 3000
             }
             spawn_pos := pls.position + la.normalize0([3]f32{spawn_vector.x, 0.1, spawn_vector.z}) * 0.5
-            new_player_burst_particles.particle_info[new_player_burst_particles.particles.insert_at] = particle_info
-            ring_buffer_push(&new_player_burst_particles.particles, Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
+            ptcls.player_burst_particles.particle_info[ptcls.player_burst_particles.particles.insert_at] = particle_info
+            ring_buffer_push(&ptcls.player_burst_particles.particles, Particle{spawn_pos.x, spawn_pos.y, spawn_pos.z, 0})
         }
     }
 
-    particle_count := new_player_burst_particles.particles.len
+    particle_count := ptcls.player_burst_particles.particles.len
     if particle_count > 0 {
-        pp := new_player_burst_particles.particles.values[:particle_count]
-        pi := new_player_burst_particles.particle_info[:particle_count]
+        pp := ptcls.player_burst_particles.particles.values[:particle_count]
+        pi := ptcls.player_burst_particles.particle_info[:particle_count]
         for p_idx in 0..<particle_count {
             pp[p_idx].xyz += pi[p_idx].vel * delta_time
             part := pi[p_idx] 
@@ -73,7 +71,7 @@ update_particles :: proc(
         gl.BindBuffer(gl.ARRAY_BUFFER, bs.trail_particle_vbo)
         gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(sorted_pp[0]) * particle_count, &sorted_pp[0])
 
-        particle_velocities := new_player_burst_particles.particle_info.vel
+        particle_velocities := ptcls.player_burst_particles.particle_info.vel
         gl.BindBuffer(gl.COPY_READ_BUFFER, bs.trail_particle_velocity_vbo)
         gl.GetBufferParameteriv(gl.COPY_READ_BUFFER, gl.BUFFER_SIZE, &buffer_size)
         gl.BindBuffer(gl.COPY_WRITE_BUFFER, bs.prev_trail_particle_velocity_vbo)
@@ -81,6 +79,4 @@ update_particles :: proc(
         gl.BindBuffer(gl.ARRAY_BUFFER, bs.trail_particle_velocity_vbo)
         gl.BufferSubData(gl.ARRAY_BUFFER, 0, size_of(particle_velocities[0]) * particle_count, &particle_velocities[0])
     }
-
-    particle_buffer_swap(&ptcls.player_burst_particles, new_player_burst_particles)
 }
