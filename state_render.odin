@@ -129,6 +129,11 @@ init_render_state :: proc(rs: ^Render_State, perm_alloc: runtime.Allocator) {
     ring_buffer_init(&rs.player_trail, [3]f32{0, 0, 0}, perm_alloc)
 }
 
+free_render_state :: proc(rs: Render_State) {
+    delete(rs.screen_splashes)
+    ring_buffer_free(rs.player_trail)
+}
+
 lg_render_group :: proc(lg: Level_Geometry) -> int {
     return int(lg.render_type) * len(SHAPE) + int(lg.shape)
 }

@@ -128,10 +128,10 @@ main :: proc () {
     gs:    Game_State;
 
     init_player_state(&pls, perm_arena_alloc)
-    init_render_state(&rs, perm_arena_alloc)
+    init_render_state(&rs, context.allocator); defer free_render_state(rs)
     init_camera_state(&cs)
     init_editor_state(&es, level_to_load)
-    init_slide_zone_state(&szs, perm_arena_alloc)
+    init_slide_zone_state(&szs, context.allocator); defer free_slide_zone_state(szs)
     init_game_state(&gs)
 
     // player icosphere mesh
@@ -140,7 +140,8 @@ main :: proc () {
 
     // player spin particles
     // -------------------------------------------
-    particle_buffer_init(&ptcls.player_burst_particles, perm_arena_alloc)
+    particle_buffer_init(&ptcls.player_burst_particles, context.allocator)
+    defer particle_buffer_free(ptcls.player_burst_particles)
 
 
     // #####################################################
@@ -176,7 +177,7 @@ main :: proc () {
     num_entities := len(loaded_level_geometry) 
 
     // convert loaded gemoetry to SOA ------
-    lgs = make(Level_Geometry_State, len(loaded_level_geometry), perm_arena_alloc)
+    lgs = make(Level_Geometry_State, len(loaded_level_geometry), context.allocator); defer delete_soa(lgs)
     for lg, idx in loaded_level_geometry {
         append(&lgs, lg)
     }

@@ -5,10 +5,10 @@ gameplay_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Playe
     input_attributes := get_input_attributes(is, elapsed_time, f32(delta_time))
     player_action_triggers := get_player_action_triggers(input_attributes, pls^, szs^, elapsed_time, delta_time)
 
-    // updated player state
-    collisions, new_pls := update_player(
+    // mutate player state (pls)
+    collisions := update_player(
         lgs[:],
-        pls^,
+        pls,
         gs^,
         player_action_triggers,
         physics_map,
@@ -22,25 +22,25 @@ gameplay_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Playe
         bs,
         physics_map,
         player_action_triggers,
-        new_pls,
+        pls^,
         elapsed_time,
-        delta_time
+        delta_time,
     )
 
     // mutate render state (rs)
     update_fx(
         rs,
-        new_pls,
+        pls^,
         cs^,
         player_action_triggers,
         elapsed_time
     )
 
     // updated level geometry state (lgs) and slide zone state (szs)
-    new_lgs, new_szs_entities, new_szs_intersections := update_geometry(
+    update_geometry(
         lgs,
         szs,
-        new_pls,
+        pls^,
         player_action_triggers,
         collisions,
         elapsed_time,
@@ -51,7 +51,7 @@ gameplay_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Playe
     update_game(
         gs,
         lgs[:],
-        new_pls,
+        pls^,
         player_action_triggers,
         collisions,
         elapsed_time,
@@ -61,15 +61,9 @@ gameplay_update :: proc(lgs: ^Level_Geometry_State, is: Input_State, pls: ^Playe
     // mutate camera state (cs)
     update_camera(
         cs,
-        new_pls,
+        pls^,
         gs^,
         player_action_triggers
     )
-
-    // mutate state
-    pls^ = new_pls
-    dynamic_soa_swap(lgs, new_lgs)
-    dynamic_soa_swap(&szs.entities, new_szs_entities)
-    set_swap(&szs.intersected, new_szs_intersections)
 }
 

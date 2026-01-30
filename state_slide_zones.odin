@@ -19,3 +19,8 @@ init_slide_zone_state :: proc(szs: ^Slide_Zone_State, perm_alloc: runtime.Alloca
     szs.entities = make(#soa[dynamic]Obb, perm_alloc)
     szs.intersected = make(map[int]struct{}, perm_alloc)
 }
+
+free_slide_zone_state :: proc(szs: Slide_Zone_State) {
+    delete(szs.entities)
+    delete(szs.intersected)
+}

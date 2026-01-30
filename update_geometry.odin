@@ -11,18 +11,13 @@ update_geometry :: proc(
     collisions: Collision_Log,
     elapsed_time: f32,
     delta_time: f32
-) -> (
-    new_lgs: Level_Geometry_State,
-    new_szs_entities: #soa[dynamic]Obb,
-    new_szs_intersections: map[int]struct{}
-){
+) {
     using constants
     cts := pls.contact_state
 
-    new_lgs = dynamic_soa_copy(lgs^)
-    new_szs_entities = dynamic_soa_copy(szs.entities)
-    new_szs_intersections = make(map[int]struct{})
-
+    new_lgs := dynamic_soa_copy(lgs^)
+    new_szs_entities := dynamic_soa_copy(szs.entities)
+    new_szs_intersections := make(map[int]struct{})
 
     // #####################################################
     // STANDARD LEVEL GEOMETRY
@@ -89,9 +84,8 @@ update_geometry :: proc(
         }
     }
 
-    //dynamic_soa_swap(lgs, new_lgs)
-    //dynamic_soa_swap(&szs.entities, new_szs_entities)
-    //set_swap(&szs.intersected, new_szs_intersections)
-    return
+    dynamic_soa_swap(lgs, new_lgs)
+    dynamic_soa_swap(&szs.entities, new_szs_entities)
+    set_swap(&szs.intersected, new_szs_intersections)
 }
 

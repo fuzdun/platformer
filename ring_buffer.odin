@@ -1,6 +1,7 @@
 package main
 
 import "base:runtime"
+import "core:fmt"
 
 RingBuffer :: struct($N: int, $T: typeid) {
     len: int,
@@ -15,6 +16,10 @@ ring_buffer_init :: proc(buffer: ^RingBuffer($N, $T), default: T, alloc: runtime
     for &v in buffer.values {
         v = default
     }
+}
+
+ring_buffer_free :: proc(buffer: RingBuffer($N, $T)) {
+    free(buffer.values)
 }
 
 ring_buffer_push :: proc(buffer: ^RingBuffer($N, $T), value: T) {
@@ -39,10 +44,17 @@ ring_buffer_at :: proc(buffer: RingBuffer($N, $T), idx: int) -> T {
     return buffer.values[adjusted_idx % N]
 }
 
-ring_buffer_copy :: proc(buffer: RingBuffer($N, $T)) -> RingBuffer(N, T) {
-    new_ring_buffer: RingBuffer(N, T) 
-    new_ring_buffer.values = buffer.values
-    new_ring_buffer.insert_at = buffer.insert_at
-    return new_ring_buffer
+ring_buffer_copy :: proc(buffer: RingBuffer($N, $T)) -> (new_rb: RingBuffer(N, T)) {
+    ring_buffer_init(&new_rb, T{}, context.allocator)
+    copy(new_rb.values[:], buffer.values[:])
+    new_rb.insert_at = buffer.insert_at
+    new_rb.len = buffer.len
+    new_rb.cap = buffer.cap
+    return new_rb
+}
+
+ring_buffer_swap :: proc(a: ^RingBuffer($N, $T), b: RingBuffer(N, T)) {
+    ring_buffer_free(a^)
+    a^ = b
 }
 

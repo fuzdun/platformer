@@ -1,19 +1,13 @@
 package main
 
-dynamic_array_swap :: proc(a: ^[dynamic]$T, b: ^[dynamic]T)  {
-    clear(a)   
-    for val in b {
-        append(a, val)
-    }
-    delete(b^)
+dynamic_array_swap :: proc(a: ^[dynamic]$T, b: [dynamic]T)  {
+    delete(a^)
+    a^ = b
 }
 
 dynamic_soa_swap :: proc(a: ^#soa[dynamic]$T, b: #soa[dynamic]T)  {
-    clear_soa(a)   
-    for val in b {
-        append(a, val)
-    }
-    delete_soa(b)
+    delete_soa(a^)
+    a^ = b
 }
 
 dynamic_soa_copy :: proc(a: #soa[dynamic]$T) -> #soa[dynamic]T{
@@ -25,10 +19,8 @@ dynamic_soa_copy :: proc(a: #soa[dynamic]$T) -> #soa[dynamic]T{
 }
 
 soa_swap :: proc(a: ^#soa[]$T, b: #soa[]T)  {
-    for val, i in b {
-        a[i] = val
-    }
-    delete_soa(b)
+    delete_soa(a^)
+    a^ = b
 }
 
 soa_copy :: proc(a: #soa[]$T) -> #soa[]T{
@@ -40,10 +32,7 @@ soa_copy :: proc(a: #soa[]$T) -> #soa[]T{
 }
 
 set_swap :: proc(a: ^map[$T]struct{}, b: map[T]struct{}) {
-    clear(a)
-    for val in b {
-        a[val] = {}
-    }
-    delete(b)
+    delete(a^)
+    a^= b
 }
 

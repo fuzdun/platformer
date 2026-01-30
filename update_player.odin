@@ -14,13 +14,13 @@ INFINITE_HOP :: true
 
 update_player :: proc(
     lgs: #soa[]Level_Geometry,
-    pls: Player_State,
+    pls: ^Player_State,
     gs: Game_State,
     triggers: Action_Triggers,
     physics_map: []Physics_Segment,
     elapsed_time: f32,
     delta_time: f32
-) -> (collisions: Collision_Log, new_pls: Player_State) {
+) -> (collisions: Collision_Log) {
     using constants
 
 
@@ -376,29 +376,29 @@ update_player :: proc(
     // #####################################################
     // MUTATE PLAYER STATE 
     // #####################################################
+    pls.prev_position      = pls.position
 
-    new_pls.mode               = new_mode
-    new_pls.velocity           = collision_adjusted_velocity
-    new_pls.position           = new_position
-    new_pls.contact_state      = collision_adjusted_cts
-    new_pls.jump_pressed_time  = triggers.jump_pressed_time
-    new_pls.wall_detach_held_t = triggers.wall_detach_held
-    new_pls.dash_state         = new_dash_state
-    new_pls.slide_state        = new_slide_state
-    new_pls.spin_state         = new_spin_state
-    new_pls.hurt_t             = new_hurt_t
-    new_pls.broke_t            = new_broke_t
-    new_pls.jump_enabled       = new_jump_enabled
-    new_pls.dash_enabled       = new_dash_enabled
-    new_pls.slide_enabled      = new_slide_enabled
-    new_pls.ground_x           = new_ground_x
-    new_pls.ground_z           = new_ground_z
-    new_pls.hops_recharge      = new_hops_recharge
-    new_pls.hops_remaining     = new_hops_remaining
-    new_pls.last_hop           = new_last_hop
-    new_pls.jump_held          = triggers.jump_button_pressed
-    new_pls.prev_position      = pls.position
+    pls.mode               = new_mode
+    pls.velocity           = collision_adjusted_velocity
+    pls.position           = new_position
+    pls.contact_state      = collision_adjusted_cts
+    pls.jump_pressed_time  = triggers.jump_pressed_time
+    pls.wall_detach_held_t = triggers.wall_detach_held
+    pls.dash_state         = new_dash_state
+    pls.slide_state        = new_slide_state
+    pls.spin_state         = new_spin_state
+    pls.hurt_t             = new_hurt_t
+    pls.broke_t            = new_broke_t
+    pls.jump_enabled       = new_jump_enabled
+    pls.dash_enabled       = new_dash_enabled
+    pls.slide_enabled      = new_slide_enabled
+    pls.ground_x           = new_ground_x
+    pls.ground_z           = new_ground_z
+    pls.hops_recharge      = new_hops_recharge
+    pls.hops_remaining     = new_hops_remaining
+    pls.last_hop           = new_last_hop
+    pls.jump_held          = triggers.jump_button_pressed
 
-    return collision_ids, new_pls
+    return collision_ids
 }
 
