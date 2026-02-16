@@ -14,12 +14,10 @@ Level_Geometry_State :: #soa[dynamic]Level_Geometry
 
 Level_Geometry :: struct {
     transform: Transform,
-    angular_velocity: la.Vector3f32,
     shape: SHAPE,
     collider: SHAPE,
     render_type: Level_Geometry_Render_Type,
     attributes: Level_Geometry_Attributes,
-    aabb: Aabb,
     shatter_data: Shatter_Ubo,
     transparency: f32,
 }
@@ -53,8 +51,6 @@ Level_Geometry_Attributes :: bit_set[Level_Geometry_Component; u64]
 
 Level_Geometry_Component :: enum {
     Collider = 0,
-    Velocity = 1,
-    Angular_Velocity = 2,
     Crackable = 3,
     Dash_Breakable = 4,
     Hazardous = 5,
@@ -63,10 +59,8 @@ Level_Geometry_Component :: enum {
     Bouncy = 8
 }
 
-Level_Geometry_Component_Name :: [Level_Geometry_Component]string {
+Level_Geometry_Component_Name :: #sparse[Level_Geometry_Component]string {
     .Collider = "collider",
-    .Velocity = "velocity",
-    .Angular_Velocity = "angular_Velocity",
     .Crackable = "crackable",
     .Dash_Breakable = "dash_Breakable",
     .Hazardous = "hazardous",
@@ -82,8 +76,6 @@ move_geometry :: proc (lgs: ^Level_Geometry_State, phs: ^Physics_State, player_p
     lg := &lgs[idx]
     lg.transform.position.x += x_dir 
     lg.transform.position.y += y_dir 
-    vertices_len := len(phs.level_colliders[lg.shape].vertices)
-    trans_mat := trans_to_mat4(lg.transform)
 
     if cts.state != .IN_AIR && idx == cts.last_touched {
         player_pos.x += x_dir

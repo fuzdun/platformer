@@ -9,6 +9,34 @@ NORMAL_Y_MIN_GROUND :: 0.85
 NORMAL_Y_MIN_SLOPE :: 0.2
 
 
+build_physics_map :: proc(lgs: Level_Geometry_State, colliders: [SHAPE]Mesh, et: f32) -> (physics_map: []Physics_Segment) {
+    using constants
+    physics_map = make([]Physics_Segment, PHYSICS_SEGMENT_COUNT, context.temp_allocator)
+    for segment_idx in 0..<5 {
+        physics_map[segment_idx] = make(Physics_Segment, context.temp_allocator)
+    }
+    for lg, lg_idx in lgs {
+        if .Collider not_in lg.attributes || !(lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
+            continue
+        }
+        segment_idx: int = 0 //int(math.floor(lg.transform.position.z / PHYSICS_SEGMENT_SIZE)) 
+        //segment := physics_map[segment_idx]
+        shape_data := colliders[lg.shape]
+        trans_mat := trans_to_mat4(lg.transform)
+        coll: Collider
+        coll.id = lg_idx
+        coll.vertices = make([][3]f32, len(shape_data.vertices), context.temp_allocator)
+        for vertex, vertex_i in shape_data.vertices {
+            coll.vertices[vertex_i] = (trans_mat * [4]f32{vertex.x, vertex.y, vertex.z, 1.0}).xyz
+        }
+        coll.indices = make([]u16, len(shape_data.indices), context.temp_allocator)
+        copy(coll.indices, shape_data.indices)
+        coll.aabb = vertices_to_aabb(coll.vertices)
+        append(&physics_map[segment_idx], coll)
+    }
+    return
+}
+
 get_particle_collisions :: proc(
     particles: $T/Particle_Buffer,
     physics_map: []Physics_Segment,
@@ -36,7 +64,7 @@ get_particle_collisions :: proc(
 }
 
 get_collisions_and_update_contact_state :: proc(
-    lgs: #soa[]Level_Geometry,
+    lgs: Level_Geometry_State,
     position: [3]f32,
     velocity: [3]f32,
     physics_map: []Physics_Segment,
@@ -169,7 +197,7 @@ apply_velocity :: proc(
     velocity: [3]f32,
     dashing: bool,
     sliding: bool,
-    entities: #soa[]Level_Geometry, 
+    entities: Level_Geometry_State, 
     physics_map: []Physics_Segment,
     elapsed_time: f32,
     delta_time: f32
@@ -190,7 +218,7 @@ apply_velocity :: proc(
     collision: Collision
     contacts: [dynamic]int
     collided, collision, contacts, new_contact_state, touched_ground = get_collisions_and_update_contact_state(
-        entities[:], position, velocity,
+        entities, position, velocity,
         physics_map, contact_state, sliding,
         elapsed_time, delta_time
     )
@@ -224,7 +252,7 @@ apply_velocity :: proc(
             }
             new_velocity = (velocity_normal * remaining_vel) / delta_time
             collided, collision, contacts, new_contact_state, touched_ground = get_collisions_and_update_contact_state(
-                entities[:], new_position, new_velocity,
+                entities, new_position, new_velocity,
                 physics_map, new_contact_state, sliding,
                 elapsed_time, delta_time
             )

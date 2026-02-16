@@ -7,7 +7,6 @@ import la "core:math/linalg"
 
 Physics_State :: struct{
     level_colliders: [SHAPE]Mesh,
-    static_collider_vertices: [dynamic][3]f32,
 }
 
 Collision :: struct{
@@ -41,34 +40,6 @@ Entity_Map :: [][dynamic]int
 
 build_entity_map :: proc() {
     // to be used when separating physics colliders into spatial segments
-}
-
-build_physics_map :: proc(lgs: Level_Geometry_State, colliders: [SHAPE]Mesh, et: f32) -> (physics_map: []Physics_Segment) {
-    using constants
-    physics_map = make([]Physics_Segment, PHYSICS_SEGMENT_COUNT, context.temp_allocator)
-    for segment_idx in 0..<5 {
-        physics_map[segment_idx] = make(Physics_Segment, context.temp_allocator)
-    }
-    for lg, lg_idx in lgs {
-        if .Collider not_in lg.attributes || !(lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
-            continue
-        }
-        segment_idx: int = 0 //int(math.floor(lg.transform.position.z / PHYSICS_SEGMENT_SIZE)) 
-        //segment := physics_map[segment_idx]
-        shape_data := colliders[lg.shape]
-        trans_mat := trans_to_mat4(lg.transform)
-        coll: Collider
-        coll.id = lg_idx
-        coll.vertices = make([][3]f32, len(shape_data.vertices), context.temp_allocator)
-        for vertex, vertex_i in shape_data.vertices {
-            coll.vertices[vertex_i] = (trans_mat * [4]f32{vertex.x, vertex.y, vertex.z, 1.0}).xyz
-        }
-        coll.indices = make([]u16, len(shape_data.indices), context.temp_allocator)
-        copy(coll.indices, shape_data.indices)
-        coll.aabb = vertices_to_aabb(coll.vertices)
-        append(&physics_map[segment_idx], coll)
-    }
-    return
 }
 
 particle_triangle_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f32) -> (collided: bool = false, collision_n: [3]f32) {

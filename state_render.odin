@@ -142,7 +142,7 @@ interpolated_trail :: proc(rs: Render_State, t: f32) -> [3]glm.vec3 {
     return math.lerp(rs.prev_player_trail_sample, rs.player_trail_sample, t)
 }
 
-editor_sort_lgs :: proc(lgs: ^#soa[dynamic]Level_Geometry, current_selection: int = 0) -> (new_selection: int = 0) {
+editor_sort_lgs :: proc(lgs: ^Level_Geometry_State, current_selection: int = 0) -> (new_selection: int = 0) {
     sorted_lgs := make([]Level_Geometry, len(lgs))
     defer delete(sorted_lgs)
     group_counts: [NUM_RENDER_GROUPS]int
@@ -166,8 +166,8 @@ editor_sort_lgs :: proc(lgs: ^#soa[dynamic]Level_Geometry, current_selection: in
     return
 }
 
-sort_lgs :: proc(lgs: []Level_Geometry, alloc: runtime.Allocator) -> Level_Geometry_State {
-    sorted_lgs := make(#soa[dynamic]Level_Geometry, len(lgs), alloc)
+sort_lgs :: proc(lgs: Level_Geometry_State, alloc: runtime.Allocator) -> Level_Geometry_State {
+    sorted_lgs := make(Level_Geometry_State, len(lgs), alloc)
     group_counts: [NUM_RENDER_GROUPS]int
     for lg, idx in lgs {
         group_counts[lg_render_group(lg)] += 1

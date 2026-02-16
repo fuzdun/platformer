@@ -1,6 +1,6 @@
 package main
 
-import "constants"
+import consts "constants"
 import "core:math"
 import "core:fmt"
 import "core:slice"
@@ -13,7 +13,7 @@ import rnd "core:math/rand"
 INFINITE_HOP :: true
 
 update_player :: proc(
-    lgs: #soa[]Level_Geometry,
+    lgs: Level_Geometry_State,
     pls: ^Player_State,
     gs: Game_State,
     triggers: Action_Triggers,
@@ -21,7 +21,7 @@ update_player :: proc(
     elapsed_time: f32,
     delta_time: f32
 ) -> (collisions: Collision_Log) {
-    using constants
+    // using constants
 
 
     // #####################################################
@@ -31,7 +31,7 @@ update_player :: proc(
     cts := pls.contact_state
     on_ground := cts.state == .ON_GROUND || cts.state == .ON_SLOPE
     on_surface := cts.state == .ON_GROUND || cts.state == .ON_SLOPE || cts.state == .ON_WALL
-    is_hurt := elapsed_time < pls.hurt_t + DAMAGE_LEN
+    is_hurt := elapsed_time < pls.hurt_t + consts.DAMAGE_LEN
     normalized_contact_ray := la.normalize(cts.contact_ray) 
 
     // update ground movement vectors
@@ -70,7 +70,7 @@ update_player :: proc(
 
     // move speed
     // -------------------------------------------
-    move_spd := SLOW_ACCEL
+    move_spd := consts.SLOW_ACCEL
     if cts.state == .ON_SLOPE {
         // move_spd = SLOPE_SPEED
     } else if cts.state == .IN_AIR {
@@ -82,11 +82,11 @@ update_player :: proc(
     }
     if triggers.fwd_move {
         flat_speed := la.length(pls.velocity.xz)
-        if flat_speed > FAST_CUTOFF {
-            move_spd = FAST_ACCEL
+        if flat_speed > consts.FAST_CUTOFF {
+            move_spd = consts.FAST_ACCEL
 
-        } else if flat_speed > MED_CUTOFF {
-            move_spd = MED_ACCEL
+        } else if flat_speed > consts.MED_CUTOFF {
+            move_spd = consts.MED_ACCEL
         }
     }
 
@@ -111,7 +111,7 @@ update_player :: proc(
     new_mode := pls.mode
 
     new_jump_enabled  := pls.jump_enabled  || (!triggers.jump_button_pressed && on_ground)
-    new_slide_enabled := pls.slide_enabled || pls.slide_state.slide_end_time + SLIDE_COOLDOWN < elapsed_time
+    new_slide_enabled := pls.slide_enabled || pls.slide_state.slide_end_time + consts.SLIDE_COOLDOWN < elapsed_time
     new_dash_enabled  := pls.dash_enabled  || on_ground || triggers.bunny_hop || triggers.small_hop
 
     if triggers.jump {
@@ -133,7 +133,7 @@ update_player :: proc(
             new_dash_state.dash_start_pos = pls.position
             new_dash_state.dash_dir = [3]f32{dash_input.x, 0, dash_input.y}
             new_dash_state.dash_time = elapsed_time
-            new_dash_state.dash_spd = clamp(la.length(pls.velocity.xz) * 1.5, MIN_DASH_SPD, MAX_DASH_SPD)
+            new_dash_state.dash_spd = clamp(la.length(pls.velocity.xz) * 1.5, consts.MIN_DASH_SPD, consts.MAX_DASH_SPD)
             new_dash_enabled = false
         }
         if triggers.slide {
@@ -155,7 +155,7 @@ update_player :: proc(
     // -------------------------------------------
     } else if pls.mode == .Dashing {
         new_dash_state.dash_dir = la.lerp(pls.dash_state.dash_dir, [3]f32{triggers.move.x, 0, triggers.move.y}, 0.03)
-        if is_hurt || on_surface || elapsed_time - pls.dash_state.dash_time > DASH_LEN {
+        if is_hurt || on_surface || elapsed_time - pls.dash_state.dash_time > consts.DASH_LEN {
             new_mode = .Normal
         }         
 
@@ -168,7 +168,7 @@ update_player :: proc(
         time_since_slide_start := elapsed_time - new_slide_state.slide_time
         slide_start_to_zone_exit := new_slide_state.mid_slide_time - new_slide_state.slide_time
         time_since_exit_zone := time_since_slide_start - slide_start_to_zone_exit
-        if (!on_surface && !triggers.slide_zone) || time_since_exit_zone > SLIDE_LEN {
+        if (!on_surface && !triggers.slide_zone) || time_since_exit_zone > consts.SLIDE_LEN {
             new_mode = .Normal
             new_slide_state.slide_end_time = elapsed_time
         }
@@ -201,27 +201,27 @@ update_player :: proc(
         if triggers.fwd_move {
             new_velocity.xz = math.lerp(
                 new_velocity.xz,
-                la.clamp_length(new_velocity.xz, MAX_PLAYER_SPEED),
+                la.clamp_length(new_velocity.xz, consts.MAX_PLAYER_SPEED),
                 f32(0.01)
             )
         } else {
             new_velocity.xz = math.lerp(
                 new_velocity.xz,
-                la.clamp_length(new_velocity.xz, FAST_CUTOFF),
+                la.clamp_length(new_velocity.xz, consts.FAST_CUTOFF),
                 f32(0.1)
             )
         }
-        new_velocity.y = math.clamp(new_velocity.y, -MAX_FALL_SPEED, MAX_FALL_SPEED)
+        new_velocity.y = math.clamp(new_velocity.y, -consts.MAX_FALL_SPEED, consts.MAX_FALL_SPEED)
 
         // friction
         // -------------------------------------------
         if triggers.move == 0 {
-            if la.length(pls.velocity.xz) > FAST_CUTOFF {
-                new_velocity *= math.pow(FAST_FRICTION, delta_time)
+            if la.length(pls.velocity.xz) > consts.FAST_CUTOFF {
+                new_velocity *= math.pow(consts.FAST_FRICTION, delta_time)
             } else if !on_surface {
-                new_velocity *= math.pow(IDLE_FRICTION, delta_time)
+                new_velocity *= math.pow(consts.IDLE_FRICTION, delta_time)
             } else {
-                new_velocity *= math.pow(GROUND_FRICTION, delta_time)
+                new_velocity *= math.pow(consts.GROUND_FRICTION, delta_time)
             }
         }
 
@@ -229,12 +229,12 @@ update_player :: proc(
         // -------------------------------------------
         if cts.state != .ON_GROUND {
             down: [3]f32 = {0, -1, 0}
-            grav_force := GRAV
+            grav_force := consts.GRAV
             if cts.state == .ON_SLOPE {
-                grav_force = SLOPE_GRAV
+                grav_force = consts.SLOPE_GRAV
             }
             if cts.state == .ON_WALL {
-                grav_force = WALL_GRAV
+                grav_force = consts.WALL_GRAV
             }
             if cts.state == .ON_WALL || cts.state == .ON_SLOPE {
                 down -= la.dot(normalized_contact_ray, down) * normalized_contact_ray
@@ -244,29 +244,29 @@ update_player :: proc(
 
         // wall stick
         // -------------------------------------------
-        if cts.state == .ON_WALL && triggers.wall_detach_held < WALL_DETACH_LEN {
+        if cts.state == .ON_WALL && triggers.wall_detach_held < consts.WALL_DETACH_LEN {
             new_velocity -= la.dot(new_velocity, normalized_contact_ray) * normalized_contact_ray
         } 
 
         // jump
         // -------------------------------------------
         if triggers.ground_jump {
-            new_velocity.y = P_JUMP_SPEED
+            new_velocity.y = consts.P_JUMP_SPEED
         } else if triggers.slope_jump {
-            new_velocity += -normalized_contact_ray * SLOPE_JUMP_FORCE * (triggers.small_hop ? 0.25 : 1.0)
-            new_velocity.y = SLOPE_V_JUMP_FORCE
+            new_velocity += -normalized_contact_ray * consts.SLOPE_JUMP_FORCE * (triggers.small_hop ? 0.25 : 1.0)
+            new_velocity.y = consts.SLOPE_V_JUMP_FORCE
         } else if triggers.wall_jump {
-            new_velocity.y = P_JUMP_SPEED
-            new_velocity += -normalized_contact_ray * WALL_JUMP_FORCE 
+            new_velocity.y = consts.P_JUMP_SPEED
+            new_velocity += -normalized_contact_ray * consts.WALL_JUMP_FORCE 
         }
         if triggers.bunny_hop {
             if triggers.ground_jump {
-                new_velocity.y = GROUND_BUNNY_V_SPEED - (1.0 - pls.spin_state.spin_amt) * BUNNY_SPIN_VARIANCE
+                new_velocity.y = consts.GROUND_BUNNY_V_SPEED - (1.0 - pls.spin_state.spin_amt) * consts.BUNNY_SPIN_VARIANCE
 
             }
-            new_velocity.xz += la.normalize0(new_velocity.xz) * GROUND_BUNNY_H_SPEED
+            new_velocity.xz += la.normalize0(new_velocity.xz) * consts.GROUND_BUNNY_H_SPEED
         } else if triggers.small_hop && triggers.ground_jump {
-            new_velocity.y = SMALL_HOP_V_SPEED
+            new_velocity.y = consts.SMALL_HOP_V_SPEED
         }
 
     // set velocity if dashing
@@ -277,7 +277,7 @@ update_player :: proc(
     // set velocity if sliding 
     // -------------------------------------------
     } else if new_mode == .Sliding {
-        new_velocity = pls.slide_state.slide_dir * (triggers.slide_zone ? SLIDE_SPD * 2 : SLIDE_SPD) 
+        new_velocity = pls.slide_state.slide_dir * (triggers.slide_zone ? consts.SLIDE_SPD * 2 : consts.SLIDE_SPD) 
     }
 
     //slope adjustment (if no jump)
@@ -336,7 +336,7 @@ update_player :: proc(
         if .Bouncy in lgs[id].attributes {
             new_normalized_contact_ray := la.normalize0(collision_adjusted_cts.contact_ray)
             bounced_velocity_dir := la.normalize0(collision_adjusted_velocity) - new_normalized_contact_ray
-            collision_adjusted_velocity = bounced_velocity_dir * BOUNCE_VELOCITY
+            collision_adjusted_velocity = bounced_velocity_dir * consts.BOUNCE_VELOCITY
             collision_adjusted_cts.state = .IN_AIR
             break
         }
@@ -352,12 +352,12 @@ update_player :: proc(
     // -------------------------------------------
     if triggers.restart  {
         collision_adjusted_velocity = [3]f32{0, 0, 0}
-        new_position = INIT_PLAYER_POS
+        new_position = consts.INIT_PLAYER_POS
     }
 
     if triggers.checkpoint {
         collision_adjusted_velocity = [3]f32{0, 0, -40}
-        new_position = INIT_PLAYER_POS - [3]f32{0, 0, f32(CHUNK_DEPTH * gs.current_sector)}
+        new_position = consts.INIT_PLAYER_POS - [3]f32{0, 0, f32(CHUNK_DEPTH * gs.current_sector)}
     }
 
     if triggers.restart || triggers.checkpoint {

@@ -5,7 +5,7 @@ import "core:math"
 import la "core:math/linalg"
 
 
-update_game :: proc(gs: ^Game_State, lgs: #soa[]Level_Geometry, pls: Player_State, triggers: Action_Triggers, collisions: Collision_Log, elapsed_time: f32, delta_time: f32) {
+update_game :: proc(gs: ^Game_State, lgs: Level_Geometry_State, pls: Player_State, triggers: Action_Triggers, collisions: Collision_Log, elapsed_time: f32, delta_time: f32) {
     using constants
     cts := pls.contact_state.state
     on_ground := cts == .ON_SLOPE || cts == .ON_GROUND

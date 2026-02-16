@@ -22,17 +22,17 @@ trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
     return
 }
 
-encode_test_level_cbor :: proc(lgs: #soa[]Level_Geometry, dest: string) {
-    aos_level_data := make([dynamic]Level_Geometry, context.temp_allocator)
+encode_test_level_cbor :: proc(lgs: Level_Geometry_State, dest: string) {
+    level_data := make([dynamic]Level_Geometry, context.temp_allocator)
     for &lg in lgs {
         // lg.attributes = {.Collider, .Crackable}
-        append(&aos_level_data, lg)
+        append(&level_data, lg)
     }
-    bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
+    bin, err := cbor.marshal(level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
     os.write_entire_file(dest, bin)
 }
 
-generate_new_chunk :: proc(lgs: #soa[]Level_Geometry) {
+generate_new_chunk :: proc(lgs: Level_Geometry_State) {
     aos_level_data := make([dynamic]Level_Geometry, context.temp_allocator)
     lg: Level_Geometry
     append(&aos_level_data, lg)

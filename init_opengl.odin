@@ -11,12 +11,13 @@ import SDL "vendor:sdl2"
 import ft "shared:freetype"
 
 
-init_opengl :: proc(window: ^SDL.Window) {
+init_opengl :: proc(window: ^SDL.Window) -> (gl_context: SDL.GLContext){
     SDL.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 4)
     SDL.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 6)
-    gl_context := SDL.GL_CreateContext(window)
+    gl_context = SDL.GL_CreateContext(window)
     SDL.GL_MakeCurrent(window, gl_context)
     gl.load_up_to(4, 6, SDL.gl_set_proc_address)
+    return
 }
 
 

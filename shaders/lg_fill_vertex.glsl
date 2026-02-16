@@ -59,11 +59,10 @@ void main() {
     vs_out.id = gl_BaseInstance + gl_InstanceID + 1; 
     mat4 transform = transforms[gl_BaseInstance + gl_InstanceID];
     vec4 new_pos = transform * aPos;
-    // float player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
-    float player_dist = distance(player_pos, new_pos.xyz) - 200;
-    // vec2 projected_point = (projection * new_pos).xy;
-    // vec2 projected_disp = projected_point - 0.5;
-    // new_pos.xy -= (player_dist / 50.0) * projected_disp;
+    float player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
+    vec2 projected_point = (projection * new_pos).xy;
+    vec2 projected_disp = projected_point - 0.5;
+    new_pos.xy -= (player_dist / 50.0) * projected_disp;
     gl_Position = new_pos;
     vec3 rot_normal = normalize(mat3(transpose(inverse(transform))) * normal_in).xyz;
 

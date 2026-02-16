@@ -83,7 +83,7 @@ main :: proc () {
     // #####################################################
 
     level_to_load := "levels/test_level.bin"
-    
+
     if len(os.args) == 3 {
         if os.args[1] == "chunk" {
             level_to_load = str.concatenate({"chunks/chunk_", os.args[2], ".bin" }, perm_arena_alloc)
@@ -106,7 +106,7 @@ main :: proc () {
     // INIT OPENGL
     // #####################################################
 
-    init_opengl(window)
+    gl_context := init_opengl(window)
 
 
     // #####################################################
@@ -122,7 +122,6 @@ main :: proc () {
     rs:    Render_State;
     bs:    Buffer_State;
     pls:   Player_State;
-    sr:    Shape_Resources;
     szs:   Slide_Zone_State;
     ptcls: Particle_State;
     gs:    Game_State;
@@ -133,10 +132,7 @@ main :: proc () {
     init_editor_state(&es, level_to_load)
     init_slide_zone_state(&szs, perm_arena_alloc)
     init_game_state(&gs)
-
-    // player icosphere mesh
-    // -------------------------------------------
-    add_player_sphere_data(&sr.player_vertices, &sr.player_fill_indices, &sr.player_outline_indices, perm_arena_alloc)
+    init_shaders(&shs, perm_arena_alloc)
 
     // player spin particles
     // -------------------------------------------
@@ -144,19 +140,22 @@ main :: proc () {
 
 
     // #####################################################
-    // LOAD BLENDER RESOURCES 
+    // GENERATE/LOAD MODEL DATA
     // #####################################################
 
+    sr: Shape_Resources
+    defer free_shape_resources(sr)
+    add_player_sphere_data(&sr.player_vertices, &sr.player_fill_indices, &sr.player_outline_indices, context.allocator)
     for shape in SHAPE {
-        if ok := load_glb_model(shape, &sr, &phs, perm_arena_alloc); ok {
+        if ok := load_glb_model(shape, &sr, &phs, context.allocator); ok {
             fmt.println("loaded", shape) 
         }
     }
-
     for &v in sr.level_geometry[.SPIN_TRAIL].vertices {
         v.pos.yz *= 10.0
         v.pos.x *= .5
     }
+    init_opengl_mesh_rendering(&bs, ptcls, &sr, perm_arena_alloc)
 
 
     // #####################################################
@@ -211,24 +210,10 @@ main :: proc () {
 
 
     // #####################################################
-    // COMPILE SHADERS 
-    // #####################################################
-
-    init_shaders(&shs, perm_arena_alloc)
-
-
-    // #####################################################
     // INIT OPENGL TEXT RENDERING
     // #####################################################
 
     init_opengl_text_rendering(&bs, perm_arena_alloc)
-
-
-    // #####################################################
-    // INIT OPENGL MESH RENDERING
-    // #####################################################
-
-    init_opengl_mesh_rendering(&bs, ptcls, &sr, perm_arena_alloc)
 
 
     // #####################################################
@@ -322,7 +307,7 @@ main :: proc () {
             // fixed update
             // -------------------------------------------
             if EDIT {
-                editor_update(&lgs, sr, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
+                editor_update(&lgs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
                 gameplay_update(&lgs, is, &pls, &phs, &rs, &ptcls, bs, &cs, &szs, &gs, f32(elapsed_time), FIXED_DELTA_TIME * gs.time_mult)
             }
@@ -333,10 +318,10 @@ main :: proc () {
 
         // render
         // -------------------------------------------
-        draw(lgs[:], sr, pls, &rs, &ptcls, bs, &shs, &phs, &cs, is, es, szs, gs, elapsed_time, interpolated_time, FIXED_DELTA_TIME * gs.time_mult)
+        draw(lgs, sr, pls, &rs, &ptcls, bs, &shs, &phs, &cs, is, es, szs, gs, elapsed_time, interpolated_time, FIXED_DELTA_TIME * gs.time_mult)
         when ODIN_OS != .Windows {
             if EDIT {
-                update_imgui(&es, &dynamic_lgs)
+                update_imgui(&es, &lgs)
             }
         }
         SDL.GL_SwapWindow(window)

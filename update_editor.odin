@@ -5,7 +5,7 @@ import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
 
-editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, sr: Shape_Resources, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
+editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
     using constants
 
     need_sort := false
@@ -193,7 +193,7 @@ editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, sr: Shape_Resources, es
     if is.ent_pressed {
         if !es.saved {
             fmt.println(es.save_dest)
-            encode_test_level_cbor(lgs[:], es.save_dest)
+            encode_test_level_cbor(lgs^, es.save_dest)
             es.saved = true
         }
     } else {
@@ -205,7 +205,7 @@ editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, sr: Shape_Resources, es
     }
 
     if is.f12_pressed {
-        generate_new_chunk(lgs[:])
+        generate_new_chunk(lgs^)
     }
 
     es.can_switch = !is.tab_pressed

@@ -7,7 +7,7 @@ import imgui "shared:odin-imgui"
 import imsdl "shared:odin-imgui/imgui_impl_sdl2"
 import imgl "shared:odin-imgui/imgui_impl_opengl3"
 
-update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^#soa[dynamic]Level_Geometry) {
+update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^Level_Geometry_State) {
     imgl.new_frame()
     imsdl.new_frame()
     imgui.new_frame()

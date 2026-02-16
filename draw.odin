@@ -13,7 +13,7 @@ import la "core:math/linalg"
 import tim "core:time"
 
 draw :: proc(
-    lgs: #soa[]Level_Geometry, 
+    lgs: Level_Geometry_State, 
     sr: Shape_Resources,
     pls: Player_State,
     rs: ^Render_State,
@@ -65,11 +65,15 @@ draw :: proc(
         }
     }
 
+    // actually needed for sorting: transforms, render type, shape (combine as render group?)
+
+
     // load UBOs 
     // -------------------------------------------
-    transforms, angular_velocities,
-    shapes, colliders, render_types,
-    attributess, aabbs, shatter_datas,
+
+    // actually needed for rendering: transforms, shatter_datas, transparencies
+    transforms, sxxxhapes, cxxxolliders,
+    rxxender_types, axxttributes, shatter_datas,
     transparencies := soa_unzip(culled_lgs[:])
 
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))

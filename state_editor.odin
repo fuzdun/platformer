@@ -16,7 +16,7 @@ Editor_State :: struct {
     zoom: f32,
     connections: [dynamic]Connection,
     pos: [3]f32,
-    displayed_attributes: [Level_Geometry_Component]bool,
+    displayed_attributes: #sparse[Level_Geometry_Component]bool,
     displayed_shape: i32,
     displayed_render_type: i32,
     save_dest: string
@@ -75,7 +75,7 @@ get_geometry_dist :: proc(ps: Physics_State, lga: Level_Geometry, lgb: Level_Geo
     return
 }
 
-editor_save_changes :: proc(lgs:^#soa[]Level_Geometry, is: Input_State, es: ^Editor_State) {
+editor_save_changes :: proc(lgs:^Level_Geometry_State, is: Input_State, es: ^Editor_State) {
     if is.ent_pressed {
         if !es.saved {
             encode_test_level_cbor(lgs^, es.save_dest)

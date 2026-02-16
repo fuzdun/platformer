@@ -25,7 +25,7 @@ model_json_struct :: struct {
     }
 }
 
-load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, ps: ^Physics_State, perm_arena: runtime.Allocator) -> bool {
+load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, phs: ^Physics_State, perm_arena: runtime.Allocator) -> bool {
     temp_arena: vmem.Arena
     arena_err := vmem.arena_init_growing(&temp_arena); ensure(arena_err == nil)
     temp_arena_alloc := vmem.arena_allocator(&temp_arena) 
@@ -77,7 +77,7 @@ load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, ps: ^Physics_State, p
 
     collider_mesh_idx := len(js.scenes[0].nodes) == 2 ? 1 : 0
     sr.level_geometry[shape] = read_mesh_data_from_binary(js, bin_data, 0, false, perm_arena).(Shape_Data)
-    ps.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true, perm_arena).(Mesh)
+    phs.level_colliders[shape] = read_mesh_data_from_binary(js, bin_data, collider_mesh_idx, true, perm_arena).(Mesh)
 
     vmem.arena_destroy(&temp_arena)
     return true
@@ -130,7 +130,7 @@ read_mesh_data_from_binary :: proc(model_data: model_json_struct, binary_data: [
     coll.vertices = make([][3]f32, len(pos_data), perm_arena) 
     coll.indices = make([]u16, len(indices_data), perm_arena)
     for pos, pi in pos_data {
-        coll.vertices[pi] = {pos[0], pos[1], pos[2]}
+        coll.vertices[pi] = pos
     }
     copy(coll.indices, indices_data)
     return coll
