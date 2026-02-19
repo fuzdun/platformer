@@ -1,13 +1,10 @@
 package main
 
-import "constants"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import "core:strconv"
-import "core:fmt"
 
 draw_editor :: proc(rs: ^Render_State, bs: Buffer_State, shs: ^Shader_State, es: Editor_State, is: Input_State, lgs: Level_Geometry_State, rg: Render_Groups, proj_mat: glm.mat4) {
-    using constants
     gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
     gl.ClearColor(0, 0, 0, 1)
     gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -42,7 +39,7 @@ draw_editor :: proc(rs: ^Render_State, bs: Buffer_State, shs: ^Shader_State, es:
             )
             avg_pos := el.poss[0] + (el.poss[1] - el.poss[0]) / 2
             dist_txt_buf: [3]byte            
-            strconv.itoa(dist_txt_buf[:], el.dist)
+            strconv.write_int(dist_txt_buf[:], i64(el.dist), 10)
             render_screen_text(shs, bs, string(dist_txt_buf[:]), avg_pos, proj_mat, scale)
         }
     }
@@ -50,7 +47,7 @@ draw_editor :: proc(rs: ^Render_State, bs: Buffer_State, shs: ^Shader_State, es:
     if is.lctrl_pressed {
         for lg, lg_idx in lgs {
             buf: [4]byte
-            idx_string := strconv.itoa(buf[:], lg_idx)
+            idx_string := strconv.write_int(buf[:], i64(lg_idx), 10)
             render_screen_text(shs, bs, idx_string, lg.transform.position, proj_mat, 0.3)
         }
     }

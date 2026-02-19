@@ -1,14 +1,11 @@
 package main
 
-import "core:fmt"
-import "constants"
 import "core:math"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
 
 
 update_fx :: proc(rs: ^Render_State, pls: Player_State, cs: Camera_State, triggers: Action_Triggers, elapsed_time: f32) {
-    using constants
     cts := pls.contact_state
 
     // player vertex displacement

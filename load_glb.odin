@@ -33,8 +33,8 @@ load_glb_model :: proc(shape: SHAPE, sr: ^Shape_Resources, phs: ^Physics_State, 
     // read binary data
     filename := SHAPE_FILENAME[shape]
     binary_filename := str.concatenate({"models/", filename, ".glb"}, temp_arena_alloc)
-    data, ok := os.read_entire_file_from_filename(binary_filename, temp_arena_alloc)
-    if !ok {
+    data, err := os.read_entire_file_from_path(binary_filename, temp_arena_alloc)
+    if err != os.ERROR_NONE {
         fmt.eprintln("failed to read file")
         return false
     }

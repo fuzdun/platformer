@@ -2,9 +2,7 @@ package main
 
 import "core:math/rand"
 import "base:runtime"
-import tim "core:time"
 import la "core:math/linalg"
-import glm "core:math/linalg/glsl"
 import rnd "core:math/rand"
 
 CHUNK_WIDTH :: 500
@@ -14,12 +12,13 @@ Level_Geometry_State :: #soa[dynamic]Level_Geometry
 
 Level_Geometry :: struct {
     transform: Transform,
-    shape: SHAPE,
+    shape: SHAPE, // remove this after fixing level editor to have collider selectable
     collider: SHAPE,
     render_type: Level_Geometry_Render_Type,
     attributes: Level_Geometry_Attributes,
     shatter_data: Shatter_Ubo,
     transparency: f32,
+    render_data_handle: Handle
 }
 
 Position :: la.Vector3f32 

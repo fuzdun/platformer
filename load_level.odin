@@ -1,17 +1,13 @@
 package main
 
-import "core:bytes"
-import "core:strconv"
 import la "core:math/linalg"
 import "core:encoding/cbor"
 import "core:os"
 import "core:math"
-import "core:fmt"
 import "base:runtime"
-import vmem "core:mem/virtual"
 import rnd "core:math/rand"
 import str "core:strings"
-import glm "core:math/linalg/glsl"
+import hm "core:container/handle_map"
 
 trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
     for val in T {
@@ -28,19 +24,19 @@ encode_test_level_cbor :: proc(lgs: Level_Geometry_State, dest: string) {
         // lg.attributes = {.Collider, .Crackable}
         append(&level_data, lg)
     }
-    bin, err := cbor.marshal(level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
-    os.write_entire_file(dest, bin)
+    bin, marshal_err := cbor.marshal(level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
+    write_err := os.write_entire_file(dest, bin)
 }
 
 generate_new_chunk :: proc(lgs: Level_Geometry_State) {
     aos_level_data := make([dynamic]Level_Geometry, context.temp_allocator)
     lg: Level_Geometry
     append(&aos_level_data, lg)
-    bin, err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
-    os.write_entire_file("chunks/new_chunk.bin", bin)
+    bin, marshal_err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
+    write_err := os.write_entire_file("chunks/new_chunk.bin", bin)
 }
 
-generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
+generate_level :: proc(lgrs: ^Level_Geometry_Render_Data_State, arena: runtime.Allocator) -> []Level_Geometry {
     level_geometry := make([]Level_Geometry, 300, arena)
     spawn_offset := [3]f32{0, 0, 0}
     entry_idx := 0
@@ -52,12 +48,21 @@ generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
         level_bin, read_err := os.read_entire_file(level_filename, context.temp_allocator)
         decoded, decode_err := cbor.decode(string(level_bin), nil, context.temp_allocator)
         decoded_arr := decoded.(^cbor.Array)
-        for entry, idx in decoded_arr {
+        for entry in decoded_arr {
             lg: Level_Geometry
+
+            // USE SEPARATE LG TYPE FOR UNMARSHALING LOADED DATA, SINCE WE DON'T NEED TO KEEP IT ALL AROUND
+            // ALSO CREATE A SUBTYPES OF RENDER_DATA FOR DIFFERENT PIPELINES, BUT DON'T TRY TO OVERGENERALIZE
+            // / OOP-IFY THE DRAW CODE. JUST CREATE INIT FUNCTIONS FOR SHADER PIPELINES
+ 
             entry_bin, _ := cbor.encode(entry, cbor.ENCODE_SMALL, context.temp_allocator)
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
-            lg.transparency = 1.0
+            render_data_handle, ok := hm.add(lgrs, Level_Geometry_Render_Data {
+                render_group = lg_render_group(lg),
+                transparency = 1
+            })
+            lg.render_data_handle = render_data_handle
             lg.transform.position += spawn_offset
             level_geometry[entry_idx] = lg
             entry_idx += 1
@@ -67,7 +72,7 @@ generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
     return level_geometry
 }
 
-load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Level_Geometry {
+load_level_geometry :: proc(filename: string, lgrs: ^Level_Geometry_Render_Data_State, arena: runtime.Allocator) -> []Level_Geometry {
     // level_prefix := loading_chunk ? "chunks/chunk_" : "levels/"
     // level_filename := str.concatenate({level_prefix, filename, ".bin"}, context.temp_allocator)
     level_bin, read_err := os.read_entire_file(filename, context.temp_allocator)
@@ -87,6 +92,10 @@ load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Lev
             x := f32(i % 10)
             y := math.floor(f32(i) / 4) - 50
             lg.transform = {{x * 75, y * 1 - 80, y * -25 + 200},{30, 30, 30}, rot}
+            render_data_handle, ok := hm.add(lgrs, Level_Geometry_Render_Data {
+                render_group = lg_render_group(lg),
+                transparency = 1
+            })
             lg.render_type = .Standard
             lg.attributes = { .Collider }
             loaded_level_geometry[i] = lg

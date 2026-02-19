@@ -1,6 +1,5 @@
 package main
 
-import "constants"
 import "base:runtime"
 import "core:os"
 import "core:fmt"
@@ -68,8 +67,6 @@ init_opengl_text_rendering :: proc(bs: ^Buffer_State, perm_alloc: runtime.Alloca
 
 
 init_opengl_mesh_rendering :: proc(bs: ^Buffer_State, ptcls: Particle_State, sr: ^Shape_Resources, perm_alloc: runtime.Allocator) {
-    using constants
-
     // init buffers / VAOs ----------------
     gl.GenFramebuffers(1, &bs.postprocessing_fbo)
     gl.GenTextures(1, &bs.postprocessing_tcb)
@@ -280,14 +277,14 @@ init_opengl_mesh_rendering :: proc(bs: ^Buffer_State, ptcls: Particle_State, sr:
     gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 
     // load blue noise dither texture -----
-    if dither_bin, read_success := os.read_entire_file("textures/blue_noise_64.png", perm_alloc); read_success {
+    if dither_bin, err := os.read_entire_file("textures/blue_noise_64.png", perm_alloc); err == os.ERROR_NONE {
         gl.BindTexture(gl.TEXTURE_2D, bs.dither_tex)
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
         gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
         gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 64, 64, 0, gl.RGBA, gl.UNSIGNED_BYTE, &dither_bin[0])
-    }
+    } 
 
     // load resource vertices/indices buffers
     element_array_vertices := make([dynamic]Vertex, context.temp_allocator)

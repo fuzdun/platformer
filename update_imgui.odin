@@ -1,7 +1,6 @@
 package main
 
 import "core:strconv"
-import "core:fmt"
 import str "core:strings"
 import imgui "shared:odin-imgui"
 import imsdl "shared:odin-imgui/imgui_impl_sdl2"
@@ -19,7 +18,7 @@ update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^Level_Geometry_State) {
         for lg, lg_idx in dynamic_lgs {
             color: imgui.Vec4 = es.selected_entity == lg_idx ? {1, 0, 0, 1} : {1, 1, 1, 1}
             buf: [4]byte
-            num_string := strconv.itoa(buf[:], lg_idx)
+            num_string := strconv.write_int(buf[:], i64(lg_idx), 10)
             shape_string := SHAPE_NAME[lg.shape]
             display_name := str.concatenate({num_string, ": ", shape_string})
             defer delete(display_name)

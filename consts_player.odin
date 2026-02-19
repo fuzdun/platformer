@@ -1,4 +1,4 @@
-package constants
+package main
 
 import "core:math"
 
@@ -113,4 +113,5 @@ MAX_FOV_MOD :: .75
 TIME_LIMIT :: 40.0
 CHECKPOINT_TIME_BOOST :: 4.0
 CHECKPOINT_SIZE :: 1.0
+
 

@@ -1,9 +1,7 @@
 package main
 
-import "constants"
 import "base:runtime"
 import "core:math"
-import "core:fmt"
 import la "core:math/linalg"
 import rnd "core:math/rand"
 import gl "vendor:OpenGL"
@@ -18,7 +16,6 @@ update_particles :: proc(
     elapsed_time: f32,
     delta_time: f32,
 ) {
-    using constants
     cts := pls.contact_state
     normalized_contact_ray := la.normalize0(cts.contact_ray)
     surface_ortho1 := la.vector3_orthogonal(normalized_contact_ray)

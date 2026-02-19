@@ -1,24 +1,19 @@
 package main
 
-import "core:sort"
-import "core:encoding/xml/example"
 import "core:fmt"
 import "core:mem"
 import "core:os"
-import "core:strconv"
-import "core:flags"
-import "core:math"
 import vmem "core:mem/virtual"
 import glm "core:math/linalg/glsl"
 import str "core:strings"
 import rnd "core:math/rand"
 import SDL "vendor:sdl2"
-import TTF "vendor:sdl2/ttf"
 import gl "vendor:OpenGL"
 import ft "shared:freetype"
 import imgui "shared:odin-imgui"
 import imsdl "shared:odin-imgui/imgui_impl_sdl2"
 import imgl "shared:odin-imgui/imgui_impl_opengl3"
+import hm "core:container/handle_map"
 
 MAX_LEVEL_GEOMETRY_COUNT :: 2000
 
@@ -36,11 +31,13 @@ FORCE_EXTERNAL_MONITOR :: false
 
 TITLE :: "Durian"
 
-SEED := rnd.float32() * 1000
+SEED: f32
 
 quit_app := false
 
-main :: proc () {
+main :: proc() {
+    
+    SEED = rnd.float32() * 1000
 
 
     // ####################################################
@@ -106,7 +103,9 @@ main :: proc () {
     // INIT OPENGL
     // #####################################################
 
+
     gl_context := init_opengl(window)
+    // pipeline_test()
 
 
     // #####################################################
@@ -114,12 +113,14 @@ main :: proc () {
     // #####################################################
 
     lgs:   Level_Geometry_State;
+    lgrs:  Level_Geometry_Render_Data_State;
     is:    Input_State;
     cs:    Camera_State;
     es:    Editor_State;
     phs:   Physics_State;
     shs:   Shader_State;
     rs:    Render_State;
+    sr:    Shape_Resources
     bs:    Buffer_State;
     pls:   Player_State;
     szs:   Slide_Zone_State;
@@ -133,6 +134,7 @@ main :: proc () {
     init_slide_zone_state(&szs, perm_arena_alloc)
     init_game_state(&gs)
     init_shaders(&shs, perm_arena_alloc)
+    hm.dynamic_init(&lgrs, perm_arena_alloc)
 
     // player spin particles
     // -------------------------------------------
@@ -143,11 +145,9 @@ main :: proc () {
     // GENERATE/LOAD MODEL DATA
     // #####################################################
 
-    sr: Shape_Resources
-    defer free_shape_resources(sr)
-    add_player_sphere_data(&sr.player_vertices, &sr.player_fill_indices, &sr.player_outline_indices, context.allocator)
+    add_player_sphere_data(&sr.player_vertices, &sr.player_fill_indices, &sr.player_outline_indices, perm_arena_alloc)
     for shape in SHAPE {
-        if ok := load_glb_model(shape, &sr, &phs, context.allocator); ok {
+        if ok := load_glb_model(shape, &sr, &phs, perm_arena_alloc); ok {
             fmt.println("loaded", shape) 
         }
     }
@@ -156,7 +156,6 @@ main :: proc () {
         v.pos.x *= .5
     }
     init_opengl_mesh_rendering(&bs, ptcls, &sr, perm_arena_alloc)
-
 
     // #####################################################
     // LOAD LEVEL GEOMETRY
@@ -167,16 +166,16 @@ main :: proc () {
     loaded_level_geometry: []Level_Geometry
 
     if GENERATE {
-        loaded_level_geometry = generate_level(context.temp_allocator)
+        loaded_level_geometry = generate_level(&lgrs, context.temp_allocator)
     } else {
-        loaded_level_geometry = load_level_geometry(level_to_load, context.temp_allocator)
+        loaded_level_geometry = load_level_geometry(level_to_load, &lgrs, context.temp_allocator)
     }
 
     num_entities := len(loaded_level_geometry) 
 
     // convert loaded gemoetry to SOA ------
-    lgs = make(Level_Geometry_State, len(loaded_level_geometry), perm_arena_alloc)
-    for lg, idx in loaded_level_geometry {
+    lgs = make(Level_Geometry_State, perm_arena_alloc)
+    for &lg, idx in loaded_level_geometry {
         append(&lgs, lg)
     }
 
@@ -230,7 +229,7 @@ main :: proc () {
             imgl.init()
         }
     }
-    
+
 
     // #####################################################
     // FRAME LOOP 
@@ -247,7 +246,7 @@ main :: proc () {
     }
     snap_hz = i64(clocks_per_second) / snap_hz
     snap_vals : [8]i64 = { snap_hz, snap_hz * 2, snap_hz * 3, snap_hz * 4, snap_hz * 5, snap_hz * 6, snap_hz * 7, snap_hz * 8 }
-    
+
     frame_time_buffer : RingBuffer(4, i64)
     ring_buffer_init(&frame_time_buffer, target_frame_clocks, perm_arena_alloc)
 
@@ -309,7 +308,7 @@ main :: proc () {
             if EDIT {
                 editor_update(&lgs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
-                gameplay_update(&lgs, is, &pls, &phs, &rs, &ptcls, bs, &cs, &szs, &gs, f32(elapsed_time), FIXED_DELTA_TIME * gs.time_mult)
+                gameplay_update(&lgs, &lgrs, is, &pls, &phs, &rs, &ptcls, bs, &cs, &szs, &gs, f32(elapsed_time), FIXED_DELTA_TIME * gs.time_mult)
             }
             accumulator -= target_frame_clocks 
         }
@@ -318,7 +317,7 @@ main :: proc () {
 
         // render
         // -------------------------------------------
-        draw(lgs, sr, pls, &rs, &ptcls, bs, &shs, &phs, &cs, is, es, szs, gs, elapsed_time, interpolated_time, FIXED_DELTA_TIME * gs.time_mult)
+        draw(lgs, &lgrs, sr, pls, &rs, &ptcls, bs, &shs, &phs, &cs, is, es, szs, gs, elapsed_time, interpolated_time, FIXED_DELTA_TIME * gs.time_mult)
         when ODIN_OS != .Windows {
             if EDIT {
                 update_imgui(&es, &lgs)

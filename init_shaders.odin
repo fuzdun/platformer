@@ -16,8 +16,8 @@ init_shaders :: proc(shs: ^Shader_State, perm_alloc: runtime.Allocator) {
         for filename, shader_i in config.pipeline {
             type := config.shader_types[shader_i]
             filename := str.concatenate({dir, filename, ext}, context.temp_allocator)
-            shader_string, shader_ok := os.read_entire_file(filename, context.temp_allocator)
-            if !shader_ok {
+            shader_string, shader_err := os.read_entire_file(filename, context.temp_allocator)
+            if shader_err != os.ERROR_NONE {
                 fmt.eprintln("failed to read shader file:", shader_string)
             }
             shader_id, ok := gl.compile_shader_from_source(string(shader_string), type)

@@ -1,16 +1,12 @@
 package main
 
-import "constants"
 import "base:runtime"
-import "core:sort"
 import "core:math"
-import "core:slice"
-import "core:fmt"
 import str "core:strings"
 import gl "vendor:OpenGL"
 import la "core:math/linalg"
 import glm "core:math/linalg/glsl"
-import ft "shared:freetype"
+import hm "core:container/handle_map"
 
 OUTER_TESSELLATION_AMT :: 3.0
 INNER_TESSELLATION_AMT :: 3.0
@@ -29,6 +25,8 @@ SHAPE :: enum {
     FRANK,
     SPIN_TRAIL,
 }
+
+Handle :: distinct hm.Handle32
 
 Level_Geometry_Render_Type :: enum {
     Standard,
@@ -54,7 +52,7 @@ NUM_RENDER_GROUPS :: len(SHAPE) * len(Level_Geometry_Render_Type)
 Render_State :: struct {
     player_trail_sample: [3]glm.vec3,
     prev_player_trail_sample: [3]glm.vec3,
-    player_trail: RingBuffer(constants.TRAIL_SIZE, [3]f32),
+    player_trail: RingBuffer(TRAIL_SIZE, [3]f32),
 
     player_vertex_displacment: [3]f32,
     tgt_player_vertex_displacement: [3]f32,
@@ -66,6 +64,16 @@ Render_State :: struct {
     screen_splashes: [dynamic][4]f32,
     screen_ripple_pt: [2]f32,
 }
+
+Level_Geometry_Render_Data :: struct {
+    handle: Handle,
+    transform: Transform,
+    render_group: int,
+    transparency: f32,
+    shatter_data: Shatter_Ubo,
+}
+
+Level_Geometry_Render_Data_State :: hm.Dynamic_Handle_Map(Level_Geometry_Render_Data, Handle)
 
 Quad_Vertex :: struct {
     position: glm.vec3,

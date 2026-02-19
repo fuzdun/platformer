@@ -1,19 +1,16 @@
 package main
 
-import "constants"
-import "core:sort"
-import "core:fmt"
 import "core:slice"
-import "core:math"
 import "core:strconv"
-import vmem "core:mem/virtual"
+import "core:math"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
-import tim "core:time"
+import hm "core:container/handle_map"
 
 draw :: proc(
     lgs: Level_Geometry_State, 
+    lgrs: ^Level_Geometry_Render_Data_State,
     sr: Shape_Resources,
     pls: Player_State,
     rs: ^Render_State,
@@ -30,7 +27,6 @@ draw :: proc(
     interp_t: f64,
     dt: f32
 ) {
-    using constants
 
     // #####################################################
     //  PREPARE RENDER DATA
@@ -41,59 +37,70 @@ draw :: proc(
     group_offsets: [NUM_RENDER_GROUPS]int
     min_z_cull := cs.position.z - FWD_Z_CULL
     max_z_cull := cs.position.z + BCK_Z_CULL
-    num_culled_lgs := 0
-    for lg, idx in lgs {
-        if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
-            group_offsets[lg_render_group(lg)] += 1
-            num_culled_lgs += 1
+    num_culled_rd := 0
+
+    rd_it := hm.iterator_make(lgrs)
+    for rd, rd_h in hm.iterate(&rd_it) {
+        if EDIT || (rd.transform.position.z < max_z_cull && rd.transform.position.z > min_z_cull) {
+            group_offsets[rd.render_group] += 1
+            num_culled_rd += 1
         }
     }
 
-    // generate draw commands 
+    // convert group counts to group offsets
     // -------------------------------------------
-    counts_to_offsets(group_offsets[:])
-    draw_commands := offsets_to_render_commands(group_offsets[:], num_culled_lgs, rs^, sr)
-
-    // sort and cull
-    // -------------------------------------------
-    culled_lgs := make(#soa[]Level_Geometry, num_culled_lgs, context.temp_allocator)
-    for lg, idx in lgs {
-        if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
-            rg := lg_render_group(lg)
-            culled_lgs[group_offsets[rg]] = lg
-            group_offsets[rg] += 1
-        }
+    for &val, idx in group_offsets[1:] {
+       val += group_offsets[idx] 
+    }
+    #reverse for &val, idx in group_offsets {
+        val = idx == 0 ? 0 : group_offsets[idx - 1]
     }
 
-    // actually needed for sorting: transforms, render type, shape (combine as render group?)
+    // generate draw commands
+    // -------------------------------------------
+    draw_commands: Render_Groups
+    for &rg in draw_commands {
+        rg = make([dynamic]gl.DrawElementsIndirectCommand, context.temp_allocator)
+    } 
+    for g_off, idx in group_offsets {
+        next_off := idx == len(group_offsets) - 1 ? num_culled_rd : group_offsets[idx + 1]
+        count := u32(next_off - g_off)
+        if count == 0 do continue
+        shape := SHAPE(idx % len(SHAPE))
+        render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(SHAPE))))
+        sd := sr.level_geometry[shape] 
+        command: gl.DrawElementsIndirectCommand = {
+            u32(len(sd.indices)),
+            count,
+            sr.index_offsets[shape],
+            sr.vertex_offsets[shape],
+            u32(g_off)
+        }
+        append(&draw_commands[render_type], command)
+    }
 
+    culled_rd := make(#soa[]Level_Geometry_Render_Data, num_culled_rd, context.temp_allocator)
+
+    // sort culled geometry
+    // -------------------------------------------
+    rd_it = hm.iterator_make(lgrs)
+    for rd, rd_h in hm.iterate(&rd_it) {
+        if EDIT || (rd.transform.position.z < max_z_cull && rd.transform.position.z > min_z_cull) {
+            culled_rd[group_offsets[rd.render_group]] = rd^
+            group_offsets[rd.render_group] += 1
+        }
+    }
 
     // load UBOs 
     // -------------------------------------------
-
-    // actually needed for rendering: transforms, shatter_datas, transparencies
-    transforms, sxxxhapes, cxxxolliders,
-    rxxender_types, axxttributes, shatter_datas,
-    transparencies := soa_unzip(culled_lgs[:])
+    ssbo_mapper(culled_rd, .Transform, glm.mat4, bs.transforms_ubo)
+    ssbo_mapper(culled_rd, .Transparency, Transparency_Ubo, bs.transparencies_ubo)
+    ssbo_mapper(culled_rd, .Shatter, Shatter_Ubo, bs.shatter_ubo)
+    ssbo_mapper(culled_rd, .Z_Width, Z_Width_Ubo, bs.z_widths_ubo)
 
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
     intensity := gs.intensity
-
-    z_widths := make([]Z_Width_Ubo, num_culled_lgs, context.temp_allocator)
-    for i in 0..<num_culled_lgs {
-        z_widths[i] = { 20 }
-    }
-
-    transparency_ubos := make([]Transparency_Ubo, num_culled_lgs, context.temp_allocator)
-    for t, i in transparencies {
-        transparency_ubos[i] = { t }
-    }
-
-    transform_mats := make([]glm.mat4, num_culled_lgs, context.temp_allocator)
-    for t, i in transforms {
-        transform_mats[i] = trans_to_mat4(t)
-    }
 
     common_ubo: Common_Ubo = {
         projection = proj_mat,
@@ -122,18 +129,6 @@ draw :: proc(
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, bs.tess_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Tess_Ubo), &tess_ubo)
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.transforms_ubo)
-    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(glm.mat4) * num_culled_lgs, &transform_mats[0])
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.z_widths_ubo)
-    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(glm.vec4) * num_culled_lgs, &z_widths[0])
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.shatter_ubo)
-    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Shatter_Ubo) * num_culled_lgs, &shatter_datas[0])
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.transparencies_ubo)
-    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Transparency_Ubo) * num_culled_lgs, &transparency_ubos[0])
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, bs.intensity_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(f32), &intensity)
@@ -438,7 +433,7 @@ draw :: proc(
         use_shader(shs, rs, .Text)
 
         score_buf: [8]byte
-        strconv.itoa(score_buf[:], gs.score)
+        strconv.write_int(score_buf[:], i64(gs.score), 10)
         //render_screen_text(shs, bs, string(score_buf[:]), [3]f32{-0.9, 0.75, 0}, la.MATRIX4F32_IDENTITY, .3)
         //
         //if gs.time_remaining > 0 {

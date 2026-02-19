@@ -1,4 +1,4 @@
-package constants
+package main
 
 PHYSICS_SEGMENT_COUNT :: 10
 PHYSICS_SEGMENT_SIZE :: 500.0

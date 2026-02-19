@@ -1,6 +1,5 @@
 package main
 
-import "constants"
 import "base:runtime"
 import "core:math"
 import glm "core:math/linalg/glsl"
@@ -78,7 +77,6 @@ Player_State :: struct {
 }
 
 init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
-    using constants
     pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
     pls.dash_enabled = true
@@ -114,7 +112,6 @@ interpolated_player_matrix :: proc(ps: Player_State, t: f32) -> matrix[4, 4]f32 
 }
 
 animate_player_vertices_sliding :: proc(vertices: []Vertex, contact_ray: [3]f32, slide_total: f32, slide_off: f32, time: f32) {
-    using constants
     up := la.normalize(contact_ray)
     spin_mat := la.matrix4_rotate_f32(f32(time) / 150, up)
     slide_t := slide_total

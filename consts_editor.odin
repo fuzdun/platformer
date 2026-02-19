@@ -1,4 +1,4 @@
-package constants
+package main
 
 INIT_EDITOR_ZOOM :: 400
 INIT_EDITOR_ROTATION :: -0.25

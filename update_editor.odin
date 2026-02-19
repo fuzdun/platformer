@@ -1,12 +1,10 @@
 package main
 
-import "constants"
 import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
 
-editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
-    using constants
+editor_update :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
 
     need_sort := false
 

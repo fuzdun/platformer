@@ -1,8 +1,6 @@
 package main
 
-import "constants"
 import "core:math"
-import "core:fmt"
 
 Editor_State :: struct {
     selected_entity: int,
@@ -28,7 +26,6 @@ Connection :: struct {
 }
 
 init_editor_state :: proc(es: ^Editor_State, level_to_load: string) {
-    using constants
     es.y_rot = INIT_EDITOR_ROTATION 
     es.zoom = INIT_EDITOR_ZOOM
     es.save_dest = level_to_load
