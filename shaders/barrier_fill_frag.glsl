@@ -1,14 +1,17 @@
 #version 460 core
 
-layout (std140, binding = 0) uniform Common
-{
-    mat4 projection;
-    float i_time;
-};
-
-layout (std140, binding = 2) uniform Player_Pos
+layout (std140, binding = 0) uniform Combined
 {
     vec3 player_pos;
+	vec2 _padding0;
+    mat4 projection;
+    float i_time;
+    float intensity;
+    float dash_time;
+    float dash_total;
+    vec3 constrain_dir;
+    float inner_tess;
+    float outer_tess;
 };
 
 in vec2 perspective_uv;

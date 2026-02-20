@@ -43,16 +43,13 @@ Buffer_State :: struct {
 
     indirect_buffer: u32,
 
-    common_ubo: u32,
-    dash_ubo: u32,
-    ppos_ubo: u32,
-    tess_ubo: u32,
-    transforms_ubo: u32,
-    z_widths_ubo: u32,
-    shatter_ubo: u32,
-    crack_time_ubo: u32,
-    transparencies_ubo: u32,
-    intensity_ubo: u32,
+    combined_ubo: u32,
+    transforms_ssbo: u32,
+    z_widths_ssbo: u32,
+    shatter_ssbo: u32,
+    crack_time_ssbo: u32,
+    transparencies_ssbo: u32,
+    intensity_ssbo: u32,
 
     dither_tex: u32
 }

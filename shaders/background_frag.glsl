@@ -7,17 +7,19 @@ uniform int crunch_pt_count;
 in vec2 uv;
 out vec4 fragColor;
 
-layout (std140, binding = 0) uniform Common
+layout (std140, binding = 0) uniform Combined
 {
+    vec3 player_pos;
+	vec2 _padding0;
     mat4 projection;
     float i_time;
-};
-
-layout (std140, binding = 8) uniform Intensity
-{
     float intensity;
+    float dash_time;
+    float dash_total;
+    vec3 constrain_dir;
+    float inner_tess;
+    float outer_tess;
 };
-
 
 vec3 tonemap(vec3 x) {
    return (x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14);

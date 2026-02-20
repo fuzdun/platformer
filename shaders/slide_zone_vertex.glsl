@@ -4,13 +4,21 @@ layout (location = 0) in vec4 a_pos;
 layout (location = 1) in vec2 vertex_uv;
 layout (location = 2) in vec3 normal_in;
 
-layout (std140, binding = 0) uniform Common
+layout (std140, binding = 0) uniform Combined
 {
+    vec3 player_pos;
+	vec2 _padding0;
     mat4 projection;
     float i_time;
+    float intensity;
+    float dash_time;
+    float dash_total;
+    vec3 constrain_dir_in;
+    float inner_tess;
+    float outer_tess;
 };
 
-layout (std140, binding = 4) uniform Transforms
+layout (std140, binding = 4) buffer Transforms
 {
     mat4 transforms[1000]; 
 };
@@ -20,12 +28,12 @@ struct Break_Data {
     vec4 crack_time_break_dir;
 };
 
-layout (std140, binding = 6) uniform Shatter_Datas
+layout (std140, binding = 6) buffer Shatter_Datas
 {
     Break_Data break_data[1000]; 
 };
 
-layout (std140, binding = 7) uniform Transparencies
+layout (std140, binding = 7) buffer Transparencies
 {
     float transparencies_data[1000]; 
 };

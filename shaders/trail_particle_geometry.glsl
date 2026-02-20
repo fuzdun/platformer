@@ -13,10 +13,18 @@ in VS_OUT {
     vec3 vel;
 } vs_out[];
 
-layout (std140, binding = 0) uniform Common
+layout (std140, binding = 0) uniform Combined
 {
+    vec3 player_pos;
+	vec2 _padding0;
     mat4 projection;
     float i_time;
+    float _intensity_in;
+    float dash_time;
+    float dash_total;
+    vec3 constrain_dir_in;
+    float inner_tess;
+    float outer_tess;
 };
 
 out vec2 uv;

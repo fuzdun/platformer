@@ -5,23 +5,19 @@ layout (location = 1) in vec2 uv_in;
 layout (location = 2) in vec4 offset;
 layout (location = 3) in vec4 prev_offset;
 
-layout (std140, binding = 0) uniform Common
+layout (std140, binding = 0) uniform Combined
 {
+    vec3 player_pos;
+	vec2 _padding0;
     mat4 projection;
     float i_time;
+    float intensity;
+    float dash_time;
+    float dash_total;
+    vec3 constrain_dir_in;
+    float inner_tess;
+    float outer_tess;
 };
-
-// layout (std140, binding = 1) uniform Dash
-// {
-//     float dash_time;
-//     float dash_total;
-//     vec3 constrain_dir;
-// };
-
-// layout (std140, binding = 2) uniform Player_Pos
-// {
-//     vec3 player_pos;
-// };
 
 uniform float radius;
 uniform float interp_t;

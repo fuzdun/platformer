@@ -3,23 +3,26 @@
 layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec2 vertexUV;
 
-layout (std140, binding = 0) uniform Common
-{
-    mat4 projection;
-    float i_time;
-};
-
-layout (std140, binding = 2) uniform Player_Pos
+layout (std140, binding = 0) uniform Combined
 {
     vec3 player_pos;
+	vec2 _padding0;
+    mat4 projection;
+    float i_time;
+    float intensity;
+    float dash_time;
+    float dash_total;
+    vec3 constrain_dir_in;
+    float inner_tess;
+    float outer_tess;
 };
 
-layout (std140, binding = 4) uniform Transforms
+layout (std140, binding = 4) buffer Transforms
 {
     mat4 transforms[1000]; 
 };
 
-layout (std140, binding = 5) uniform Z_Widths
+layout (std140, binding = 5) buffer Z_Widths
 {
     float z_width_data[1000]; 
 };
@@ -29,7 +32,7 @@ struct Break_Data {
     vec4 crack_time_break_dir;
 };
 
-layout (std140, binding = 6) uniform Shatter_Datas
+layout (std140, binding = 6) buffer Shatter_Datas
 {
     Break_Data break_data[1000]; 
 };

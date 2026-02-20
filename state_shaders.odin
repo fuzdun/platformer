@@ -33,7 +33,6 @@ ProgramName :: enum {
     Grid_Line,
     Text,
     Dash_Line,
-    Screen_Dither,
     Player_Fill,
     Player_Outline,
     Postprocessing,
@@ -110,11 +109,6 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
         uniforms = {"projection", "transform"},
     },
-    .Screen_Dither = {
-        pipeline = {"screen_dither_vertex", "screen_dither_geometry", "screen_dither_frag"},
-        shader_types = {.VERTEX_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"inverse_projection", "inverse_view", "projection", "camera_pos"}
-    },
     .Player_Fill = {
         pipeline = {"player_fill_vertex", "player_fill_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
@@ -128,7 +122,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Postprocessing = {
         pipeline = {"postprocessing_vertex", "postprocessing_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"time", "ppos", "crunch_time"}
+        uniforms = {"time", "ripple_pt", "crunch_time"}
     },
     .Wireframe = {
         pipeline = {"wireframe_vertex", "wireframe_frag"},

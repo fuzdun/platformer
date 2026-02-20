@@ -97,6 +97,18 @@ Break_Data :: struct {
     dir: [3]f32
 }
 
+Combined_Ubo :: struct {
+    ppos: [3]f32,
+    projection: glm.mat4,
+    time: f32,
+    intensity: f32,
+    dash_time: f32,
+    dash_total: f32,
+    constrain_dir: glm.vec3,
+    inner_tess: f32,
+    outer_tess: f32
+}
+
 Common_Ubo :: struct {
     projection: glm.mat4,
     time: f32

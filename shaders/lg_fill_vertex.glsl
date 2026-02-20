@@ -4,29 +4,26 @@ layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec2 vertexUV;
 layout (location = 2) in vec3 normal_in;
 
-layout (std140, binding = 0) uniform Common
-{
-    mat4 projection;
-    float i_time;
-};
-
-layout (std140, binding = 2) uniform Player_Pos
+layout (std140, binding = 0) uniform Combined
 {
     vec3 player_pos;
+	vec2 _padding0;
+    mat4 projection;
+    float i_time;
+    float intensity;
+    float dash_time;
+    float dash_total;
+    vec3 constrain_dir;
+    float inner_tess;
+    float outer_tess;
 };
 
-layout (std140, binding = 3) uniform Tessellation
-{
-    float inner_amt;
-    float outer_amt;
-};
-
-layout (std140, binding = 4) uniform Transforms
+layout (std140, binding = 4) buffer Transforms
 {
     mat4 transforms[1000]; 
 };
 
-layout (std140, binding = 5) uniform Z_Widths
+layout (std140, binding = 5) buffer Z_Widths
 {
     float z_width_data[1000]; 
 };
@@ -36,7 +33,7 @@ struct Break_Data {
     vec4 crack_time_break_dir;
 };
 
-layout (std140, binding = 6) uniform Shatter_Datas
+layout (std140, binding = 6) buffer Shatter_Datas
 {
     Break_Data break_data[1000]; 
 };
@@ -74,7 +71,7 @@ void main() {
     Break_Data bd = break_data[gl_BaseInstance + gl_InstanceID];
     vs_out.break_time_pos = bd.break_time_pos; 
     vs_out.crack_time_break_dir = bd.crack_time_break_dir;
-    vs_out.outer_tess_amt = outer_amt;
-    vs_out.inner_tess_amt = inner_amt;
+    vs_out.outer_tess_amt = outer_tess;
+    vs_out.inner_tess_amt = inner_tess;
 }
 

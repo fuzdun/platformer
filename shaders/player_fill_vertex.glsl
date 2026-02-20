@@ -9,17 +9,18 @@ out float time;
 
 #define PI 3.1415
 
-layout (std140, binding = 0) uniform Common
+layout (std140, binding = 0) uniform Combined
 {
+    vec3 player_pos;
+	vec2 _padding0;
     mat4 projection;
     float i_time;
-};
-
-layout (std140, binding = 1) uniform Dash
-{
+    float intensity;
     float dash_time;
     float dash_total;
     vec3 constrain_dir_in;
+    float inner_tess;
+    float outer_tess;
 };
 
 uniform mat4 transform;

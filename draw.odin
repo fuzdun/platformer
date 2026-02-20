@@ -93,45 +93,29 @@ draw :: proc(
 
     // load UBOs 
     // -------------------------------------------
-    ssbo_mapper(culled_rd, .Transform, glm.mat4, bs.transforms_ubo)
-    ssbo_mapper(culled_rd, .Transparency, Transparency_Ubo, bs.transparencies_ubo)
-    ssbo_mapper(culled_rd, .Shatter, Shatter_Ubo, bs.shatter_ubo)
-    ssbo_mapper(culled_rd, .Z_Width, Z_Width_Ubo, bs.z_widths_ubo)
+    ssbo_mapper(culled_rd, .Transform,    glm.mat4,         bs.transforms_ssbo)
+    ssbo_mapper(culled_rd, .Transparency, Transparency_Ubo, bs.transparencies_ssbo)
+    ssbo_mapper(culled_rd, .Shatter,      Shatter_Ubo,      bs.shatter_ssbo)
+    ssbo_mapper(culled_rd, .Z_Width,      Z_Width_Ubo,      bs.z_widths_ssbo)
 
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
     intensity := gs.intensity
 
-    common_ubo: Common_Ubo = {
+    combined_ubo : Combined_Ubo = {
+        ppos = i_ppos,
         projection = proj_mat,
-        time = f32(time)
-    }
-
-    dash_ubo : Dash_Ubo = {
+        time = f32(time),
+        intensity = intensity,
         dash_time = pls.dash_state.dash_time,
         dash_total = f32(time) - pls.dash_state.dash_time,
-        constrain_dir = la.normalize0(pls.dash_state.dash_dir)
+        constrain_dir = la.normalize0(pls.dash_state.dash_dir),
+        inner_tess = INNER_TESSELLATION_AMT,
+        outer_tess = OUTER_TESSELLATION_AMT
     }
 
-    tess_ubo : Tess_Ubo = {
-        inner_amt = INNER_TESSELLATION_AMT,
-        outer_amt = OUTER_TESSELLATION_AMT
-    }
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.common_ubo)
-    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Common_Ubo), &common_ubo)
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.dash_ubo)
-    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Dash_Ubo), &dash_ubo)
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.ppos_ubo)
-    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(glm.vec3), &i_ppos[0])
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.tess_ubo)
-    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Tess_Ubo), &tess_ubo)
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.intensity_ubo)
-    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(f32), &intensity)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.combined_ubo)
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Combined_Ubo), &combined_ubo)
 
     gl.Viewport(0, 0, WIDTH, HEIGHT)
 
@@ -434,22 +418,22 @@ draw :: proc(
 
         score_buf: [8]byte
         strconv.write_int(score_buf[:], i64(gs.score), 10)
-        //render_screen_text(shs, bs, string(score_buf[:]), [3]f32{-0.9, 0.75, 0}, la.MATRIX4F32_IDENTITY, .3)
-        //
-        //if gs.time_remaining > 0 {
-        //
-        //    for hop_idx in 0..<pls.hops_remaining {
-        //        render_screen_text(shs, bs, "S", [3]f32{0.35, 0.075 - (0.075 * f32(hop_idx)), 0}, la.MATRIX4F32_IDENTITY, .3)
-        //    }
-        //
-        //    time_buf: [4]byte
-        //    strconv.itoa(time_buf[:], int(gs.time_remaining))
-        //    render_screen_text(shs, bs, string(time_buf[:]), [3]f32{0.0, 0.65, 0}, la.MATRIX4F32_IDENTITY, .3)
-        //}
-        //
-        //if f32(time) - gs.last_checkpoint_t < 2000 {
-        //    render_screen_text(shs, bs, "checkpoint (+10)", [3]f32{0.1, 0.65, 0}, la.MATRIX4F32_IDENTITY, .2)
-        //}
+        render_screen_text(shs, bs, string(score_buf[:]), [3]f32{-0.9, 0.75, 0}, la.MATRIX4F32_IDENTITY, .3)
+
+        if gs.time_remaining > 0 {
+
+           for hop_idx in 0..<pls.hops_remaining {
+               render_screen_text(shs, bs, "S", [3]f32{0.35, 0.075 - (0.075 * f32(hop_idx)), 0}, la.MATRIX4F32_IDENTITY, .3)
+           }
+
+           time_buf: [4]byte
+           strconv.write_int(time_buf[:], i64(gs.time_remaining), 10)
+           render_screen_text(shs, bs, string(time_buf[:]), [3]f32{0.0, 0.65, 0}, la.MATRIX4F32_IDENTITY, .3)
+        }
+
+        if f32(time) - gs.last_checkpoint_t < 2000 {
+           render_screen_text(shs, bs, "checkpoint (+10)", [3]f32{0.1, 0.65, 0}, la.MATRIX4F32_IDENTITY, .2)
+        }
 
         // post-processing
         // -------------------------------------------
@@ -460,9 +444,8 @@ draw :: proc(
 
         use_shader(shs, rs, .Postprocessing)
         screen_ripple_pt := rs.screen_ripple_pt
-        set_float_uniform(shs, "time", f32(time))
         set_float_uniform(shs, "crunch_time", f32(rs.crunch_time))
-        set_vec2_uniform(shs, "ppos", 1, &screen_ripple_pt)
+        set_vec2_uniform(shs, "ripple_pt", 1, &screen_ripple_pt)
         gl.BindVertexArray(bs.background_vao)
         gl.BindTexture(gl.TEXTURE_2D, bs.postprocessing_tcb)
         gl.Disable(gl.DEPTH_TEST)

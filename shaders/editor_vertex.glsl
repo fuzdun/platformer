@@ -8,13 +8,21 @@ uniform int selected_index;
 
 out int selected;
 
-layout (std140, binding = 0) uniform Common
+layout (std140, binding = 0) uniform Combined
 {
+    vec3 player_pos;
+	vec2 _padding0;
     mat4 projection;
     float i_time;
+    float intensity;
+    float dash_time;
+    float dash_total;
+    vec3 constrain_dir_in;
+    float inner_tess;
+    float outer_tess;
 };
 
-layout (std140, binding = 4) uniform Transforms
+layout (std140, binding = 4) buffer Transforms
 {
     mat4 transforms[1000]; 
 };

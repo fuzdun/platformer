@@ -96,15 +96,12 @@ init_opengl_mesh_rendering :: proc(bs: ^Buffer_State, ptcls: Particle_State, sr:
 
     gl.GenBuffers(1, &bs.indirect_buffer)
     
-    gl.GenBuffers(1, &bs.common_ubo)
-    gl.GenBuffers(1, &bs.dash_ubo)
-    gl.GenBuffers(1, &bs.ppos_ubo)
-    gl.GenBuffers(1, &bs.tess_ubo)
-    gl.GenBuffers(1, &bs.transforms_ubo)
-    gl.GenBuffers(1, &bs.z_widths_ubo)
-    gl.GenBuffers(1, &bs.shatter_ubo)
-    gl.GenBuffers(1, &bs.transparencies_ubo)
-    gl.GenBuffers(1, &bs.intensity_ubo)
+    gl.GenBuffers(1, &bs.combined_ubo)
+    gl.GenBuffers(1, &bs.transforms_ssbo)
+    gl.GenBuffers(1, &bs.z_widths_ssbo)
+    gl.GenBuffers(1, &bs.shatter_ssbo)
+    gl.GenBuffers(1, &bs.transparencies_ssbo)
+    gl.GenBuffers(1, &bs.intensity_ssbo)
 
     gl.GenBuffers(1, &bs.standard_vbo)
     gl.GenBuffers(1, &bs.player_vbo)
@@ -238,43 +235,37 @@ init_opengl_mesh_rendering :: proc(bs: ^Buffer_State, ptcls: Particle_State, sr:
     gl.BindBuffer(gl.ARRAY_BUFFER, 0)
     gl.BindVertexArray(0)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.common_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Common_Ubo), nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 0, bs.common_ubo, 0, size_of(Common_Ubo))
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.combined_ubo)
+    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Combined_Ubo), nil, gl.STATIC_DRAW)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 0, bs.combined_ubo, 0, size_of(Combined_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.dash_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Dash_Ubo), nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 1, bs.dash_ubo, 0, size_of(Dash_Ubo))
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, bs.transforms_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
+    // gl.BindBufferRange(gl.SHADER_STORAGE_BUFFER, 4, bs.transforms_ubo, 0, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 4, bs.transforms_ssbo)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.ppos_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.vec4), nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 2, bs.ppos_ubo, 0, size_of(glm.vec4))
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, bs.z_widths_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(Z_Width_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
+    // gl.BindBufferRange(gl.SHADER_STORAGE_BUFFER, 5, bs.z_widths_ubo, 0, size_of(Z_Width_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 5, bs.z_widths_ssbo)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.tess_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Tess_Ubo), nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 3, bs.tess_ubo, 0, size_of(Tess_Ubo))
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, bs.shatter_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(Shatter_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
+    // gl.BindBufferRange(gl.SHADER_STORAGE_BUFFER, 6, bs.shatter_ubo, 0, size_of(Shatter_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 6, bs.shatter_ssbo)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.transforms_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 4, bs.transforms_ubo, 0, size_of(glm.mat4) * MAX_LEVEL_GEOMETRY_COUNT)
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, bs.transparencies_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
+    // gl.BindBufferRange(gl.SHADER_STORAGE_BUFFER, 7, bs.transparencies_ubo, 0, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 7, bs.transparencies_ssbo)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.z_widths_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Z_Width_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 5, bs.z_widths_ubo, 0, size_of(Z_Width_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, bs.intensity_ssbo)
+    gl.BufferData(gl.SHADER_STORAGE_BUFFER, size_of(f32), nil, gl.STATIC_DRAW)
+    // gl.BindBufferRange(gl.SHADER_STORAGE_BUFFER, 8, bs.intensity_ubo, 0, size_of(f32))
+    gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, 8, bs.intensity_ssbo)
 
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.shatter_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Shatter_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 6, bs.shatter_ubo, 0, size_of(Shatter_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.transparencies_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT, nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 7, bs.transparencies_ubo, 0, size_of(Transparency_Ubo) * MAX_LEVEL_GEOMETRY_COUNT)
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.intensity_ubo)
-    gl.BufferData(gl.UNIFORM_BUFFER, size_of(f32), nil, gl.STATIC_DRAW)
-    gl.BindBufferRange(gl.UNIFORM_BUFFER, 8, bs.intensity_ubo, 0, size_of(f32))
-
-    gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
+    // gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, 0)
+    // gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 
     // load blue noise dither texture -----
     if dither_bin, err := os.read_entire_file("textures/blue_noise_64.png", perm_alloc); err == os.ERROR_NONE {

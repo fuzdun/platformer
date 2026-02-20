@@ -28,9 +28,6 @@ update_geometry :: proc(
 
     if triggers.restart || triggers.checkpoint {
         for &lg in lgs {
-            // lg.shatter_data.crack_time = 0
-            // lg.shatter_data.smash_time = 0
-
             rd := hm.get(lgrs, lg.render_data_handle)
             rd.shatter_data.crack_time = 0
             rd.shatter_data.smash_time = 0
@@ -39,7 +36,6 @@ update_geometry :: proc(
 
     if triggers.bunny_hop {
         last_touched := cts.last_touched
-        // lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
 
         rd := hm.get(lgrs, lgs[last_touched].render_data_handle)
         rd.shatter_data.crack_time = elapsed_time - BREAK_DELAY
@@ -47,18 +43,6 @@ update_geometry :: proc(
 
     for id in collisions {
         lg := &lgs[id]
-        // if .Dash_Breakable in lg.attributes && pls.mode == .Dashing {
-        //     lg.shatter_data.smash_time = lg.shatter_data.smash_time == 0.0 ? elapsed_time : lg.shatter_data.smash_time 
-        //     lg.shatter_data.smash_dir = la.normalize(pls.velocity)
-        //     lg.shatter_data.smash_pos = pls.position
-        // } else if .Slide_Zone in lg.attributes && pls.mode == .Sliding {
-        //     // do nothing
-        // } else if .Breakable in lg.attributes {
-        //     lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time - BREAK_DELAY : lg.shatter_data.crack_time
-        // } else if .Crackable in lg.attributes {
-        //     lg.shatter_data.crack_time = lg.shatter_data.crack_time == 0.0 ? elapsed_time + CRACK_DELAY : lg.shatter_data.crack_time
-        // }
-
         rd := hm.get(lgrs, lg.render_data_handle)
         if .Dash_Breakable in lg.attributes && pls.mode == .Dashing {
             rd.shatter_data.smash_time = rd.shatter_data.smash_time == 0.0 ? elapsed_time : rd.shatter_data.smash_time 
@@ -87,15 +71,12 @@ update_geometry :: proc(
     // #####################################################
 
     for &sz in szs.entities {
-        // lgs[sz.id].transparency = sz.transparency_t
-
         rd := hm.get(lgrs, lgs[sz.id].render_data_handle)
         rd.transparency = sz.transparency_t
     }
 
     clear(&szs.intersected)
     for sz in szs.entities {
-        // if lgs[sz.id].shatter_data.crack_time != 0 {
         if hm.get(lgrs, lgs[sz.id].render_data_handle).shatter_data.crack_time != 0 {
             continue
         }

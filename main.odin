@@ -36,7 +36,7 @@ SEED: f32
 quit_app := false
 
 main :: proc() {
-    
+
     SEED = rnd.float32() * 1000
 
 
