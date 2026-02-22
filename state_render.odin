@@ -98,7 +98,8 @@ Break_Data :: struct {
 }
 
 Combined_Ubo :: struct {
-    ppos: [3]f32,
+    ppos: [4]f32,
+    cpos: [4]f32,
     projection: glm.mat4,
     time: f32,
     intensity: f32,
@@ -106,23 +107,17 @@ Combined_Ubo :: struct {
     dash_total: f32,
     constrain_dir: glm.vec3,
     inner_tess: f32,
-    outer_tess: f32
+    outer_tess: f32,
 }
 
-Common_Ubo :: struct {
-    projection: glm.mat4,
-    time: f32
-}
-
-Dash_Ubo :: struct {
-    dash_time: f32,
-    dash_total: f32,
-    constrain_dir: glm.vec3,
-}
-
-Tess_Ubo :: struct #align(16){
-    inner_amt: f32,
-    outer_amt: f32
+Standard_Ubo :: struct {
+    crunch_pt: glm.vec3,
+    player_trail: [3]glm.vec3,
+    inverse_view: glm.mat4,
+    inverse_projection: glm.mat4,
+    slide_t: f32,
+    crunch_t: f32,
+    shatter_delay: f32
 }
 
 Shatter_Ubo :: struct #packed {

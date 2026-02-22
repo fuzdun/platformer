@@ -7,15 +7,17 @@ layout (location = 2) in vec3 normal_in;
 layout (std140, binding = 0) uniform Combined
 {
     vec3 player_pos;
-	vec2 _padding0;
+	float _pad0;
+	vec3 cam_pos;
     mat4 projection;
     float i_time;
     float intensity;
     float dash_time;
     float dash_total;
-    vec3 constrain_dir_in;
+    vec3 constrain_dir;
     float inner_tess;
     float outer_tess;
+	vec4 _pad1;
 };
 
 layout (std140, binding = 4) buffer Transforms
@@ -23,14 +25,12 @@ layout (std140, binding = 4) buffer Transforms
     mat4 transforms[1000]; 
 };
 
-uniform vec3 camera_pos;
-
 out float camera_dist;
 
 void main() {
     mat4 transform = transforms[gl_BaseInstance + gl_InstanceID];
     vec4 transformed_pos = transform * aPos;
-    camera_dist = max(0, camera_pos.z - 50.0 - transformed_pos.z);
+    camera_dist = max(0, cam_pos.z - 50.0 - transformed_pos.z);
     gl_Position = projection * transformed_pos;
 }
 

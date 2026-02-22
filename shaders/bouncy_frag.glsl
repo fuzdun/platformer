@@ -5,7 +5,8 @@ out vec4 fragColor;
 layout (std140, binding = 0) uniform Combined
 {
     vec3 player_pos;
-	vec2 _padding0;
+	float _pad0;
+	vec3 cam_pos;
     mat4 projection;
     float i_time;
     float intensity;
@@ -14,6 +15,7 @@ layout (std140, binding = 0) uniform Combined
     vec3 constrain_dir;
     float inner_tess;
     float outer_tess;
+	vec4 _pad1;
 };
 
 in vec3 global_pos;
@@ -38,7 +40,6 @@ in float denom;
 
 in float did_shatter;
 
-uniform vec3 camera_pos;
 uniform vec3[3] player_trail;
 uniform vec3 crunch_pt;
 uniform float crunch_time;
@@ -181,7 +182,7 @@ void main()
     vec4 ray_clip = vec4(ndc.xy, -1.0, 1.0);
     vec4 ray_eye = inverse_projection * ray_clip;
     vec3 ray_wor = normalize((inverse_view * vec4(ray_eye.xy, -1.0, 0.0)).xyz);
-    vec3 intersection = (plane_dist + dot(-camera_pos, normal_frag)) / dot(-normal_frag, ray_wor) * ray_wor - camera_pos;
+    vec3 intersection = (plane_dist + dot(-cam_pos, normal_frag)) / dot(-normal_frag, ray_wor) * ray_wor - cam_pos;
     intersection *= -1;
 
     vec3 v2 = intersection - t0_pos;

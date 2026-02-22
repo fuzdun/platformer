@@ -13,27 +13,14 @@ Ssbo :: enum {
     Z_Width
 }
 
-Ssbo_Info :: struct {
-    id: u32,
-    type: typeid
+Ssbo_Info :: [Ssbo]struct{ type_sz: int, loc: u32 } {
+    .Transform    = { size_of(glm.mat4),         4},
+    .Z_Width      = { size_of(Z_Width_Ubo),      5},
+    .Shatter      = { size_of(Shatter_Ubo),      6},
+    .Transparency = { size_of(Transparency_Ubo), 7}
 }
 
-Ssbo_Infos := #partial[Ssbo]Ssbo_Info {
-    .Z_Width = {
-        type = glm.vec4
-    },
-    .Shatter = {
-        type = Shatter_Ubo
-    },
-    .Transform = {
-        type = glm.vec4
-    },
-    .Transparency = {
-        type = Transparency_Ubo
-    }
-}
-
-ssbo_mapper :: proc(rd: #soa[]Level_Geometry_Render_Data, ssbo: Ssbo, $T: typeid, loc: u32) {
+ssbo_mapper :: proc(rd: #soa[]Level_Geometry_Render_Data, bs: Buffer_State, ssbo: Ssbo) {
 
     data: rawptr
     switch ssbo {
@@ -63,8 +50,9 @@ ssbo_mapper :: proc(rd: #soa[]Level_Geometry_Render_Data, ssbo: Ssbo, $T: typeid
         data = &z_widths[0]
     }
 
-    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, loc)
-    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, size_of(T) * len(rd), data)
+    ssbo_info := Ssbo_Info
+    gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, bs.ssbo_ids[ssbo])
+    gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, ssbo_info[ssbo].type_sz * len(rd), data)
     return
 }
 

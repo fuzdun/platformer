@@ -3,6 +3,7 @@ package main
 import "core:slice"
 import "core:strconv"
 import "core:math"
+import "core:fmt"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
@@ -93,17 +94,17 @@ draw :: proc(
 
     // load UBOs 
     // -------------------------------------------
-    ssbo_mapper(culled_rd, .Transform,    glm.mat4,         bs.transforms_ssbo)
-    ssbo_mapper(culled_rd, .Transparency, Transparency_Ubo, bs.transparencies_ssbo)
-    ssbo_mapper(culled_rd, .Shatter,      Shatter_Ubo,      bs.shatter_ssbo)
-    ssbo_mapper(culled_rd, .Z_Width,      Z_Width_Ubo,      bs.z_widths_ssbo)
+    for ssbo in Ssbo {
+        ssbo_mapper(culled_rd, bs, ssbo)
+    }
 
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
     intensity := gs.intensity
 
     combined_ubo : Combined_Ubo = {
-        ppos = i_ppos,
+        ppos = [4]f32 { i_ppos.x, i_ppos.y, i_ppos.z, 0 },
+        cpos = [4]f32 { cs.position.x, cs.position.y, cs.position.z, 0 },
         projection = proj_mat,
         time = f32(time),
         intensity = intensity,
@@ -111,7 +112,11 @@ draw :: proc(
         dash_total = f32(time) - pls.dash_state.dash_time,
         constrain_dir = la.normalize0(pls.dash_state.dash_dir),
         inner_tess = INNER_TESSELLATION_AMT,
-        outer_tess = OUTER_TESSELLATION_AMT
+        outer_tess = OUTER_TESSELLATION_AMT,
+    }
+
+    standard_ubo : Standard_Ubo = {
+
     }
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, bs.combined_ubo)
@@ -146,8 +151,6 @@ draw :: proc(
         inverse_proj := glm.inverse(only_projection_matrix(cs, f32(interp_t)))
         slide_middle := SLIDE_LEN / 2.0
         slide_total := f32(time) - pls.slide_state.slide_time 
-    
-    
         slide_off := pls.slide_state.mid_slide_time - pls.slide_state.slide_time
         start_slide_t := clamp(slide_total / slide_middle, 0, 1) * 0.5
         end_slide_t := clamp(((slide_total - slide_off) - (slide_middle)) / slide_middle, 0, 1) * 0.5
@@ -172,7 +175,6 @@ draw :: proc(
         set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
         set_float_uniform(shs, "slide_t", slide_t)
         set_float_uniform(shs, "crunch_time", f32(rs.crunch_time) / 1000)
-        set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
         draw_indirect_render_queue(bs, draw_commands[.Standard][:], gl.PATCHES)
 
@@ -184,7 +186,6 @@ draw :: proc(
         set_matrix_uniform(shs, "inverse_view", &inverse_view)
         set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
         set_float_uniform(shs, "crunch_time", f32(rs.crunch_time) / 1000)
-        set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
         set_float_uniform(shs, "slide_t", slide_t)
         draw_indirect_render_queue(bs, draw_commands[.Bouncy][:], gl.PATCHES)
@@ -197,7 +198,6 @@ draw :: proc(
 
         use_shader(shs, rs, .Wireframe)
         set_vec3_uniform(shs, "color", 1, &wireframe_color)
-        set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         draw_indirect_render_queue(bs, draw_commands[.Wireframe][:], gl.LINES)
 
         // dash barrier
@@ -206,7 +206,6 @@ draw :: proc(
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
         set_matrix_uniform(shs, "inverse_view", &inverse_view)
         set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
-        set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         draw_indirect_render_queue(bs, draw_commands[.Dash_Barrier][:], gl.PATCHES)
 
         // background 
@@ -406,7 +405,6 @@ draw :: proc(
 
         use_shader(shs, rs, .Spin_Trails)
         set_matrix_uniform(shs, "transform", &spin_trail_transform)
-        set_vec3_uniform(shs, "camera_pos", 1, &cs.position)
         set_float_uniform(shs, "spin_amt", pls.spin_state.spin_amt)
 
         if pls.spin_state.spin_amt > 0 {
