@@ -28,7 +28,6 @@ layout (std140, binding = 1) uniform Standard
     mat4 inverse_projection;
     float slide_t;
     float crunch_time;
-    float shatter_delay;
 	vec4 padding0;
 };
 
@@ -247,7 +246,7 @@ void main()
 
     vec3 impact_col = vec3(0.0);
     float crunch_dist = distance(global_pos, crunch_pt.xyz);    
-    float k = crunch_dist - (time - crunch_time) * 20;
+    float k = crunch_dist - (time - crunch_time / 1000) * 20;
     float angle = atan(global_pos.z - crunch_pt.z, global_pos.x - crunch_pt.x);
     float w = crunch_dist + 25.7 * floor(angle / TWOPI * 10);
     angle -= (.2*jaggy(w/2) + .17*jaggy(w/1.7) + .13*jaggy(w/1.3)) / pow(crunch_dist, .5) * 20;

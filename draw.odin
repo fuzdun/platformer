@@ -48,7 +48,7 @@ draw :: proc(
     }
 
     // convert group counts to group offsets
-    // -------------------------------------------
+
     for &val, idx in group_offsets[1:] {
        val += group_offsets[idx] 
     }
@@ -143,12 +143,15 @@ draw :: proc(
         inverse_view = glm.inverse(only_view_matrix(cs, f32(interp_t))),
         inverse_projection = glm.inverse(only_projection_matrix(cs, f32(interp_t))),
         slide_t = start_slide_t + end_slide_t,
-        crunch_t = f32(rs.crunch_time) / 1000,
-        shatter_delay = f32(BREAK_DELAY)
+        crunch_t = f32(rs.crunch_time),
     }
 
     gl.BindBuffer(gl.UNIFORM_BUFFER, bs.standard_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Standard_Ubo), &standard_ubo)
+
+    shatter_delay := f32(BREAK_DELAY)
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.shatter_delay_ubo)
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(f32), &shatter_delay)
 
     gl.Viewport(0, 0, WIDTH, HEIGHT)
 
@@ -175,39 +178,29 @@ draw :: proc(
 
         // standard geometry
         // -------------------------------------------
-        gl.BindVertexArray(bs.standard_vao)
-        gl.BindTexture(gl.TEXTURE_2D, bs.dither_tex)
-        gl.Enable(gl.DEPTH_TEST)
-
-        use_shader(shs, rs, .Level_Geometry_Fill)
+        use_shader(shs, rs, bs, .Level_Geometry_Fill)
         draw_indirect_render_queue(bs, draw_commands[.Standard][:], gl.PATCHES)
 
         // bouncy geometry
         // -------------------------------------------
-        use_shader(shs, rs, .Bouncy)
+        use_shader(shs, rs, bs, .Bouncy)
         draw_indirect_render_queue(bs, draw_commands[.Bouncy][:], gl.PATCHES)
 
         // wireframe object
         // -------------------------------------------
-        gl.Enable(gl.BLEND)
-
+        use_shader(shs, rs, bs, .Wireframe)
         wireframe_color := [3]f32{0.000, 0.300, 0.600}
-
-        use_shader(shs, rs, .Wireframe)
         set_vec3_uniform(shs, "color", 1, &wireframe_color)
         draw_indirect_render_queue(bs, draw_commands[.Wireframe][:], gl.LINES)
 
         // dash barrier
         // -------------------------------------------
-        use_shader(shs, rs, .Barrier)
+        use_shader(shs, rs, bs, .Barrier)
         draw_indirect_render_queue(bs, draw_commands[.Dash_Barrier][:], gl.PATCHES)
 
         // background 
         // -------------------------------------------
-        gl.BindVertexArray(bs.background_vao)
-        gl.Disable(gl.DEPTH_TEST)
-
-        use_shader(shs, rs, .Background)
+        use_shader(shs, rs, bs, .Background)
         if len(rs.screen_splashes) > 0 {
             splashes := rs.screen_splashes[:]
             set_vec4_uniform(shs, "crunch_pts", i32(len(rs.screen_splashes)), &splashes[0])
@@ -217,17 +210,12 @@ draw :: proc(
 
         // geometry outlines
         // -------------------------------------------
-        gl.BindVertexArray(bs.standard_vao)
-        gl.Disable(gl.BLEND)
-        gl.Disable(gl.CULL_FACE)
-
+        use_shader(shs, rs, bs, .Level_Geometry_Outline)
         geometry_outline_color := [3]f32{0.75, 0.75, 0.75}
-        barrier_outline_color := [3]f32{1.0, 0, 0}
-
-        use_shader(shs, rs, .Level_Geometry_Outline)
         set_vec3_uniform(shs, "color", 1, &geometry_outline_color)
         draw_indirect_render_queue(bs, draw_commands[.Standard][:], gl.PATCHES)
 
+        barrier_outline_color := [3]f32{1.0, 0, 0}
         set_vec3_uniform(shs, "color", 1, &barrier_outline_color)
         draw_indirect_render_queue(bs, draw_commands[.Dash_Barrier][:], gl.PATCHES)
 
@@ -236,8 +224,6 @@ draw :: proc(
         //  DRAW PLAYER
         // #####################################################
 
-        gl.BindVertexArray(bs.player_vao)
-        gl.Enable(gl.DEPTH_TEST)
 
         // animate vertices
         // -------------------------------------------
@@ -274,41 +260,26 @@ draw :: proc(
         // -------------------------------------------
         gl.BindBuffer(gl.ARRAY_BUFFER, bs.player_vbo)
         gl.BufferData(gl.ARRAY_BUFFER, size_of(offset_vertices[0]) * len(offset_vertices), raw_data(offset_vertices), gl.STATIC_DRAW) 
-        player_mat := interpolated_player_matrix(pls, f32(interp_t))
 
         // draw body
         // -------------------------------------------
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.player_fill_ebo)
-
-        use_shader(shs, rs, .Player_Fill)
+        use_shader(shs, rs, bs, .Player_Fill)
         set_vec3_uniform(shs, "p_color", 1, &p_color)
+        player_mat := interpolated_player_matrix(pls, f32(interp_t))
         set_matrix_uniform(shs, "transform", &player_mat)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.player_fill_ebo)
         gl.DrawElements(gl.TRIANGLES, i32(len(sr.player_fill_indices)), gl.UNSIGNED_INT, nil)
 
         // draw outline
         // -------------------------------------------
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.player_outline_ebo)
-        if pls.contact_state.state == .ON_GROUND {
-            gl.LineWidth(1.5)
-        } else {
-            gl.LineWidth(2)
-        }
-        if pls.mode == .Sliding {
-            gl.LineWidth(0.5)
-        }
-
-        use_shader(shs, rs, .Player_Outline)
+        use_shader(shs, rs, bs, .Player_Outline)
         set_vec3_uniform(shs, "p_outline_color", 1, &p_outline_color)
         set_matrix_uniform(shs, "transform", &player_mat)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.player_outline_ebo)
         gl.DrawElements(gl.LINES, i32(len(sr.player_outline_indices)), gl.UNSIGNED_INT, nil)
 
         // draw dash line
         // -------------------------------------------
-        gl.Disable(gl.CULL_FACE)
-        gl.Enable(gl.BLEND)
-        gl.BindVertexArray(bs.lines_vao)
-        gl.LineWidth(2)
-
         dash_line_start := pls.dash_state.dash_start_pos + pls.dash_state.dash_dir * 4.5;
         dash_line_end := pls.dash_state.dash_start_pos + pls.dash_state.dash_dir * DASH_DIST
         dash_line: [2]Line_Vertex = {
@@ -320,7 +291,7 @@ draw :: proc(
 
         green := [3]f32{1.0, 0.0, 1.0}
 
-        use_shader(shs, rs, .Dash_Line)
+        use_shader(shs, rs, bs, .Dash_Line)
         set_vec3_uniform(shs, "color", 1, &green)
         set_float_uniform(shs, "resolution", f32(20))
         gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
@@ -332,13 +303,12 @@ draw :: proc(
 
         // slide zone (transparent)
         // -------------------------------------------
-        gl.BindVertexArray(bs.standard_vao)
-        // gl.Disable(gl.BLEND)
-
-        use_shader(shs, rs, .Slide_Zone)
+        use_shader(shs, rs, bs, .Slide_Zone)
         set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
         draw_indirect_render_queue(bs, draw_commands[.Slide_Zone][:], gl.TRIANGLES)
 
+        // particles
+        // -------------------------------------------
         pv := PARTICLE_VERTICES
         for &pv in pv {
             pv.position = (camera_right_worldspace * pv.position.x + camera_up_worldspace * pv.position.y) * 1.0
@@ -358,8 +328,7 @@ draw :: proc(
             slice.sort_by(sorted_pp[:], z_sort)
         }
 
-        gl.BindVertexArray(bs.trail_particle_vao)
-        use_shader(shs, rs, .Trail_Particle)
+        use_shader(shs, rs, bs, .Trail_Particle)
         set_float_uniform(shs, "interp_t", f32(interp_t))
         set_float_uniform(shs, "delta_time", dt)
         // set_float_uniform(shs, "radius", FIXED_DELTA_TIME)
@@ -369,55 +338,36 @@ draw :: proc(
 
         // slide zone outline
         // -------------------------------------------
-        gl.BindVertexArray(bs.standard_vao)
-        gl.Disable(gl.BLEND)
-        gl.Disable(gl.CULL_FACE)
-        gl.Disable(gl.DEPTH_TEST)
-
+        use_shader(shs, rs, bs, .Level_Geometry_Outline)
         slide_zone_outline_color := [3]f32{1.0, 0, 1.0}
-
-        use_shader(shs, rs, .Level_Geometry_Outline)
         set_vec3_uniform(shs, "color", 1, &slide_zone_outline_color)
         draw_indirect_render_queue(bs, draw_commands[.Slide_Zone][:], gl.PATCHES)
 
-        // draw spin trails
+        // spin trails
         // -------------------------------------------
-        gl.BindVertexArray(bs.spin_trails_vao)
-        gl.Enable(gl.BLEND)
-        gl.Enable(gl.CULL_FACE)
-        gl.Enable(gl.DEPTH_TEST)
-
+        use_shader(shs, rs, bs, .Spin_Trails)
         spin_trail_off := glm.mat4Translate(i_ppos)
         spin_trail_rotation_1 := la.matrix4_rotate_f32(f32(time) / 300, [3]f32{1, 0, 0})
         player_velocity_dir := la.normalize0(pls.velocity.xz)
         spin_trail_rotation_2 := la.matrix4_rotate_f32(la.atan2(player_velocity_dir.x, player_velocity_dir.y), [3]f32{0, 1, 0})
         spin_trail_transform := spin_trail_off * spin_trail_rotation_2 * spin_trail_rotation_1
-
-
-        gl.BindBuffer(gl.ARRAY_BUFFER, bs.spin_trails_vbo)
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.spin_trails_ebo)
-
-        use_shader(shs, rs, .Spin_Trails)
         set_matrix_uniform(shs, "transform", &spin_trail_transform)
         set_float_uniform(shs, "spin_amt", pls.spin_state.spin_amt)
-
         if pls.spin_state.spin_amt > 0 {
             gl.DrawElements(gl.TRIANGLES, i32(len(sr.level_geometry[.SPIN_TRAIL].indices)), gl.UNSIGNED_INT, nil)
         }
         
-        gl.BindVertexArray(bs.text_vao)
-        use_shader(shs, rs, .Text)
-
+        // UI text
+        // -------------------------------------------
+        use_shader(shs, rs, bs, .Text)
         score_buf: [8]byte
         strconv.write_int(score_buf[:], i64(gs.score), 10)
         render_screen_text(shs, bs, string(score_buf[:]), [3]f32{-0.9, 0.75, 0}, la.MATRIX4F32_IDENTITY, .3)
 
         if gs.time_remaining > 0 {
-
            for hop_idx in 0..<pls.hops_remaining {
                render_screen_text(shs, bs, "S", [3]f32{0.35, 0.075 - (0.075 * f32(hop_idx)), 0}, la.MATRIX4F32_IDENTITY, .3)
            }
-
            time_buf: [4]byte
            strconv.write_int(time_buf[:], i64(gs.time_remaining), 10)
            render_screen_text(shs, bs, string(time_buf[:]), [3]f32{0.0, 0.65, 0}, la.MATRIX4F32_IDENTITY, .3)
@@ -432,15 +382,11 @@ draw :: proc(
         gl.BindFramebuffer(gl.FRAMEBUFFER, 0) 
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT)
-        gl.Enable(gl.CULL_FACE)
 
-        use_shader(shs, rs, .Postprocessing)
+        use_shader(shs, rs, bs, .Postprocessing)
+        // set_float_uniform(shs, "crunch_time", f32(rs.crunch_time))
         screen_ripple_pt := rs.screen_ripple_pt
-        set_float_uniform(shs, "crunch_time", f32(rs.crunch_time))
         set_vec2_uniform(shs, "ripple_pt", 1, &screen_ripple_pt)
-        gl.BindVertexArray(bs.background_vao)
-        gl.BindTexture(gl.TEXTURE_2D, bs.postprocessing_tcb)
-        gl.Disable(gl.DEPTH_TEST)
         gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
 }

@@ -40,7 +40,10 @@ layout (std140, binding = 7) buffer Transparencies
     float transparencies_data[1000]; 
 };
 
-uniform float shatter_delay;
+layout (std140, binding = 2) uniform Shatter_Delay
+{
+    float shatter_delay;
+};
 
 out vec2 uv;
 out float transparency;

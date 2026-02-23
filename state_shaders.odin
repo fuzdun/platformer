@@ -16,6 +16,99 @@ Program :: struct {
     shader_types: []gl.Shader_Type,
 }
 
+Program_Init :: [ProgramName]proc(Buffer_State) {
+    .Level_Geometry_Fill = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.standard_vao)
+        gl.BindTexture(gl.TEXTURE_2D, bs.dither_tex)
+        gl.Enable(gl.DEPTH_TEST)
+        gl.Enable(gl.CULL_FACE)
+        gl.Disable(gl.BLEND)
+    },
+    .Bouncy = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.standard_vao)
+        gl.Enable(gl.DEPTH_TEST)
+        gl.Enable(gl.CULL_FACE)
+        gl.Disable(gl.BLEND)
+    },
+    .Wireframe = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.standard_vao)
+        gl.Disable(gl.DEPTH_TEST)
+        gl.Disable(gl.CULL_FACE)
+        gl.Enable(gl.BLEND)
+    },
+    .Barrier = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.standard_vao)
+        gl.Enable(gl.DEPTH_TEST)
+        gl.Enable(gl.CULL_FACE)
+        gl.Disable(gl.BLEND)
+    },
+    .Background = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.background_vao)
+        gl.Disable(gl.DEPTH_TEST)
+        gl.Enable(gl.CULL_FACE)
+        gl.Enable(gl.BLEND)
+    },
+    .Level_Geometry_Outline = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.standard_vao)
+        gl.Disable(gl.DEPTH_TEST)
+        gl.Disable(gl.CULL_FACE)
+        gl.Disable(gl.BLEND)
+    },
+    .Player_Fill = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.player_vao)
+        gl.Enable(gl.DEPTH_TEST)
+        gl.Enable(gl.CULL_FACE)
+        gl.Disable(gl.BLEND)
+    },
+    .Player_Outline = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.player_vao)
+        gl.Enable(gl.DEPTH_TEST)
+        gl.Enable(gl.CULL_FACE)
+        gl.LineWidth(1.5)
+    },
+    .Dash_Line = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.lines_vao)
+        gl.BindBuffer(gl.ARRAY_BUFFER, bs.editor_lines_vbo)
+        gl.Enable(gl.DEPTH_TEST)
+        gl.Disable(gl.CULL_FACE)
+        gl.Enable(gl.BLEND)
+        gl.LineWidth(2)
+    },
+    .Slide_Zone = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.standard_vao)
+        gl.Enable(gl.DEPTH_TEST)
+        gl.Enable(gl.CULL_FACE)
+        gl.Enable(gl.BLEND)
+    },
+    .Trail_Particle = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.trail_particle_vao)
+    },
+    .Editor_Geometry = proc(bs: Buffer_State) {},
+    .Player_Particle = proc(bs: Buffer_State) {},
+    .Static_Line = proc(bs: Buffer_State) {},
+    .Grid_Line = proc(bs: Buffer_State) {},
+    .Text = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.text_vao)
+    },
+    .Postprocessing = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.background_vao)
+        gl.BindTexture(gl.TEXTURE_2D, bs.postprocessing_tcb)
+        gl.Enable(gl.CULL_FACE)
+        gl.Disable(gl.DEPTH_TEST)
+        gl.Disable(gl.BLEND)
+    },
+    .Spin_Trails = proc(bs: Buffer_State) {
+        gl.BindVertexArray(bs.spin_trails_vao)
+        gl.BindBuffer(gl.ARRAY_BUFFER, bs.spin_trails_vbo)
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, bs.spin_trails_ebo)
+        gl.Enable(gl.BLEND)
+        gl.Enable(gl.CULL_FACE)
+        gl.Enable(gl.DEPTH_TEST)
+    },
+    .Player = proc(bs: Buffer_State) {
+    },
+}
+
 Active_Program :: struct {
     id: u32,
     locations: map[string]i32
@@ -47,7 +140,6 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Barrier = {
         pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "barrier_fill_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        // uniforms = {"shatter_delay", "inverse_view", "inverse_projection", "camera_pos"}
         uniforms = {}
     },
     .Level_Geometry_Outline = {
@@ -58,13 +150,11 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Level_Geometry_Fill = {
         pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "lg_fill_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        // uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view", "shatter_delay", "slide_t"},
         uniforms = {},
     },
     .Bouncy = {
         pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "bouncy_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        // uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view", "shatter_delay", "slide_t"},
         uniforms = {},
     },
     .Player = {
@@ -144,13 +234,15 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     },
 }
 
-use_shader :: proc(sh: ^Shader_State, rs: ^Render_State, name: ProgramName) {
+use_shader :: proc(sh: ^Shader_State, rs: ^Render_State, bs: Buffer_State, name: ProgramName) {
     if name in sh.active_programs {
         gl.UseProgram(sh.active_programs[name].id)
         sh.loaded_program = sh.active_programs[name].id
         sh.loaded_program_name = name
         gl.UseProgram(sh.loaded_program)
     }
+    program_inits := Program_Init
+    program_inits[name](bs)
 }
 
 set_matrix_uniform :: proc(sh: ^Shader_State, name: string, data: ^glm.mat4) {

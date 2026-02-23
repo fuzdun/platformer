@@ -5,7 +5,6 @@ out vec4 fragColor;
 in vec2 uv;
 
 uniform sampler2D screenTexture;
-uniform float crunch_time;
 uniform vec2 ripple_pt;
 
 layout (std140, binding = 0) uniform Combined
@@ -22,6 +21,19 @@ layout (std140, binding = 0) uniform Combined
     float inner_tess;
     float outer_tess;
 	vec4 _pad1;
+};
+
+layout (std140, binding = 1) uniform Standard
+{
+    vec4 crunch_pt;
+    vec4 player_trail0;
+    vec4 player_trail1;
+    vec4 player_trail2;
+    mat4 inverse_view;
+    mat4 inverse_projection;
+    float slide_t;
+    float crunch_time;
+	vec4 padding0;
 };
 
 void main() {

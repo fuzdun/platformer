@@ -45,6 +45,7 @@ Buffer_State :: struct {
 
     combined_ubo: u32,
     standard_ubo: u32,
+    shatter_delay_ubo: u32,
 
     dither_tex: u32,
 

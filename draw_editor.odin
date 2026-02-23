@@ -13,7 +13,7 @@ draw_editor :: proc(rs: ^Render_State, bs: Buffer_State, shs: ^Shader_State, es:
     gl.BindVertexArray(bs.standard_vao)
 
     // draw geometry (w/ outlines)
-    use_shader(shs, rs, .Editor_Geometry)
+    use_shader(shs, rs, bs, .Editor_Geometry)
     set_int_uniform(shs, "selected_index", i32(es.selected_entity))
 
     draw_indirect_render_queue(bs, rg[.Standard][:], gl.TRIANGLES)
@@ -25,7 +25,7 @@ draw_editor :: proc(rs: ^Render_State, bs: Buffer_State, shs: ^Shader_State, es:
     // draw geometry connections
     lines := make([dynamic]Line_Vertex); defer delete(lines)
     gl.BindVertexArray(bs.text_vao)
-    use_shader(shs, rs, .Text)
+    use_shader(shs, rs, bs, .Text)
     gl.Enable(gl.BLEND)
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     if len(es.connections) > 0 {
@@ -114,13 +114,13 @@ draw_editor :: proc(rs: ^Render_State, bs: Buffer_State, shs: ^Shader_State, es:
     gl.Disable(gl.BLEND)
     gl.BindVertexArray(bs.lines_vao)
 
-    use_shader(shs, rs, .Static_Line)
+    use_shader(shs, rs, bs, .Static_Line)
     gl.LineWidth(2.5)
     gl.BindBuffer(gl.ARRAY_BUFFER, bs.editor_lines_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(lines[0]) * len(lines), &lines[0], gl.DYNAMIC_DRAW)
     gl.DrawArrays(gl.LINES, 0, i32(len(lines)))
 
-    use_shader(shs, rs, .Grid_Line)
+    use_shader(shs, rs, bs, .Grid_Line)
     gl.LineWidth(1.5)
     gl.BindBuffer(gl.ARRAY_BUFFER, bs.editor_lines_vbo)
     gl.BufferData(gl.ARRAY_BUFFER, size_of(grid_lines[0]) * len(grid_lines), &grid_lines[0], gl.DYNAMIC_DRAW)

@@ -26,7 +26,6 @@ layout (std140, binding = 1) uniform Standard
     mat4 inverse_projection;
     float slide_t;
     float crunch_time;
-    float shatter_delay;
 	vec4 padding0;
 };
 
@@ -58,8 +57,6 @@ in float did_shatter;
 
 // uniform mat4 inverse_projection;
 // uniform mat4 inverse_view;
-
-uniform sampler2D ditherTexture;
 
 out vec4 fragColor;
 

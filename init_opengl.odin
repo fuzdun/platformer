@@ -100,6 +100,7 @@ init_opengl_mesh_rendering :: proc(bs: ^Buffer_State, ptcls: Particle_State, sr:
     
     gl.GenBuffers(1, &bs.combined_ubo)
     gl.GenBuffers(1, &bs.standard_ubo)
+    gl.GenBuffers(1, &bs.shatter_delay_ubo)
 
     gl.GenBuffers(1, &bs.standard_vbo)
     gl.GenBuffers(1, &bs.player_vbo)
@@ -240,6 +241,10 @@ init_opengl_mesh_rendering :: proc(bs: ^Buffer_State, ptcls: Particle_State, sr:
     gl.BindBuffer(gl.UNIFORM_BUFFER, bs.standard_ubo)
     gl.BufferData(gl.UNIFORM_BUFFER, size_of(Standard_Ubo), nil, gl.STATIC_DRAW)
     gl.BindBufferRange(gl.UNIFORM_BUFFER, 1, bs.standard_ubo, 0, size_of(Standard_Ubo))
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.shatter_delay_ubo)
+    gl.BufferData(gl.UNIFORM_BUFFER, size_of(f32), nil, gl.STATIC_DRAW)
+    gl.BindBufferRange(gl.UNIFORM_BUFFER, 2, bs.shatter_delay_ubo, 0, size_of(f32))
 
     ssbo_info := Ssbo_Info
     for ssbo in Ssbo {
