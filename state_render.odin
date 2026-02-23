@@ -111,8 +111,8 @@ Combined_Ubo :: struct {
 }
 
 Standard_Ubo :: struct {
-    crunch_pt: glm.vec3,
-    player_trail: [3]glm.vec3,
+    crunch_pt: glm.vec4,
+    player_trail: [3]glm.vec4,
     inverse_view: glm.mat4,
     inverse_projection: glm.mat4,
     slide_t: f32,

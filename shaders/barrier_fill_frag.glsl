@@ -16,6 +16,20 @@ layout (std140, binding = 0) uniform Combined
 	vec4 _pad1;
 };
 
+layout (std140, binding = 1) uniform Standard
+{
+    vec4 crunch_pt;
+    vec4 player_trail0;
+    vec4 player_trail1;
+    vec4 player_trail2;
+    mat4 inverse_view;
+    mat4 inverse_projection;
+    float slide_t;
+    float crunch_time;
+    float shatter_delay;
+	vec4 padding0;
+};
+
 in vec2 perspective_uv;
 in vec3 normal_frag;
 in float displacement;
@@ -42,8 +56,8 @@ in float denom;
 
 in float did_shatter;
 
-uniform mat4 inverse_projection;
-uniform mat4 inverse_view;
+// uniform mat4 inverse_projection;
+// uniform mat4 inverse_view;
 
 uniform sampler2D ditherTexture;
 

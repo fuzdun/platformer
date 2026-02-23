@@ -44,6 +44,7 @@ Buffer_State :: struct {
     indirect_buffer: u32,
 
     combined_ubo: u32,
+    standard_ubo: u32,
 
     dither_tex: u32,
 

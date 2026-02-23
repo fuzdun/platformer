@@ -47,7 +47,8 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Barrier = {
         pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "barrier_fill_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"shatter_delay", "inverse_view", "inverse_projection", "camera_pos"}
+        // uniforms = {"shatter_delay", "inverse_view", "inverse_projection", "camera_pos"}
+        uniforms = {}
     },
     .Level_Geometry_Outline = {
         pipeline = {"lg_outline_vertex", "lg_outline_tessctrl", "lg_outline_tesseval", "lg_outline_geometry", "lg_outline_frag"},
@@ -57,12 +58,14 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Level_Geometry_Fill = {
         pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "lg_fill_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view", "shatter_delay", "slide_t"},
+        // uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view", "shatter_delay", "slide_t"},
+        uniforms = {},
     },
     .Bouncy = {
         pipeline = {"lg_fill_vertex", "lg_fill_tessctrl", "lg_fill_tesseval", "lg_fill_geometry", "bouncy_frag"},
         shader_types = {.VERTEX_SHADER, .TESS_CONTROL_SHADER, .TESS_EVALUATION_SHADER, .GEOMETRY_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view", "shatter_delay", "slide_t"},
+        // uniforms = {"player_trail", "crunch_time", "crunch_pt", "camera_pos", "inverse_projection", "inverse_view", "shatter_delay", "slide_t"},
+        uniforms = {},
     },
     .Player = {
         pipeline = {"player_vertex", "player_frag"},

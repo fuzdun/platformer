@@ -3,7 +3,6 @@ package main
 import "core:slice"
 import "core:strconv"
 import "core:math"
-import "core:fmt"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
@@ -100,11 +99,26 @@ draw :: proc(
 
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
+    i_cpos: [3]f32 = interpolated_camera_pos(cs, f32(interp_t))
     intensity := gs.intensity
+
+    slide_middle := SLIDE_LEN / 2.0
+    slide_total := f32(time) - pls.slide_state.slide_time 
+    slide_off := pls.slide_state.mid_slide_time - pls.slide_state.slide_time
+    start_slide_t := clamp(slide_total / slide_middle, 0, 1) * 0.5
+    end_slide_t := clamp(((slide_total - slide_off) - (slide_middle)) / slide_middle, 0, 1) * 0.5
+    slide_t := start_slide_t + end_slide_t
+
+    camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
+    camera_right_worldspace = la.normalize(camera_right_worldspace)
+    camera_up_worldspace: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
+    camera_up_worldspace = la.normalize(camera_up_worldspace)
+    camera_fwd_worldspace: [3]f32 = {proj_mat[0][2], proj_mat[1][2], proj_mat[2][2]}
+    camera_fwd_worldspace = la.normalize(camera_fwd_worldspace)
 
     combined_ubo : Combined_Ubo = {
         ppos = [4]f32 { i_ppos.x, i_ppos.y, i_ppos.z, 0 },
-        cpos = [4]f32 { cs.position.x, cs.position.y, cs.position.z, 0 },
+        cpos = [4]f32 { i_cpos.x, i_cpos.y, i_cpos.z, 0 },
         projection = proj_mat,
         time = f32(time),
         intensity = intensity,
@@ -115,12 +129,26 @@ draw :: proc(
         outer_tess = OUTER_TESSELLATION_AMT,
     }
 
-    standard_ubo : Standard_Ubo = {
-
-    }
-
     gl.BindBuffer(gl.UNIFORM_BUFFER, bs.combined_ubo)
     gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Combined_Ubo), &combined_ubo)
+
+    player_trail_vec4: [3][4]f32
+    for v, i in interpolated_trail(rs^, f32(interp_t)) {
+        player_trail_vec4[i].xyz = v.xyz
+    }
+
+    standard_ubo : Standard_Ubo = {
+        crunch_pt = [4]f32 { rs.crunch_pt.x, rs.crunch_pt.y, rs.crunch_pt.z, 0 },
+        player_trail = player_trail_vec4,
+        inverse_view = glm.inverse(only_view_matrix(cs, f32(interp_t))),
+        inverse_projection = glm.inverse(only_projection_matrix(cs, f32(interp_t))),
+        slide_t = start_slide_t + end_slide_t,
+        crunch_t = f32(rs.crunch_time) / 1000,
+        shatter_delay = f32(BREAK_DELAY)
+    }
+
+    gl.BindBuffer(gl.UNIFORM_BUFFER, bs.standard_ubo)
+    gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(Standard_Ubo), &standard_ubo)
 
     gl.Viewport(0, 0, WIDTH, HEIGHT)
 
@@ -145,23 +173,6 @@ draw :: proc(
         gl.ClearColor(0, 0, 0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-        crunch_pt : glm.vec3 = rs.crunch_pt
-        player_trail := interpolated_trail(rs^, f32(interp_t))
-        inverse_view := glm.inverse(only_view_matrix(cs, f32(interp_t)))
-        inverse_proj := glm.inverse(only_projection_matrix(cs, f32(interp_t)))
-        slide_middle := SLIDE_LEN / 2.0
-        slide_total := f32(time) - pls.slide_state.slide_time 
-        slide_off := pls.slide_state.mid_slide_time - pls.slide_state.slide_time
-        start_slide_t := clamp(slide_total / slide_middle, 0, 1) * 0.5
-        end_slide_t := clamp(((slide_total - slide_off) - (slide_middle)) / slide_middle, 0, 1) * 0.5
-        slide_t := start_slide_t + end_slide_t
-        camera_right_worldspace: [3]f32 = {proj_mat[0][0], proj_mat[1][0], proj_mat[2][0]}
-        camera_right_worldspace = la.normalize(camera_right_worldspace)
-        camera_up_worldspace: [3]f32 = {proj_mat[0][1], proj_mat[1][1], proj_mat[2][1]}
-        camera_up_worldspace = la.normalize(camera_up_worldspace)
-        camera_fwd_worldspace: [3]f32 = {proj_mat[0][2], proj_mat[1][2], proj_mat[2][2]}
-        camera_fwd_worldspace = la.normalize(camera_fwd_worldspace)
-
         // standard geometry
         // -------------------------------------------
         gl.BindVertexArray(bs.standard_vao)
@@ -169,25 +180,11 @@ draw :: proc(
         gl.Enable(gl.DEPTH_TEST)
 
         use_shader(shs, rs, .Level_Geometry_Fill)
-        set_vec3_uniform(shs, "crunch_pt", 1, &crunch_pt)
-        set_vec3_uniform(shs, "player_trail", 3, &player_trail[0])
-        set_matrix_uniform(shs, "inverse_view", &inverse_view)
-        set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
-        set_float_uniform(shs, "slide_t", slide_t)
-        set_float_uniform(shs, "crunch_time", f32(rs.crunch_time) / 1000)
-        set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
         draw_indirect_render_queue(bs, draw_commands[.Standard][:], gl.PATCHES)
 
         // bouncy geometry
         // -------------------------------------------
         use_shader(shs, rs, .Bouncy)
-        set_vec3_uniform(shs, "crunch_pt", 1, &crunch_pt)
-        set_vec3_uniform(shs, "player_trail", 3, &player_trail[0])
-        set_matrix_uniform(shs, "inverse_view", &inverse_view)
-        set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
-        set_float_uniform(shs, "crunch_time", f32(rs.crunch_time) / 1000)
-        set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
-        set_float_uniform(shs, "slide_t", slide_t)
         draw_indirect_render_queue(bs, draw_commands[.Bouncy][:], gl.PATCHES)
 
         // wireframe object
@@ -203,9 +200,6 @@ draw :: proc(
         // dash barrier
         // -------------------------------------------
         use_shader(shs, rs, .Barrier)
-        set_float_uniform(shs, "shatter_delay", f32(BREAK_DELAY))
-        set_matrix_uniform(shs, "inverse_view", &inverse_view)
-        set_matrix_uniform(shs, "inverse_projection", &inverse_proj)
         draw_indirect_render_queue(bs, draw_commands[.Dash_Barrier][:], gl.PATCHES)
 
         // background 

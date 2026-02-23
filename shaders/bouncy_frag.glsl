@@ -18,6 +18,20 @@ layout (std140, binding = 0) uniform Combined
 	vec4 _pad1;
 };
 
+layout (std140, binding = 1) uniform Standard
+{
+    vec4 crunch_pt;
+    vec4 player_trail0;
+    vec4 player_trail1;
+    vec4 player_trail2;
+    mat4 inverse_view;
+    mat4 inverse_projection;
+    float slide_t;
+    float crunch_time;
+    float shatter_delay;
+	vec4 padding0;
+};
+
 in vec3 global_pos;
 in vec2 perspective_uv;
 in vec3 normal_frag;
@@ -40,12 +54,12 @@ in float denom;
 
 in float did_shatter;
 
-uniform vec3[3] player_trail;
-uniform vec3 crunch_pt;
-uniform float crunch_time;
-uniform mat4 inverse_projection;
-uniform mat4 inverse_view;
-uniform float slide_t;
+// uniform vec3[3] player_trail;
+// uniform vec3 crunch_pt;
+// uniform float crunch_time;
+// uniform mat4 inverse_projection;
+// uniform mat4 inverse_view;
+// uniform float slide_t;
 
 uniform sampler2D ditherTexture;
 
@@ -216,13 +230,13 @@ void main()
     //     noise_border = 0;
     // }
     vec3 trail_col = vec3(0.0, 0, 0);
-    vec2 res1 = distanceToSegment(player_pos, player_trail[0], global_pos);
-    vec2 res2 = distanceToSegment(player_trail[0], player_trail[1], global_pos);
-    vec2 res3 = distanceToSegment(player_trail[1], player_trail[2], global_pos);
+    vec2 res1 = distanceToSegment(player_pos, player_trail0.xyz, global_pos);
+    vec2 res2 = distanceToSegment(player_trail0.xyz, player_trail1.xyz, global_pos);
+    vec2 res3 = distanceToSegment(player_trail1.xyz, player_trail2.xyz, global_pos);
     float d = min(res1[0], min(res2[0], res3[0]));
     float t = (d == res1[0] ? res1[1] : (d == res2[0] ? 1.0 + res2[1] : 2.0 + res3[1])) / 3.0;
     d += t * 0.69;
-    float line_len = length(player_pos - player_trail[0]) + length(player_trail[1] - player_trail[0]) + length(player_trail[2] - player_trail[1]);
+    float line_len = length(player_pos - player_trail0.xyz) + length(player_trail1.xyz - player_trail0.xyz) + length(player_trail2.xyz - player_trail1.xyz);
     float freq = 2.0 * line_len;
     float width =  sin(-time * 70.0 + t * TWOPI * freq) * 3.0 + 35.0;
     float border_d = 0.050 * width;
@@ -232,7 +246,7 @@ void main()
     }
 
     vec3 impact_col = vec3(0.0);
-    float crunch_dist = distance(global_pos, crunch_pt);    
+    float crunch_dist = distance(global_pos, crunch_pt.xyz);    
     float k = crunch_dist - (time - crunch_time) * 20;
     float angle = atan(global_pos.z - crunch_pt.z, global_pos.x - crunch_pt.x);
     float w = crunch_dist + 25.7 * floor(angle / TWOPI * 10);

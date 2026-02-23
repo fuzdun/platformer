@@ -19,6 +19,21 @@ layout (std140, binding = 0) uniform Combined
 	vec4 _pad1;
 };
 
+layout (std140, binding = 1) uniform Standard
+{
+    vec4 crunch_pt;
+    vec4 player_trail0;
+    vec4 player_trail1;
+    vec4 player_trail2;
+    mat4 inverse_view;
+    mat4 inverse_projection;
+    float slide_t;
+    float crunch_time;
+    float shatter_delay;
+	vec4 padding0;
+};
+
+
 in TE_OUT {
     float id;
 
@@ -43,8 +58,6 @@ in TE_OUT {
     in float d11;
     in float denom;
 } te_out[];
-
-uniform float shatter_delay;
 
 out vec3 global_pos;
 out vec2 perspective_uv;
