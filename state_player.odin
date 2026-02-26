@@ -17,26 +17,48 @@ Contact_State :: struct {
     last_touched: int
 }
 
-Dash_State :: struct {
+Player_Surface :: struct {
+    surface_x: [3]f32,
+    surface_z: [3]f32,
+    contact_ray: [3]f32
+}
+
+Player_Normal_Ground :: struct {
+    using surface: Player_Surface
+}
+
+Player_Normal_Slope :: struct {
+    using surface: Player_Surface
+
+}
+
+Player_Normal_Wall :: struct {
+    using surface: Player_Surface,
+    wall_detach_held_t: f32
+}
+
+Player_Normal_Air :: struct { }
+
+Player_Normal_Spinning :: struct {
+    spin_time: f32,
+    spin_dir: [2]f32,
+    spin_amt: f32,
+}
+
+
+Player_Dashing :: struct {
     dash_start_pos: [3]f32,
     dash_dir: [3]f32,
     dash_time: f32,
     dash_spd: f32
 }
 
-Slide_State :: struct {
+Player_Sliding :: struct {
     slide_time: f32,
     mid_slide_time: f32,
     slide_dir: [3]f32,
     slide_start_pos: [3]f32,
     slide_end_time: f32,
-}
-
-Spin_State :: struct {
-    //spinning: bool,
-    spin_time: f32,
-    spin_dir: [2]f32,
-    spin_amt: f32,
 }
 
 Player_Mode :: enum {
@@ -45,12 +67,38 @@ Player_Mode :: enum {
     Sliding,
 }
 
+Mode_State :: union {
+    Player_Normal_Ground,
+    Player_Normal_Slope,
+    Player_Normal_Wall,
+    Player_Normal_Air,
+    Player_Dashing,
+    Player_Sliding
+}
+
+New_Player_State :: struct {
+    mode_state: Mode_State,
+    prev_position: [3]f32,
+    position: [3]f32,
+    velocity: [3]f32,
+    hops_remaining: int,
+    hops_recharge: f32,
+    hurt_t: f32,
+    broke_t: f32,
+    left_ground: f32,
+    left_slope: f32,
+    left_wall: f32,
+    surface_touch_time: f32,
+    last_touched_geometry: int,
+    jump_enabled: bool,
+    dash_enabled: bool,
+    slide_enabled: bool,
+    last_small_hop: f32,
+}
+
 Player_State :: struct {
     mode: Player_Mode,
     contact_state: Contact_State,
-    dash_state: Dash_State,
-    slide_state: Slide_State,
-    spin_state: Spin_State, 
 
     hops_remaining: int,
     hops_recharge: f32,
@@ -58,22 +106,36 @@ Player_State :: struct {
     hurt_t: f32,
     broke_t: f32,
 
+    prev_position: [3]f32,
     position: [3]f32,
     velocity: [3]f32,
-
-    ground_x: [3]f32,
-    ground_z: [3]f32,
 
     jump_enabled: bool,
     dash_enabled: bool,
     slide_enabled: bool,
 
+    // move to input update
     jump_held: bool,
     jump_pressed_time: f32,
-    last_hop: f32,
+    // ===================
+
+    last_small_hop: f32,
+
+    // normal
+    // normal wall
     wall_detach_held_t: f32,
 
-    prev_position: [3]f32,
+    ground_x: [3]f32,
+    ground_z: [3]f32,
+
+    // normal spinning
+    spin_state: Player_Normal_Spinning, 
+
+    // dash
+    dash_state: Player_Dashing,
+
+    // slide
+    slide_state: Player_Sliding,
 }
 
 init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {

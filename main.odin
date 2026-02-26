@@ -85,8 +85,6 @@ main :: proc() {
         if os.args[1] == "chunk" {
             level_to_load = str.concatenate({"chunks/chunk_", os.args[2], ".bin" }, perm_arena_alloc)
        }
-    }
-    if len(os.args) == 2 {
         level_to_load = str.concatenate({"levels/", os.args[1], ".bin"}, perm_arena_alloc)
     }
 

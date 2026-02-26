@@ -101,15 +101,9 @@ update_player :: proc(
     // #####################################################
 
     new_mode := pls.mode
-
-    new_jump_enabled  := pls.jump_enabled  || (!triggers.jump_button_pressed && on_ground)
-    new_slide_enabled := pls.slide_enabled || pls.slide_state.slide_end_time + SLIDE_COOLDOWN < elapsed_time
-    new_dash_enabled  := pls.dash_enabled  || on_ground || triggers.bunny_hop || triggers.small_hop
-
-    if triggers.jump {
-        new_jump_enabled = false
-    }
-
+    new_jump_enabled := triggers.new_jump_enabled
+    new_slide_enabled := triggers.new_slide_enabled
+    new_dash_enabled := triggers.new_dash_enabled
     new_dash_state := pls.dash_state
     new_slide_state := pls.slide_state
 
@@ -168,9 +162,9 @@ update_player :: proc(
 
     // prevent extra hops
     // -------------------------------------------
-    new_last_hop := pls.last_hop
+    new_last_small_hop := pls.last_small_hop
     if triggers.small_hop {
-        new_last_hop = elapsed_time
+        new_last_small_hop = elapsed_time
     }
 
 
@@ -379,7 +373,6 @@ update_player :: proc(
     pls.velocity           = collision_adjusted_velocity
     pls.position           = new_position
     pls.contact_state      = collision_adjusted_cts
-    pls.jump_pressed_time  = triggers.jump_pressed_time
     pls.wall_detach_held_t = triggers.wall_detach_held
     pls.dash_state         = new_dash_state
     pls.slide_state        = new_slide_state
@@ -393,7 +386,12 @@ update_player :: proc(
     pls.ground_z           = new_ground_z
     pls.hops_recharge      = new_hops_recharge
     pls.hops_remaining     = new_hops_remaining
-    pls.last_hop           = new_last_hop
+    pls.last_small_hop     = new_last_small_hop
+
+    // move to input update
+    pls.jump_pressed_time  = triggers.jump_pressed_time
+
+    // move to input update
     pls.jump_held          = triggers.jump_button_pressed
 
     return collision_ids

@@ -122,7 +122,6 @@ get_collisions_and_update_contact_state :: proc(
         }
     }
 
-    best_plane_normal := collided ? collision.normal : {100, 100, 100}
     ignore_contact := sliding && (.Slide_Zone in lgs[collision.id].attributes)
 
     // update contact state
@@ -130,14 +129,14 @@ get_collisions_and_update_contact_state :: proc(
     if !(collided && .Hazardous in lgs[collision.id].attributes) {
         on_surface := (cs.state == .ON_GROUND || cs.state == .ON_WALL || cs.state == .ON_SLOPE)
         // left surface
-        if len(contacts) == 0 && on_surface {
+        if len(contacts) == 0 {
             new_surface_contact_state = .IN_AIR
             // else, update state based on contact angle
         } else if collided {
-            if best_plane_normal.y >= NORMAL_Y_MIN_GROUND {
+            if collision.normal.y >= NORMAL_Y_MIN_GROUND {
                 new_surface_contact_state = .ON_GROUND
                 touched_ground = true
-            } else if best_plane_normal.y >= NORMAL_Y_MIN_SLOPE {
+            } else if collision.normal.y >= NORMAL_Y_MIN_SLOPE {
                 new_surface_contact_state = .ON_SLOPE
                 touched_ground = true
             } else {
@@ -172,8 +171,8 @@ get_collisions_and_update_contact_state :: proc(
 
     // update contact ray
     new_contact_ray := cs.contact_ray
-    if !ignore_contact && best_plane_normal.y < 100.0 {
-        new_contact_ray = -best_plane_normal * CONTACT_RAY_LEN
+    if !ignore_contact && collided {
+        new_contact_ray = -collision.normal * CONTACT_RAY_LEN
     }
 
     new_cs = cs
