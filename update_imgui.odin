@@ -3,7 +3,7 @@ package main
 import "core:strconv"
 import str "core:strings"
 import imgui "shared:odin-imgui"
-import imsdl "shared:odin-imgui/imgui_impl_sdl2"
+import imsdl "shared:odin-imgui/imgui_impl_sdl3"
 import imgl "shared:odin-imgui/imgui_impl_opengl3"
 
 update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^Level_Geometry_State) {
@@ -22,7 +22,10 @@ update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^Level_Geometry_State) {
             shape_string := SHAPE_NAME[lg.shape]
             display_name := str.concatenate({num_string, ": ", shape_string})
             defer delete(display_name)
-            imgui.text_colored(color, str.unsafe_string_to_cstring(display_name))
+            cname := str.clone_to_cstring(display_name)
+            defer delete(cname)
+            imgui.text_colored(color, cname)
+            // imgui.text_colored(color, str.unsafe_string_to_cstring(display_name))
             if imgui.is_item_activated() || imgui.is_item_clicked(imgui.Mouse_Button.Left) {
                 es.selected_entity = lg_idx 
             }
@@ -37,13 +40,17 @@ update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^Level_Geometry_State) {
     {
         shape_items: [len(SHAPE_NAME)]cstring
         for shape_name, idx in SHAPE_NAME {
-            shape_items[idx] = str.unsafe_string_to_cstring(shape_name)
+            shape_items[idx] = str.clone_to_cstring(shape_name)
         }
-        imgui.combo("", &es.displayed_shape, shape_items[0], 8)
+        imgui.combo_char("", &es.displayed_shape, raw_data(shape_items[:]), i32(len(shape_items)), 8)
         if imgui.is_item_edited() {
             dynamic_lgs[es.selected_entity].shape = SHAPE(es.displayed_shape)
             es.selected_entity = editor_sort_lgs(dynamic_lgs, es.selected_entity)
         }
+        for shape in shape_items {
+            delete(shape)
+        }
+
     }
     imgui.end()
 
@@ -53,12 +60,15 @@ update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^Level_Geometry_State) {
     {
         render_type_items: [len(Level_Geometry_Render_Type_Name)]cstring
         for render_type_name, idx in Level_Geometry_Render_Type_Name {
-            render_type_items[idx] = str.unsafe_string_to_cstring(render_type_name)
+            render_type_items[idx] = str.clone_to_cstring(render_type_name)
         }
-        imgui.combo("", &es.displayed_render_type, render_type_items[0], 8)
+        imgui.combo_char("", &es.displayed_shape, raw_data(render_type_items[:]), i32(len(render_type_items)), 8)
         if imgui.is_item_edited() {
             dynamic_lgs[es.selected_entity].render_type = Level_Geometry_Render_Type(es.displayed_render_type)
             es.selected_entity = editor_sort_lgs(dynamic_lgs, es.selected_entity)
+        }
+        for type in render_type_items {
+            delete(type)
         }
     }
     imgui.end()
@@ -75,7 +85,10 @@ update_imgui :: proc(es: ^Editor_State, dynamic_lgs: ^Level_Geometry_State) {
     imgui.begin("Attributes")
     {
         for attribute_name, idx in Level_Geometry_Component_Name {
-            imgui.checkbox(str.unsafe_string_to_cstring(attribute_name), &es.displayed_attributes[idx])
+            // imgui.checkbox(str.unsafe_string_to_cstring(attribute_name), &es.displayed_attributes[idx])
+            cname := str.clone_to_cstring(attribute_name)
+            defer delete(cname)
+            imgui.checkbox(cname, &es.displayed_attributes[idx])
         }
     }
     imgui.end()

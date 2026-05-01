@@ -1,7 +1,7 @@
 package main
 
-import SDL "vendor:sdl2"
-import imsdl "shared:odin-imgui/imgui_impl_sdl2"
+import SDL "vendor:sdl3"
+import imsdl "shared:odin-imgui/imgui_impl_sdl3"
 
 Input_State :: struct {
     a_pressed: bool,
@@ -47,7 +47,7 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
             }
         }
         #partial switch event.type {
-        case .CONTROLLERAXISMOTION:
+        case .GAMEPAD_AXIS_MOTION:
             if event.jaxis.axis == 0 {
                 if (event.jaxis.value < -10000 || event.jaxis.value > 10000) {
                     is.hor_axis = f32(event.jaxis.value) / 32767.0
@@ -62,138 +62,138 @@ process_input :: proc (is: ^Input_State, quit_handler: proc()) {
                     is.vert_axis = 0
                 }
             }
-        case .CONTROLLERBUTTONDOWN:
-            switch event.cbutton.button {
-            case u8(SDL.GameControllerButton.B):
+        case .GAMEPAD_BUTTON_DOWN:
+            switch event.gbutton.button {
+            case u8(SDL.GamepadButton.SOUTH):
                 is.z_pressed = true
-            case u8(SDL.GameControllerButton.X):
+            case u8(SDL.GamepadButton.EAST):
                 is.r_pressed = true
-            case u8(SDL.GameControllerButton.Y):
+            case u8(SDL.GamepadButton.WEST):
                 is.x_pressed = true
-            case u8(SDL.GameControllerButton.RIGHTSHOULDER):
+            case u8(SDL.GamepadButton.RIGHT_SHOULDER):
                 is.c_pressed = true
             }
-        case .CONTROLLERBUTTONUP:
-            switch event.cbutton.button {
-            case u8(SDL.GameControllerButton.B):
+        case .GAMEPAD_BUTTON_UP:
+            switch event.gbutton.button {
+            case u8(SDL.GamepadButton.SOUTH):
                 is.z_pressed = false
-            case u8(SDL.GameControllerButton.X):
+            case u8(SDL.GamepadButton.EAST):
                 is.r_pressed = false
-            case u8(SDL.GameControllerButton.Y):
+            case u8(SDL.GamepadButton.WEST):
                 is.x_pressed = false
-            case u8(SDL.GameControllerButton.RIGHTSHOULDER):
+            case u8(SDL.GamepadButton.RIGHT_SHOULDER):
                 is.c_pressed = false
             }
-        case .KEYDOWN:
-            #partial switch event.key.keysym.sym {
-            case .ESCAPE:
+        case .KEY_DOWN:
+            switch event.key.key {
+            case SDL.K_ESCAPE:
                 quit_handler()
-            case .a:
+            case SDL.K_A:
                 is.a_pressed = true
-            case .s:
+            case SDL.K_S:
                 is.s_pressed = true
-            case .d:
+            case SDL.K_D:
                 is.d_pressed = true
-            case .w:
+            case SDL.K_W:
                 is.w_pressed = true
-            case .q:
+            case SDL.K_Q:
                 is.q_pressed = true
-            case .z:
+            case SDL.K_Z:
                 is.z_pressed = true
-            case .x:
+            case SDL.K_X:
                 is.x_pressed = true
-            case .COMMA:
+            case SDL.K_COMMA:
                 is.lt_pressed = true
-            case .PERIOD:
+            case SDL.K_PERIOD:
                 is.gt_pressed = true
-            case .LEFT:
+            case SDL.K_LEFT:
                 is.left_pressed = true
-            case .RIGHT:
+            case SDL.K_RIGHT:
                 is.right_pressed = true
-            case .UP:
+            case SDL.K_UP:
                 is.up_pressed = true
-            case .DOWN:
+            case SDL.K_DOWN:
                 is.down_pressed = true
-            case .PAGEUP:
+            case SDL.K_PAGEUP:
                 is.pg_up_pressed = true
-            case .PAGEDOWN:
+            case SDL.K_PAGEDOWN:
                 is.pg_down_pressed = true
-            case .TAB:
+            case SDL.K_TAB:
                 is.tab_pressed = true
-            case .BACKSPACE:
+            case SDL.K_BACKSPACE:
                 is.bck_pressed = true
-            case .R:
+            case SDL.K_R:
                 is.r_pressed = true
-            case .E:
+            case SDL.K_E:
                 is.e_pressed = true
-            case .RETURN:
+            case SDL.K_RETURN:
                 is.ent_pressed = true
-            case .c:
+            case SDL.K_C:
                 is.c_pressed = true
-            case .SPACE:
+            case SDL.K_SPACE:
                 is.spc_pressed = true
-            case .LALT:
+            case SDL.K_LALT:
                 is.alt_pressed = true
-            case .LCTRL:
+            case SDL.K_LCTRL:
                 is.lctrl_pressed = true
-            case .LSHIFT:
+            case SDL.K_LSHIFT:
                 is.lshift_pressed = true
-            case .F12:
+            case SDL.K_F12:
                 is.f12_pressed = true
             }
-        case .KEYUP:
-            #partial switch event.key.keysym.sym {
-            case .a:
+        case .KEY_UP:
+            switch event.key.key {
+            case SDL.K_A:
                 is.a_pressed = false
-            case .s:
+            case SDL.K_S:
                 is.s_pressed = false
-            case .d:
+            case SDL.K_D:
                 is.d_pressed = false
-            case .w:
+            case SDL.K_W:
                 is.w_pressed = false
-            case .z:
+            case SDL.K_Z:
                 is.z_pressed = false
-            case .x:
+            case SDL.K_X:
                 is.x_pressed = false
-            case .q:
+            case SDL.K_Q:
                 is.q_pressed = false
-            case .COMMA:
+            case SDL.K_COMMA:
                 is.lt_pressed = false
-            case .PERIOD:
+            case SDL.K_PERIOD:
                 is.gt_pressed = false
-            case .LEFT:
+            case SDL.K_LEFT:
                 is.left_pressed = false
-            case .RIGHT:
+            case SDL.K_RIGHT:
                 is.right_pressed = false
-            case .UP:
+            case SDL.K_UP:
                 is.up_pressed = false
-            case .DOWN:
+            case SDL.K_DOWN:
                 is.down_pressed = false
-            case .PAGEUP:
+            case SDL.K_PAGEUP:
                 is.pg_up_pressed = false
-            case .PAGEDOWN:
+            case SDL.K_PAGEDOWN:
                 is.pg_down_pressed = false
-            case .TAB:
+            case SDL.K_TAB:
                 is.tab_pressed = false
-            case .BACKSPACE:
+            case SDL.K_BACKSPACE:
                 is.bck_pressed = false
-            case .R:
+            case SDL.K_R:
                 is.r_pressed = false
-            case .E:
+            case SDL.K_E:
                 is.e_pressed = false
-            case .RETURN:
+            case SDL.K_RETURN:
                 is.ent_pressed = false
-            case .c:
+            case SDL.K_C:
                 is.c_pressed = false
-            case .SPACE:
+            case SDL.K_SPACE:
                 is.spc_pressed = false
-            case .LALT:
+            case SDL.K_LALT:
                 is.alt_pressed = false
-            case .LCTRL:
+            case SDL.K_LCTRL:
                 is.lctrl_pressed = false
-            case .LSHIFT:
+            case SDL.K_LSHIFT:
                 is.lshift_pressed = false
-            case .F12:
+            case SDL.K_F12:
                 is.f12_pressed = false
             }
         }

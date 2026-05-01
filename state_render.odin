@@ -2,6 +2,7 @@ package main
 
 import "base:runtime"
 import "core:math"
+import "core:fmt"
 import str "core:strings"
 import gl "vendor:OpenGL"
 import la "core:math/linalg"

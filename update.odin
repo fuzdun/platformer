@@ -1,7 +1,5 @@
 package main
 
-import "core:fmt"
-
 gameplay_update :: proc(
     lgs:   ^Level_Geometry_State,
     lgrs: ^Level_Geometry_Render_Data_State,

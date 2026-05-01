@@ -110,19 +110,11 @@ load_level_geometry :: proc(filename: string, lgrs: ^Level_Geometry_Render_Data_
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
             lg.transparency = 1.0
-            // if lg.shape == .DASH_BARRIER {
-            //     lg.attributes += {.Hazardous, .Dash_Breakable, .Breakable}
-            //     lg.render_type = .Dash_Barrier
-            // } else if lg.shape == .SLIDE_ZONE {
-            //     lg.attributes += {.Hazardous, .Slide_Zone, .Breakable}
-            //     lg.render_type = .Slide_Zone
-            // } else if lg.shape == .BOUNCY {
-            //     lg.attributes += {.Bouncy}
-            //     lg.render_type = .Bouncy
-            // } else if lg.shape == .ICE_CREAM || lg.shape == .CHAIR || lg.shape == .FRANK {
-            //     lg.attributes -= {.Collider}
-            //     lg.render_type = .Wireframe
-            // }
+            render_data_handle, ok := hm.add(lgrs, Level_Geometry_Render_Data {
+                render_group = lg_render_group(lg),
+                transparency = 1
+            })
+            lg.render_data_handle = render_data_handle
             loaded_level_geometry[idx] = lg
         }
     }

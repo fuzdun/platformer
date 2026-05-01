@@ -7,11 +7,11 @@ import vmem "core:mem/virtual"
 import glm "core:math/linalg/glsl"
 import str "core:strings"
 import rnd "core:math/rand"
-import SDL "vendor:sdl2"
+import SDL "vendor:sdl3"
 import gl "vendor:OpenGL"
 import ft "shared:freetype"
 import imgui "shared:odin-imgui"
-import imsdl "shared:odin-imgui/imgui_impl_sdl2"
+import imsdl "shared:odin-imgui/imgui_impl_sdl3"
 import imgl "shared:odin-imgui/imgui_impl_opengl3"
 import hm "core:container/handle_map"
 
@@ -238,8 +238,9 @@ main :: proc() {
     max_deviation := clocks_per_second / 5000
 
     snap_hz: i64 = 60
-    current_display_mode: SDL.DisplayMode
-    if SDL.GetCurrentDisplayMode(0, &current_display_mode) == 0 {
+    // current_display_mode: SDL.DisplayMode
+    current_display_mode := SDL.GetCurrentDisplayMode(0)
+    if current_display_mode != nil {
         snap_hz = i64(current_display_mode.refresh_rate)
     }
     snap_hz = i64(clocks_per_second) / snap_hz
@@ -304,7 +305,7 @@ main :: proc() {
             // fixed update
             // -------------------------------------------
             if EDIT {
-                editor_update(&lgs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
+                editor_update(&lgs, &lgrs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
                 gameplay_update(&lgs, &lgrs, is, &pls, &phs, &rs, &ptcls, bs, &cs, &szs, &gs, f32(elapsed_time), FIXED_DELTA_TIME * gs.time_mult)
             }

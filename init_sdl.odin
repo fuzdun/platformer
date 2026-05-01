@@ -2,23 +2,26 @@ package main
 
 import "core:fmt"
 
-import SDL "vendor:sdl2"
-import TTF "vendor:sdl2/ttf"
+import SDL "vendor:sdl3"
+import TTF "vendor:sdl3/ttf"
 
 
-init_sdl :: proc() -> (controller: ^SDL.GameController, window: ^SDL.Window) {
-    if SDL.Init({.VIDEO, .GAMECONTROLLER}) < 0 {
+init_sdl :: proc() -> (controller: ^SDL.Gamepad, window: ^SDL.Window) {
+    if !SDL.Init({.VIDEO, .GAMEPAD}) {
         fmt.println("SDL could not initialize")
     }
     SDL.GL_SetSwapInterval(1)
 
-    if TTF.Init() == -1 {
-        fmt.eprintln("failed to initialize TTF:", TTF.GetError())
+    if !TTF.Init() {
+        fmt.eprintln("failed to initialize TTF")
     }
 
-    for i in 0..<SDL.NumJoysticks() {
-        if (SDL.IsGameController(i)) {
-            controller = SDL.GameControllerOpen(i)
+    num_joysticks: i32
+    joysticks := SDL.GetJoysticks(&num_joysticks)
+
+    for i in 0..<num_joysticks {
+        if SDL.IsGamepad(SDL.JoystickID(i)) {
+            controller = SDL.OpenGamepad(SDL.JoystickID(i))
         }
     }
 
@@ -28,8 +31,6 @@ init_sdl :: proc() -> (controller: ^SDL.GameController, window: ^SDL.Window) {
 
         window = SDL.CreateWindow(
             TITLE,
-            external_display_rect.x,
-            external_display_rect.y,
             external_display_rect.w,
             external_display_rect.h,
             {.OPENGL}
@@ -38,8 +39,8 @@ init_sdl :: proc() -> (controller: ^SDL.GameController, window: ^SDL.Window) {
     } else {
         window = SDL.CreateWindow(
             TITLE,
-            0,
-            0,
+            // 0,
+            // 0,
             WIDTH,
             HEIGHT,
             {.OPENGL}
@@ -51,7 +52,7 @@ init_sdl :: proc() -> (controller: ^SDL.GameController, window: ^SDL.Window) {
     }
 
     if FULLSCREEN {
-        SDL.SetWindowFullscreen(window, SDL.WINDOW_FULLSCREEN)
+        SDL.SetWindowFullscreen(window, true)
     }
     return
 }

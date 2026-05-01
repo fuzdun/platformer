@@ -2,7 +2,6 @@ package main
 
 import la "core:math/linalg"
 import hm "core:container/handle_map"
-import "core:fmt"
 
 update_geometry :: proc(
     lgs: ^Level_Geometry_State,
