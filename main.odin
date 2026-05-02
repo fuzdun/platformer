@@ -93,8 +93,17 @@ main :: proc() {
     // INIT SDL WINDOW
     // #####################################################
 
-    controller, window := init_sdl()
+    controller, window, audio_device := init_sdl()
     defer SDL.DestroyWindow(window)
+
+    music_wav_data: [^]u8
+    music_wav_data_len: u32
+    spec: SDL.AudioSpec
+    if !SDL.LoadWAV("sound/music/clear.wav", &spec, &music_wav_data, &music_wav_data_len) {
+        fmt.println(SDL.GetError())
+    }
+    stream := SDL.OpenAudioDeviceStream(SDL.AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nil, nil)
+    SDL.ResumeAudioStreamDevice(stream)
 
 
     // #####################################################
@@ -294,6 +303,12 @@ main :: proc() {
             accumulator = 0;
             delta_time = target_frame_clocks;
             resync = false;
+        }
+
+        // update audio
+        // -------------------------------------------
+        if SDL.GetAudioStreamQueued(stream) < i32(music_wav_data_len) {
+            SDL.PutAudioStreamData(stream, music_wav_data, i32(music_wav_data_len))
         }
 
         // handle input

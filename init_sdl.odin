@@ -6,8 +6,8 @@ import SDL "vendor:sdl3"
 import TTF "vendor:sdl3/ttf"
 
 
-init_sdl :: proc() -> (controller: ^SDL.Gamepad, window: ^SDL.Window) {
-    if !SDL.Init({.VIDEO, .GAMEPAD}) {
+init_sdl :: proc() -> (controller: ^SDL.Gamepad, window: ^SDL.Window, audio_device: SDL.AudioDeviceID) {
+    if !SDL.Init({.VIDEO, .GAMEPAD, .AUDIO}) {
         fmt.println("SDL could not initialize")
     }
     SDL.GL_SetSwapInterval(1)
@@ -54,6 +54,9 @@ init_sdl :: proc() -> (controller: ^SDL.Gamepad, window: ^SDL.Window) {
     if FULLSCREEN {
         SDL.SetWindowFullscreen(window, true)
     }
+
+    audio_device = SDL.OpenAudioDevice(SDL.AUDIO_DEVICE_DEFAULT_PLAYBACK, nil) 
+
     return
 }
 
