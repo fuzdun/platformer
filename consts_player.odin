@@ -3,7 +3,8 @@ package main
 import "core:math"
 
 // init
-INIT_PLAYER_POS :: [3]f32 { 250, 30, 0 }
+// INIT_PLAYER_POS :: [3]f32 { 250, 30, 0 }
+INIT_PLAYER_POS :: [3]f32 { 0, 0, 0 }
 
 // move speed
 MAX_PLAYER_SPEED: f32: 90.0

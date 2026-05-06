@@ -6,6 +6,7 @@ in vec2 uv;
 
 uniform sampler2D screenTexture;
 uniform vec2 ripple_pt;
+uniform float last_beat_time;
 
 layout (std140, binding = 0) uniform Combined
 {
@@ -57,5 +58,7 @@ void main() {
     // vec4 bw = tex_color * ((delay * wave_f * 0.5 + 1.0) * 0.5 + 0.65);
     // bw.r *= 2.0;
     // fragColor = mix(tex_color, bw,  clamp(wave_f / decay - 0.25, 0, 1));
+    float beat_red = smoothstep(100, 0, i_time - last_beat_time);
+    tex_color.b += beat_red * 0.5;
     fragColor = mix(tex_color, bw,  clamp(wave_f / decay - 0.25, 0, 1));
 }

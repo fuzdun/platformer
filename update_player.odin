@@ -1,6 +1,7 @@
 package main
 
 import "core:math"
+import "core:fmt"
 import la "core:math/linalg"
 
 INFINITE_HOP :: true
@@ -358,6 +359,26 @@ update_player :: proc(
         collision_adjusted_velocity = 0
     }
 
+    new_position = [3]f32{new_position.x, -22, 10 -BEAT_SPACE * current_beat_progress}
+    collision_adjusted_velocity.y = 0
+    collision_adjusted_velocity.z = 0
+
+    if current_beat_progress >= bpm_jump_start && current_beat_progress <= bpm_jump_end {
+        jump_midpoint := bpm_jump_end - 0.5 * TEST_JUMP_BEAT_COUNT
+        if current_beat_progress < jump_midpoint {
+            arc_len := jump_midpoint - bpm_jump_start
+            jump_progress := current_beat_progress - bpm_jump_start
+            jump_grav := -(2.0 * TEST_JUMP_HEIGHT) / (arc_len * arc_len)
+            jump_init_vel := -jump_grav * arc_len
+            new_position.y = -22.0 + jump_init_vel * jump_progress + 0.5 * jump_grav * jump_progress * jump_progress
+            // fmt.println(new_position.y + 22.0)
+        } else {
+            jump_progress := current_beat_progress - jump_midpoint
+            jump_grav := -(2.0 * TEST_JUMP_HEIGHT) / (0.5 * TEST_JUMP_BEAT_COUNT * 0.5 * TEST_JUMP_BEAT_COUNT)
+            new_position.y = -22.0 + TEST_JUMP_HEIGHT + 0.5 * jump_grav * jump_progress * jump_progress
+            // new_position.y = -22.0 + TEST_JUMP_HEIGHT
+        }
+    }
 
     // #####################################################
     // MUTATE STATE 

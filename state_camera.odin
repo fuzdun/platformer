@@ -10,18 +10,25 @@ CAMERA_PLAYER_X_OFFSET :: 0
 // CAMERA_PLAYER_X_OFFSET :: 20 
 // CAMERA_PLAYER_Y_OFFSET :: 0 
 CAMERA_PLAYER_Y_OFFSET :: 10
-CAMERA_PLAYER_Z_OFFSET :: 25 
-// CAMERA_PLAYER_Z_OFFSET :: 0
+// CAMERA_PLAYER_Z_OFFSET :: 25 
+
+CAMERA_PLAYER_Z_OFFSET :: 10 
 
 // CAMERA_PLAYER_X_OFFSET :: 0 
 // CAMERA_PLAYER_Y_OFFSET :: 18
 // CAMERA_PLAYER_Z_OFFSET :: 68 
 
-CAMERA_POS_LERP :: 0.10
-CAMERA_X_LERP :: 0.07
-CAMERA_Y_POS_LERP :: 0.1
-CAMERA_Y_NEG_LERP :: 0.07
-CAMERA_Z_LERP :: 0.08
+// CAMERA_POS_LERP :: 0.10
+// CAMERA_X_LERP :: 0.07
+// CAMERA_Y_POS_LERP :: 0.1
+// CAMERA_Y_NEG_LERP :: 0.07
+// CAMERA_Z_LERP :: 0.08
+
+CAMERA_POS_LERP :: 1.00
+CAMERA_X_LERP :: 1.00
+CAMERA_Y_POS_LERP :: 1.0
+CAMERA_Y_NEG_LERP :: 1.00
+CAMERA_Z_LERP :: 1.00
 
 FOV :: 2.0
 EDITOR_FOV :: 1.0
@@ -39,32 +46,58 @@ Camera_Mode :: struct {
     fov_mod: f32
 }
 
+// GROUND_CAMERA: Camera_Mode: {
+//     pos_offset = {0, 15, 25},
+//     pos_lerp = 0.07,
+//     high_speed_pos_lerp = 0.095,
+//     x_angle_lerp = 0.07,
+//     // y_angle_lerp_rising = 0.07,
+//     // y_angle_lerp_falling = 0.1,
+//     y_angle_lerp = 0.07,
+//     z_angle_lerp = 0.08,
+//     tgt_y_offset = 9.0,
+//     fov_mod = 1.0
+// }
+//
+// AERIAL_CAMERA: Camera_Mode: {
+//     pos_offset = {0, 10, 9.0},
+//     // pos_offset = {0, 10, 25},
+//     pos_lerp = 0.07,
+//     high_speed_pos_lerp = 0.085,
+//     x_angle_lerp = 0.09,
+//     // y_angle_lerp_rising = 0.07,
+//     // y_angle_lerp_falling = 0.1,
+//     y_angle_lerp = 0.09,
+//     z_angle_lerp = 0.08,
+//     tgt_y_offset = 6.0,
+//     // tgt_y_lerp = 0.1,
+//     fov_mod = 1.2
+// }
+
 GROUND_CAMERA: Camera_Mode: {
     pos_offset = {0, 15, 25},
-    pos_lerp = 0.07,
-    high_speed_pos_lerp = 0.095,
-    x_angle_lerp = 0.07,
+    pos_lerp = 1.00,
+    high_speed_pos_lerp = 1.000,
+    x_angle_lerp = 1.00,
     // y_angle_lerp_rising = 0.07,
     // y_angle_lerp_falling = 0.1,
-    y_angle_lerp = 0.07,
-    z_angle_lerp = 0.08,
+    y_angle_lerp = 1.00,
+    z_angle_lerp = 1.00,
     tgt_y_offset = 9.0,
     fov_mod = 1.0
 }
 
 AERIAL_CAMERA: Camera_Mode: {
-    pos_offset = {0, 10, 9.0},
-    // pos_offset = {0, 10, 25},
-    pos_lerp = 0.07,
-    high_speed_pos_lerp = 0.085,
-    x_angle_lerp = 0.09,
+    pos_offset = {0, 15, 25},
+    pos_lerp = 1.00,
+    high_speed_pos_lerp = 1.000,
+    x_angle_lerp = 1.00,
     // y_angle_lerp_rising = 0.07,
     // y_angle_lerp_falling = 0.1,
-    y_angle_lerp = 0.09,
-    z_angle_lerp = 0.08,
-    tgt_y_offset = 6.0,
-    // tgt_y_lerp = 0.1,
-    fov_mod = 1.2
+    y_angle_lerp = 1.00,
+    z_angle_lerp = 1.00,
+    tgt_y_offset = 9.0,
+    fov_mod = 1.0
 }
 
 Camera_State :: struct {

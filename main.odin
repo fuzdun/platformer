@@ -3,12 +3,15 @@ package main
 import "core:fmt"
 import "core:mem"
 import "core:os"
+import "core:math"
+import "core:strings"
 import vmem "core:mem/virtual"
 import glm "core:math/linalg/glsl"
 import str "core:strings"
 import rnd "core:math/rand"
 import SDL "vendor:sdl3"
 import gl "vendor:OpenGL"
+import ma "vendor:miniaudio"
 import ft "shared:freetype"
 import imgui "shared:odin-imgui"
 import imsdl "shared:odin-imgui/imgui_impl_sdl3"
@@ -27,13 +30,33 @@ HEIGHT :: 1080.0
 FULLSCREEN :: true
 TARGET_FRAME_RATE :: 60.0
 FIXED_DELTA_TIME :: f32(1.0 / TARGET_FRAME_RATE)
-FORCE_EXTERNAL_MONITOR :: false
+FORCE_EXTERNAL_MONITOR :: true
 
 TITLE :: "Durian"
 
 SEED: f32
 
+TEST_BPS :: 125.03 / 60.0 
+TEST_FRAMES_PER_BEAT :: 48000.0 / TEST_BPS 
+TEST_FIRST_BEAT_FRAME :: TEST_FRAMES_PER_BEAT / 2.0
+TEST_JUMP_HEIGHT: f32 : 40.0
+TEST_JUMP_WINDOW :: 0.25
+TEST_JUMP_BEAT_COUNT :: 2.0
+// TEST_JUMP_FRAME_COUNT :: TEST_JUMP_BEAT_COUNT * TEST_FRAMES_PER_BEAT
+
+current_beat: f32 = 0.0
+current_beat_progress: f32 = 0.0
+last_beat_time: f32 = 0
+bpm_jump_start: f32 = -100.0
+bpm_jump_end: f32 = -100.0
+// bpm_jump_len: f32 = 0.0
+// bpm_jump_start_vel: f32 = 0.0
+// bpm_jump_grav: f32 = 0.0
+
 quit_app := false
+
+
+// 
 
 main :: proc() {
 
@@ -65,7 +88,6 @@ main :: proc() {
         }
     }
 
-
     // #####################################################
     // INIT ARENA ALLOCATORS
     // #####################################################
@@ -74,6 +96,13 @@ main :: proc() {
     arena_err := vmem.arena_init_growing(&perm_arena); ensure(arena_err == nil)
     perm_arena_alloc := vmem.arena_allocator(&perm_arena)
 
+    // beat_frames := make([dynamic]int, perm_arena_alloc)
+    // data, err := os.read_entire_file_from_path("beat_frames.txt", context.temp_allocator)
+    // beat_frame_strings := strings.split(transmute(string)data, " ", context.temp_allocator)
+    // for bfs in beat_frame_strings {
+    //     val, ok := strconv.parse_int(bfs)
+    //     append(&beat_frames, val)
+    // }
 
     // #####################################################
     // SET LEVEL TO LOAD 
@@ -93,17 +122,53 @@ main :: proc() {
     // INIT SDL WINDOW
     // #####################################################
 
-    controller, window, audio_device := init_sdl()
+    controller, window, old_audio_device := init_sdl()
     defer SDL.DestroyWindow(window)
+    
 
-    music_wav_data: [^]u8
-    music_wav_data_len: u32
-    spec: SDL.AudioSpec
-    if !SDL.LoadWAV("sound/music/clear.wav", &spec, &music_wav_data, &music_wav_data_len) {
-        fmt.println(SDL.GetError())
+    // #####################################################
+    // SOUND STUFF
+    // #####################################################
+
+    engine_config := ma.engine_config_init()
+    // engine_config.noDevice = true
+    engine_config.channels = 2
+    engine_config.sampleRate = 48000
+
+    ma_engine: ma.engine
+    if ma.engine_init(&engine_config, &ma_engine) != ma.result.SUCCESS {
+        fmt.println("Failed to initialize miniaudio engine")
     }
-    stream := SDL.OpenAudioDeviceStream(SDL.AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nil, nil)
-    SDL.ResumeAudioStreamDevice(stream)
+
+    loaded_music: ma.sound
+    if ma.sound_init_from_file(&ma_engine, "sound/music/clear.wav", {}, nil, nil, &loaded_music) != ma.result.SUCCESS {
+        fmt.println("Failed to initialize miniaudio engine")
+    }
+    ma.sound_set_looping(&loaded_music, true)
+    ma.sound_start(&loaded_music)
+
+    bpm_jump_start = 1.0 + rnd.float32() * TEST_JUMP_WINDOW
+    bpm_jump_end = 1.0 + TEST_JUMP_BEAT_COUNT
+   //
+   //  music_wav_data: [^]u8
+   //  music_wav_data_len: u32
+   //  desired_spec: SDL.AudioSpec
+   //  obtained_spec: SDL.AudioSpec
+   //
+   //  // desired_spec.freq = i32(ma_engine.sampleRate)
+   //  desired_spec.freq = i32(ma.engine_get_sample_rate(&ma_engine))
+   //  desired_spec.format = SDL.AudioFormat.F32
+   //  desired_spec.channels = i32(ma.engine_get_channels(&ma_engine))
+   //
+   // sdl_audio_stream := SDL.OpenAudioDeviceStream(SDL.AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired_spec, nil, nil)
+   //  SDL.ResumeAudioStreamDevice(sdl_audio_stream)
+    
+
+    // if !SDL.LoadWAV("sound/music/clear.wav", &spec, &music_wav_data, &music_wav_data_len) {
+    //     fmt.println(SDL.GetError())
+    // }
+    // stream := SDL.OpenAudioDeviceStream(SDL.AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nil, nil)
+    // SDL.ResumeAudioStreamDevice(stream)
 
 
     // #####################################################
@@ -307,9 +372,14 @@ main :: proc() {
 
         // update audio
         // -------------------------------------------
-        if SDL.GetAudioStreamQueued(stream) < i32(music_wav_data_len) {
-            SDL.PutAudioStreamData(stream, music_wav_data, i32(music_wav_data_len))
-        }
+        // buffer_size_in_bytes := SDL.GetAudioStreamQueued(sdl_audio_stream)
+        // if buffer_size_in_bytes < i32(music_wav_data_len) {
+        //     // SDL.PutAudioStreamData(sdl_audio_stream, music_wav_data, i32(music_wav_data_len))
+        //     pcm_frames: [^]u8
+        //     buffer_size_in_frames := buffer_size_in_bytes / i32(ma.get_bytes_per_frame(ma.format.f32, ma.engine_get_channels(&ma_engine)))
+        //     ma.engine_read_pcm_frames(&ma_engine, pcm_frames, u64(buffer_size_in_frames), nil)
+        //     SDL.PutAudioStreamData()
+        // }
 
         // handle input
         // -------------------------------------------
@@ -322,6 +392,25 @@ main :: proc() {
             if EDIT {
                 editor_update(&lgs, &lgrs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
+                // BPM TESTING
+                song_progress: u64
+                ma.sound_get_cursor_in_pcm_frames(&loaded_music, &song_progress)
+
+                current_beat_progress = (f32(song_progress) - f32(TEST_FIRST_BEAT_FRAME)) / TEST_FRAMES_PER_BEAT
+                next_beat := math.floor(current_beat_progress)
+
+                if current_beat_progress >= bpm_jump_end {
+                    last_end := bpm_jump_end
+                    bpm_jump_start = bpm_jump_end + rnd.float32() * TEST_JUMP_WINDOW
+                    bpm_jump_end = last_end + TEST_JUMP_BEAT_COUNT
+                }
+
+                if f32(next_beat) != current_beat {
+                    last_beat_time = f32(elapsed_time)
+                }
+                current_beat = f32(next_beat)
+                // END BPM TESTING
+
                 gameplay_update(&lgs, &lgrs, is, &pls, &phs, &rs, &ptcls, bs, &cs, &szs, &gs, f32(elapsed_time), FIXED_DELTA_TIME * gs.time_mult)
             }
             accumulator -= target_frame_clocks 

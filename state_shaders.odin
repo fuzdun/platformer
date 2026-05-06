@@ -215,7 +215,7 @@ PROGRAM_CONFIGS :: #partial[ProgramName]Program {
     .Postprocessing = {
         pipeline = {"postprocessing_vertex", "postprocessing_frag"},
         shader_types = {.VERTEX_SHADER, .FRAGMENT_SHADER},
-        uniforms = {"time", "ripple_pt", "crunch_time"}
+        uniforms = {"time", "ripple_pt", "crunch_time", "last_beat_time"}
     },
     .Wireframe = {
         pipeline = {"wireframe_vertex", "wireframe_frag"},

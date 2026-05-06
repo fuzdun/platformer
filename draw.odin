@@ -387,6 +387,7 @@ draw :: proc(
         // set_float_uniform(shs, "crunch_time", f32(rs.crunch_time))
         screen_ripple_pt := rs.screen_ripple_pt
         set_vec2_uniform(shs, "ripple_pt", 1, &screen_ripple_pt)
+        set_float_uniform(shs, "last_beat_time", f32(last_beat_time))
         gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
 }

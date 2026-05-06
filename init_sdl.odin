@@ -39,8 +39,6 @@ init_sdl :: proc() -> (controller: ^SDL.Gamepad, window: ^SDL.Window, audio_devi
     } else {
         window = SDL.CreateWindow(
             TITLE,
-            // 0,
-            // 0,
             WIDTH,
             HEIGHT,
             {.OPENGL}
@@ -55,7 +53,7 @@ init_sdl :: proc() -> (controller: ^SDL.Gamepad, window: ^SDL.Window, audio_devi
         SDL.SetWindowFullscreen(window, true)
     }
 
-    audio_device = SDL.OpenAudioDevice(SDL.AUDIO_DEVICE_DEFAULT_PLAYBACK, nil) 
+    // audio_device = SDL.OpenAudioDevice(SDL.AUDIO_DEVICE_DEFAULT_PLAYBACK, nil) 
 
     return
 }
