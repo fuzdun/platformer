@@ -47,6 +47,7 @@ in TE_OUT {
     in float d01;
     in float d11;
     in float denom;
+    in float jump_block;
 } te_out[];
 
 out vec3 global_pos;
@@ -68,6 +69,7 @@ out float d00;
 out float d01;
 out float d11;
 out float denom;
+out float jump_block;
 
 out float did_shatter;
 
@@ -77,7 +79,7 @@ out float did_shatter;
 
 #define SHATTER_INTERVAL 1300.0
 #define SHATTER_WINDOW 1500.0
-#define SHATTER_HORIZONTAL_DIST 70.0
+#define SHATTER_HORIZONTAL_DIST 270.0
 #define SHATTER_VERTICAL_DIST 200.0
 #define CRACK_WIDTH 0.02
 #define CRACK_ROT_AMT 0.35
@@ -151,6 +153,7 @@ void main() {
     d01 = te_out[0].d01;
     d11 = te_out[0].d11;
     denom = te_out[0].denom;
+    jump_block = te_out[0].jump_block;
 
     t0_uv = te_out[0].t0_uv;
     t1_uv = te_out[0].t1_uv;

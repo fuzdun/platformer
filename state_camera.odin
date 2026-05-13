@@ -30,12 +30,14 @@ CAMERA_Y_POS_LERP :: 1.0
 CAMERA_Y_NEG_LERP :: 1.00
 CAMERA_Z_LERP :: 1.00
 
-FOV :: 2.0
+FOV :: 1.5
 EDITOR_FOV :: 1.0
 
 Camera_Mode :: struct {
     pos_offset: [3]f32,
-    pos_lerp: f32,
+    pos_lerp_x: f32,
+    pos_lerp_y: f32,
+    pos_lerp_z: f32,
     high_speed_pos_lerp: f32,
     x_angle_lerp: f32,
     // y_angle_lerp_rising: f32,
@@ -43,63 +45,110 @@ Camera_Mode :: struct {
     y_angle_lerp: f32,
     z_angle_lerp: f32,
     tgt_y_offset: f32,
-    fov_mod: f32
+    fov_mod: f32,
+    y_pos_mod: f32,
+    z_pos_mod: f32,
+    tgt_y_mod: f32
+}
+
+TEST_CAMERA: Camera_Mode: {
+    pos_offset = {0, 25, 65},
+    // pos_lerp = 0.10,
+    pos_lerp_x = 0.40,
+    pos_lerp_y = 0.20,
+    pos_lerp_z = 0.30,
+    high_speed_pos_lerp = 0.095,
+    x_angle_lerp = 1.0,
+    y_angle_lerp = 0.2,
+    z_angle_lerp = 1.0,
+    tgt_y_offset = 14.0,
+    fov_mod = 1.3,
+    y_pos_mod = -7.0,
+    z_pos_mod = -60.0,
+    tgt_y_mod = -0.5
+}
+
+// TEST_CAMERA: Camera_Mode: {
+//     pos_offset = {0, 25, 65},
+//     // pos_lerp = 0.10,
+//     pos_lerp_x = 1.00,
+//     pos_lerp_y = 0.05,
+//     pos_lerp_z = 0.10,
+//     high_speed_pos_lerp = 0.095,
+//     x_angle_lerp = 1.0,
+//     y_angle_lerp = 0.05,
+//     z_angle_lerp = 0.05,
+//     // x_angle_lerp = 1.00,
+//     // y_angle_lerp = 1.00,
+//     // z_angle_lerp = 1.00,
+//     tgt_y_offset = 14.0,
+//     // fov_mod = 1.2,
+//     fov_mod = 0.0,
+//     y_pos_mod = -11.0,
+//     z_pos_mod = -40.0,
+//     tgt_y_mod = -0.25
+// }
+
+GROUND_CAMERA: Camera_Mode: {
+    pos_offset = {0, 25, 25},
+    pos_lerp_x = 0.17,
+    pos_lerp_y = 0.17,
+    pos_lerp_z = 0.17,
+    high_speed_pos_lerp = 0.095,
+    x_angle_lerp = 0.07,
+    // y_angle_lerp_rising = 0.07,
+    // y_angle_lerp_falling = 0.1,
+    y_angle_lerp = 0.07,
+    z_angle_lerp = 0.08,
+    tgt_y_offset = 9.0,
+    fov_mod = 1.0,
+    y_pos_mod = -10.0
+}
+
+AERIAL_CAMERA: Camera_Mode: {
+    pos_offset = {0, 10, 9.0},
+    // pos_offset = {0, 10, 25},
+    pos_lerp_x = 0.07,
+    pos_lerp_y = 0.07,
+    pos_lerp_z = 0.07,
+    high_speed_pos_lerp = 0.085,
+    x_angle_lerp = 0.09,
+    // y_angle_lerp_rising = 0.07,
+    // y_angle_lerp_falling = 0.1,
+    y_angle_lerp = 0.09,
+    z_angle_lerp = 0.08,
+    tgt_y_offset = 6.0,
+    // tgt_y_lerp = 0.1,
+    fov_mod = 1.2,
+    y_pos_mod = -10.0
 }
 
 // GROUND_CAMERA: Camera_Mode: {
 //     pos_offset = {0, 15, 25},
-//     pos_lerp = 0.07,
-//     high_speed_pos_lerp = 0.095,
-//     x_angle_lerp = 0.07,
+//     pos_lerp = 1.00,
+//     high_speed_pos_lerp = 1.000,
+//     x_angle_lerp = 1.00,
 //     // y_angle_lerp_rising = 0.07,
 //     // y_angle_lerp_falling = 0.1,
-//     y_angle_lerp = 0.07,
-//     z_angle_lerp = 0.08,
+//     y_angle_lerp = 1.00,
+//     z_angle_lerp = 1.00,
 //     tgt_y_offset = 9.0,
 //     fov_mod = 1.0
 // }
 //
 // AERIAL_CAMERA: Camera_Mode: {
-//     pos_offset = {0, 10, 9.0},
-//     // pos_offset = {0, 10, 25},
-//     pos_lerp = 0.07,
-//     high_speed_pos_lerp = 0.085,
-//     x_angle_lerp = 0.09,
+//     pos_offset = {0, 15, 25},
+//     pos_lerp = 1.00,
+//     high_speed_pos_lerp = 1.000,
+//     x_angle_lerp = 1.00,
 //     // y_angle_lerp_rising = 0.07,
 //     // y_angle_lerp_falling = 0.1,
-//     y_angle_lerp = 0.09,
-//     z_angle_lerp = 0.08,
-//     tgt_y_offset = 6.0,
-//     // tgt_y_lerp = 0.1,
-//     fov_mod = 1.2
+//     y_angle_lerp = 1.00,
+//     z_angle_lerp = 1.00,
+//     tgt_y_offset = 9.0,
+//     fov_mod = 1.0
 // }
-
-GROUND_CAMERA: Camera_Mode: {
-    pos_offset = {0, 15, 25},
-    pos_lerp = 1.00,
-    high_speed_pos_lerp = 1.000,
-    x_angle_lerp = 1.00,
-    // y_angle_lerp_rising = 0.07,
-    // y_angle_lerp_falling = 0.1,
-    y_angle_lerp = 1.00,
-    z_angle_lerp = 1.00,
-    tgt_y_offset = 9.0,
-    fov_mod = 1.0
-}
-
-AERIAL_CAMERA: Camera_Mode: {
-    pos_offset = {0, 15, 25},
-    pos_lerp = 1.00,
-    high_speed_pos_lerp = 1.000,
-    x_angle_lerp = 1.00,
-    // y_angle_lerp_rising = 0.07,
-    // y_angle_lerp_falling = 0.1,
-    y_angle_lerp = 1.00,
-    z_angle_lerp = 1.00,
-    tgt_y_offset = 9.0,
-    fov_mod = 1.0
-}
-
+//
 Camera_State :: struct {
     position: [3]f32,
     target: [3]f32,
@@ -121,12 +170,13 @@ interpolated_camera_pos :: proc(cs: ^Camera_State, t: f32) -> [3]f32 {
 interpolated_camera_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {
     tgt := math.lerp(cs.prev_target, cs.target, t)
     c_pos := math.lerp(cs.prev_position, cs.position, t)
-    c_dir := glm.normalize(c_pos - tgt)
+    c_dir := glm.normalize(tgt - c_pos)
     up: [3]f32 = {0, 1, 0}
-    c_right := glm.normalize(glm.cross(up, c_dir))
+    fwd: [3]f32 = {0, 0, 1}
+    c_right := glm.normalize(glm.cross(up, fwd))
     c_up := glm.normalize(glm.cross(c_dir, c_right))
     view := glm.mat4LookAt(c_pos, tgt, up)
-    proj := glm.mat4Perspective(EDIT ? EDITOR_FOV : cs.fov, WIDTH / HEIGHT, 1.0, 10000)
+    proj := glm.mat4Perspective(EDIT ? EDITOR_FOV : cs.fov, WIDTH / HEIGHT, 1.0, 1000)
     return proj * view
 }
 
@@ -138,12 +188,12 @@ construct_camera_matrix :: proc(cs: Camera_State) -> glm.mat4 {
     c_right := glm.normalize(glm.cross(up, c_dir))
     c_up := glm.normalize(glm.cross(c_dir, c_right))
     view := glm.mat4LookAt(c_pos, tgt, up)
-    proj := glm.mat4Perspective(EDIT ? EDITOR_FOV : cs.fov, WIDTH / HEIGHT, 1.0, 10000)
+    proj := glm.mat4Perspective(EDIT ? EDITOR_FOV : cs.fov, WIDTH / HEIGHT, 1.0, 1000)
     return proj * view
 }
 
 only_projection_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {
-    return glm.mat4Perspective(EDIT ? EDITOR_FOV : cs.fov, WIDTH / HEIGHT, 1.0, 10000)
+    return glm.mat4Perspective(EDIT ? EDITOR_FOV : cs.fov, WIDTH / HEIGHT, 1.0, 1000)
 }
 
 only_view_matrix :: proc(cs: ^Camera_State, t: f32) -> glm.mat4 {

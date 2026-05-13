@@ -33,7 +33,7 @@ update_geometry :: proc(
         }
     }
 
-    if triggers.bunny_hop {
+    if triggers.bunny_hop || triggers.small_hop {
         last_touched := cts.last_touched
 
         rd := hm.get(lgrs, lgs[last_touched].render_data_handle)

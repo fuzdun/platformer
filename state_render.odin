@@ -72,6 +72,7 @@ Level_Geometry_Render_Data :: struct {
     render_group: int,
     transparency: f32,
     shatter_data: Shatter_Ubo,
+    jump_block: f32
 }
 
 Level_Geometry_Render_Data_State :: hm.Dynamic_Handle_Map(Level_Geometry_Render_Data, Handle)

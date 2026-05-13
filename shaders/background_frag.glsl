@@ -134,5 +134,6 @@ void main() {
     // fragColor = mix(vec4(col, 1.0), vec4(0.0, 0.0, 0.0, 0.0), diffusion * diffusion * 0.7 + 0.3 + i_time / 4000.0);
     // // fragColor = mix(vec4(col, 1.0), vec4(0.0, 0.0, 0.0, 0.0), diffusion * diffusion * 0.7 + 0.3);
     fragColor = mix(base_color, vec4(color, final_transparency), 0.75);
+    // fragColor = mix(base_color, vec4(color, final_transparency), 0.75);
 }
 

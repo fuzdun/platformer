@@ -13,6 +13,7 @@ in VS_OUT {
     vec4 crack_time_break_dir;
     float outer_tess_amt;
     float inner_tess_amt;
+    float jump_block;
 } vs_out[];
 
 patch out float id;
@@ -29,6 +30,7 @@ patch out float player_dist;
 patch out float plane_dist;
 patch out vec4 break_time_pos;
 patch out vec4 crack_time_break_dir;
+patch out float jump_block;
 
 out TC_OUT {
     vec2 uv;
@@ -42,6 +44,7 @@ void main() {
     plane_dist = vs_out[gl_InvocationID].plane_dist;
     break_time_pos = vs_out[gl_InvocationID].break_time_pos;
     crack_time_break_dir = vs_out[gl_InvocationID].crack_time_break_dir;
+    jump_block = vs_out[gl_InvocationID].jump_block;
     tc_out[gl_InvocationID].uv = vs_out[gl_InvocationID].uv;
 
     v0 = (gl_in[1].gl_Position - gl_in[0].gl_Position).xyz;

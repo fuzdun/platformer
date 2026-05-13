@@ -3,6 +3,7 @@ package main
 
 Game_State :: struct {
     intensity: f32,
+    tgt_intensity: f32,
     score: int,
     time_remaining: f32,
     current_sector: int,

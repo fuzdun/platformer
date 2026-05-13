@@ -20,6 +20,7 @@ patch in float player_dist;
 patch in float plane_dist;
 patch in vec4 break_time_pos;
 patch in vec4 crack_time_break_dir;
+patch in float jump_block;
 
 out TE_OUT {
     float id;
@@ -43,6 +44,7 @@ out TE_OUT {
     float d01;
     float d11;
     float denom;
+    float jump_block;
 } te_out;
 
 void main() {
@@ -78,5 +80,6 @@ void main() {
     te_out.d01 = d01;
     te_out.d11 = d11;
     te_out.denom = denom;
+    te_out.jump_block = jump_block;
 }
 

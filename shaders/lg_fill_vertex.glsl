@@ -40,6 +40,12 @@ layout (std140, binding = 6) buffer Shatter_Datas
     Break_Data break_data[1000]; 
 };
 
+layout (std140, binding = 8) buffer Jump_Blocks
+{
+    float jump_blocks[1000]; 
+};
+
+
 out VS_OUT {
     float id;
     vec2 uv;
@@ -51,14 +57,17 @@ out VS_OUT {
     vec4 crack_time_break_dir;
     float outer_tess_amt;
     float inner_tess_amt;
+    float jump_block;
 } vs_out;
 
 
 void main() {
     vs_out.id = gl_BaseInstance + gl_InstanceID + 1; 
+    vs_out.jump_block = jump_blocks[gl_BaseInstance + gl_InstanceID];
     mat4 transform = transforms[gl_BaseInstance + gl_InstanceID];
     vec4 new_pos = transform * aPos;
-    float player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
+    // float player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 40 - new_pos.z);;
+    float player_dist = max(0, player_pos.z - (z_width_data[gl_BaseInstance + gl_InstanceID]) - 100 - new_pos.z);;
     vec2 projected_point = (projection * new_pos).xy;
     vec2 projected_disp = projected_point - 0.5;
     new_pos.xy -= (player_dist / 50.0) * projected_disp;

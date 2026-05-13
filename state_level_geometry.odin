@@ -8,7 +8,7 @@ import rnd "core:math/rand"
 CHUNK_WIDTH :: 500
 CHUNK_DEPTH :: 500
 
-BEAT_SPACE :: 80
+BEAT_SPACE :: 110
 
 Level_Geometry_State :: #soa[dynamic]Level_Geometry
 

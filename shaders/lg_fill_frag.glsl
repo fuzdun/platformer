@@ -50,6 +50,7 @@ in float d00;
 in float d01;
 in float d11;
 in float denom;
+in float jump_block;
 
 in float did_shatter;
 
@@ -152,9 +153,10 @@ float udTriangle( in vec3 v1, in vec3 v2, in vec3 v3, in vec3 p )
 }
 
 #define RING_COUNT 12.0
-#define RING_SIZE 3.0
+#define RING_SIZE 6.0
 #define RING_PHASE_OFFSET 0.6
 #define RING_WAVE_SIZE 2.5
+
 float ditherRingNum(float distVal, float mask) {
     float time = i_time / 200.0;
     for (int i = 0; i < RING_COUNT; i++) {
@@ -270,7 +272,7 @@ void main()
     vec3 grad_normal = normalize(grad_noise_val.yzw);
     float lighting_amt = dot(vec3(0, -1, 0), grad_normal);
     float lighting2_amt = dot(normalize(vec3(1, 1, 1)), grad_normal);
-    vec3 pattern_col =  (lighting_amt * 0.3 + 0.7) * vec3(0.0, 0.7, 1.0) + (lighting2_amt * 0.3 + 0.7) * vec3(0.25, 0.0, 0.45);
+    vec3 pattern_col = (lighting_amt * 0.3 + 0.7) * vec3(0.0, 0.7, 1.0) + (lighting2_amt * 0.3 + 0.7) * vec3(0.25, 0.0, 0.45);
     // vec3 pattern_col1 = cos(vec3(3, 0, 2) * (lighting_amt * 0.3 + 0.7) + vec3(1, 0, 1) * i_time / 2000);
     // vec3 pattern_col2 = sin(vec3(2, 0, 1) * (lighting2_amt * 0.3 + 0.7) + vec3(1, 0, 1) * i_time / 2000);
     // vec3 pattern_col =  tanh((pattern_col1 + pattern_col2));// + (lighting2_amt * 0.3 + 0.7) * sin(vec3(2, 6, 1)) / 100.0);
@@ -293,4 +295,8 @@ void main()
 
     fragColor = mix(vec4(1.0, 1.0, 1.0, 1.0), fragColor, border_t);
     fragColor *= dot(normal_frag, normalize(vec3(1, 1, 1))) / 2.0 + 1.0;
+    if (jump_block == 1.0) {
+        fragColor.r += 0.5;
+        fragColor.a = 1.0;
+    }
 }

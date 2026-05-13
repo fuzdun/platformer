@@ -222,6 +222,7 @@ apply_velocity :: proc(
     }
     init_velocity_len := la.length(velocity)
     remaining_vel := init_velocity_len * delta_time
+    target_z := position.z + velocity.z * delta_time
     if remaining_vel > 0 {
         velocity_normal := la.normalize(velocity)
         loops := 0
@@ -239,12 +240,16 @@ apply_velocity :: proc(
             }
             new_position += (remaining_vel * (collision.t) - GROUND_BUFFER) * velocity_normal
             remaining_vel *= 1.0 - collision.t
+
             if .Hazardous in entities[collision.id].attributes {
                 remaining_vel = DAMAGE_VELOCITY
                 velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal * 1.25 
             } else {
                 velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal
             }
+
+            remaining_vel *= (target_z - new_position.z) / (velocity_normal.z * remaining_vel)
+
             new_velocity = (velocity_normal * remaining_vel) / delta_time
             collided, collision, contacts, new_contact_state, touched_ground = get_collisions_and_update_contact_state(
                 entities, new_position, new_velocity,

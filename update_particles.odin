@@ -29,11 +29,14 @@ update_particles :: proc(
         particle_info.vel -= la.dot(spc.normal, particle_info.vel) * spc.normal * 1.5
     }
 
-    if triggers.bunny_hop || triggers.small_hop {
-        particle_count := triggers.small_hop ? 200 : 1000
+    if triggers.bunny_hop {
+    // if triggers.bunny_hop {
+        // particle_count := triggers.small_hop ? 10 : 100
+        // particle_count := triggers.small_hop ? 0 : 0
+        particle_count := 100
         for idx in 0..<particle_count {
             spawn_angle := rnd.float32() * math.PI * 2.0
-            spawn_vector := (math.sin(spawn_angle) * surface_ortho1 + math.cos(spawn_angle) * surface_ortho2 - normalized_contact_ray * (rnd.float32() * 0.5 + 0.25)) * 2.5
+            spawn_vector := (math.sin(spawn_angle) * surface_ortho1 + math.cos(spawn_angle) * surface_ortho2 - normalized_contact_ray * (rnd.float32() * 0.5 + 0.10)) * 2.75
             particle_info: Particle_Info = {
                 spawn_vector * 50.0 * rnd.float32() + 0.2,
                 1.2,

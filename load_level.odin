@@ -71,20 +71,36 @@ generate_level :: proc(lgrs: ^Level_Geometry_Render_Data_State, arena: runtime.A
     //     spawn_offset.z -= CHUNK_DEPTH
     // }
     // return level_geometry
-    level_geometry := make([]Level_Geometry, 30, arena)
+    level_geometry := make([]Level_Geometry, 300, arena)
     spawn_offset := [3]f32{0, 0, 0}
-    for idx in 0..<30 {
+    x_offset: f32 = 0
+    no_skip_next := false
+    i := 0
+    for idx in 0..<300 {
+        skip_next := false
+        if no_skip_next {
+            no_skip_next = false
+        } else {
+            if rnd.float32() < 0.5 {
+                skip_next = true
+                no_skip_next = true
+            }
+        }
+        x_offset += rnd.float32() * 90.0 - 45.0
         lg: Level_Geometry
         lg.attributes = {.Collider} 
         render_data_handle, ok := hm.add(lgrs, Level_Geometry_Render_Data {
             render_group = lg_render_group(lg),
-            transparency = 1
+            transparency = 1,
+            jump_block = skip_next ? 0.0 : 0.0
         })
         lg.render_data_handle = render_data_handle
-        lg.transform.position = spawn_offset + [3]f32{0, -40, f32(idx) * -BEAT_SPACE} 
+        lg.transform.position = spawn_offset + [3]f32{x_offset, -40, f32(i) * -BEAT_SPACE} 
+        lg.transform.rotation = la.quaternion_from_euler_angle_x(f32(0.2))
         // fmt.println(lg.transform.position)
-        lg.transform.scale = 15
+        lg.transform.scale = 25
         level_geometry[idx] = lg
+        i += skip_next ? 2 : 1
     }
     return level_geometry
 }
@@ -105,7 +121,6 @@ load_level_geometry :: proc(filename: string, lgrs: ^Level_Geometry_Render_Data_
             lg: Level_Geometry
             lg.shape = .CUBE
             lg.collider = .CUBE
-
             x := f32(i % 10)
             y := math.floor(f32(i) / 4) - 50
             lg.transform = {{x * 75, y * 1 - 80, y * -25 + 200},{30, 30, 30}, rot}

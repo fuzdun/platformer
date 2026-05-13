@@ -1,32 +1,32 @@
 package main
 
 import la "core:math/linalg"
+import "core:math"
 
 Action_Triggers :: struct {
-    jump: bool,
     jump_button_pressed: bool,
     jump_pressed_time: f32,
 
-    ground_jump: bool,
-    slope_jump: bool,
-    wall_jump: bool,
+    // ground_jump: bool,
+    // slope_jump: bool,
+    // wall_jump: bool,
 
     new_jump_enabled: bool,
-    new_dash_enabled: bool,
-    new_slide_enabled: bool,
+    // new_dash_enabled: bool,
+    // new_slide_enabled: bool,
 
+    jump: bool,
     small_hop: bool,
     bunny_hop: bool,
-
-    spin: bool,
-    dash: bool,
-    slide: bool,
+    // spin: bool,
+    // dash: bool,
+    // slide: bool,
 
     move: [2]f32,
     fwd_move: bool,
     wall_detach_held: f32,
 
-    slide_zone: bool,
+    // slide_zone: bool,
 
     restart: bool,
     checkpoint: bool
@@ -51,34 +51,44 @@ get_player_action_triggers :: proc(
 
     out.new_jump_enabled  = pls.jump_enabled  || (!out.jump_button_pressed && on_ground)
 
-    hop_valid := out.jump_pressed_time > pls.last_small_hop + BUNNY_WINDOW * 2
-    if hop_valid && (
-        abs(cts.touch_time - out.jump_pressed_time) < BUNNY_WINDOW ||
-        abs(pls.slide_state.slide_end_time - out.jump_pressed_time) < BUNNY_WINDOW
-    ) {
-        out.small_hop = true
-    }
+    // hop_valid := out.jump_pressed_time > pls.last_small_hop + BUNNY_WINDOW * 2
+    // if hop_valid && (
+    //     abs(cts.touch_time - out.jump_pressed_time) < BUNNY_WINDOW ||
+    //     abs(pls.slide_state.slide_end_time - out.jump_pressed_time) < BUNNY_WINDOW
+    // ) {
+    //     out.small_hop = true
+    //     // out.bunny_hop = true
+    // }
 
-    out.bunny_hop = pls.mode == .Normal && on_surface && pls.spin_state.spin_amt > 0 &&
-                    (pls.hops_remaining > 0 || INFINITE_HOP)
-
-    should_jump := (input.jump_pressed && out.new_jump_enabled) || out.bunny_hop || out.small_hop
-
-    out.new_slide_enabled = pls.slide_enabled || pls.slide_state.slide_end_time + SLIDE_COOLDOWN < elapsed_time
-    out.new_dash_enabled  = pls.dash_enabled  || on_ground || out.bunny_hop || out.small_hop
-
-    ground_jump_coyote_time_active := elapsed_time - cts.left_ground < COYOTE_TIME
-    slope_jump_coyote_time_active  := elapsed_time - cts.left_slope  < COYOTE_TIME
-    wall_jump_coyote_time_active   := elapsed_time - cts.left_wall   < COYOTE_TIME
-
-    out.ground_jump = should_jump && (cts.state == .ON_GROUND || ground_jump_coyote_time_active)
-    out.slope_jump  = should_jump && (cts.state == .ON_SLOPE  || slope_jump_coyote_time_active) 
-    out.wall_jump   = should_jump && (cts.state == .ON_WALL   || wall_jump_coyote_time_active)
-
-    out.jump = out.ground_jump || out.slope_jump || out.wall_jump
+    jump_input := input.jump_pressed || abs(cts.touch_time - out.jump_pressed_time) < BUNNY_WINDOW
+    // ground_jump_coyote_time_active := elapsed_time - cts.left_ground < COYOTE_TIME
+    can_jump := out.new_jump_enabled && current_beat_progress > bpm_jump_end && cts.state == .ON_GROUND// || ground_jump_coyote_time_active
+    out.jump = jump_input && can_jump
     if out.jump {
         out.new_jump_enabled = false
     }
+    beat_window := math.abs(math.round(current_beat_progress) - current_beat_progress)
+    out.bunny_hop = out.jump && beat_window < TEST_PERFECT_WINDOW
+    out.small_hop = out.jump && !out.bunny_hop && beat_window < TEST_OK_WINDOW
+
+    // out.bunny_hop = pls.mode == .Normal && on_surface && pls.spin_state.spin_amt > 0 &&
+    //                 (pls.hops_remaining > 0 || INFINITE_HOP)
+
+    // should_jump := (input.jump_pressed && out.new_jump_enabled) || out.bunny_hop// || out.small_hop
+
+    // out.new_slide_enabled = pls.slide_enabled || pls.slide_state.slide_end_time + SLIDE_COOLDOWN < elapsed_time
+    // out.new_dash_enabled  = pls.dash_enabled  || on_ground || out.bunny_hop// || out.small_hop
+
+    // ground_jump_coyote_time_active := elapsed_time - cts.left_ground < COYOTE_TIME
+    // slope_jump_coyote_time_active  := elapsed_time - cts.left_slope  < COYOTE_TIME
+    // wall_jump_coyote_time_active   := elapsed_time - cts.left_wall   < COYOTE_TIME
+
+    // out.ground_jump = should_jump && (cts.state == .ON_GROUND || ground_jump_coyote_time_active)
+    // out.slope_jump  = should_jump && (cts.state == .ON_SLOPE  || slope_jump_coyote_time_active) 
+    // out.wall_jump   = should_jump && (cts.state == .ON_WALL   || wall_jump_coyote_time_active)
+
+    // out.jump = out.ground_jump || out.slope_jump || out.wall_jump
+    // out.jump = should_jump && (cts.state == .ON_GROUND || ground_jump_coyote_time_active)
 
     out.move = input.dir
     out.fwd_move = la.dot(la.normalize0(pls.velocity.xz), input.dir) > 0.80
@@ -96,11 +106,11 @@ get_player_action_triggers :: proc(
         out.wall_detach_held = 0
     }
 
-    out.spin = input.spin_pressed && !on_surface
-    out.dash = input.action_pressed && out.new_dash_enabled && !on_surface && pls.velocity != 0
-    out.slide = input.action_pressed &&  out.new_slide_enabled && on_surface && pls.velocity != 0
+    // out.spin = input.spin_pressed && !on_surface
+    // out.dash = input.action_pressed && out.new_dash_enabled && !on_surface && pls.velocity != 0
+    // out.slide = input.action_pressed &&  out.new_slide_enabled && on_surface && pls.velocity != 0
 
-    out.slide_zone = len(szs.intersected) > 0
+    // out.slide_zone = len(szs.intersected) > 0
 
     out.restart = input.restart_pressed
     out.checkpoint = pls.position.y < -100

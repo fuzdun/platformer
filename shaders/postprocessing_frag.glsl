@@ -58,7 +58,9 @@ void main() {
     // vec4 bw = tex_color * ((delay * wave_f * 0.5 + 1.0) * 0.5 + 0.65);
     // bw.r *= 2.0;
     // fragColor = mix(tex_color, bw,  clamp(wave_f / decay - 0.25, 0, 1));
-    float beat_red = smoothstep(100, 0, i_time - last_beat_time);
-    tex_color.b += beat_red * 0.5;
-    fragColor = mix(tex_color, bw,  clamp(wave_f / decay - 0.25, 0, 1));
+    vec4 beat_red = vec4(0, 0, smoothstep(100, 0, i_time - last_beat_time) * 0.2, 1);
+    // tex_color.b += beat_red * 0.5;
+
+    fragColor = mix(tex_color, bw,  clamp(wave_f / decay - 0.25, 0, 1)) + beat_red;
+    // fragColor = texture(screenTexture, uv);
 }

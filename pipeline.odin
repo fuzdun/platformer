@@ -10,21 +10,22 @@ Ssbo :: enum {
     Transform,
     Transparency,
     Shatter,
-    Z_Width
+    Z_Width,
+    Jump_Block
 }
 
 Ssbo_Info :: [Ssbo]struct{ type_sz: int, loc: u32 } {
     .Transform    = { size_of(glm.mat4),         4},
     .Z_Width      = { size_of(Z_Width_Ubo),      5},
     .Shatter      = { size_of(Shatter_Ubo),      6},
-    .Transparency = { size_of(Transparency_Ubo), 7}
+    .Transparency = { size_of(Transparency_Ubo), 7},
+    .Jump_Block   = { size_of(f32),              8}
 }
 
 ssbo_mapper :: proc(rd: #soa[]Level_Geometry_Render_Data, bs: Buffer_State, ssbo: Ssbo) {
     if len(rd) > 0 {
         data: rawptr
         switch ssbo {
-
         case .Transform:
             transform_mats := make([]glm.mat4, len(rd), context.temp_allocator)
             for i in 0..<len(rd) {
@@ -48,6 +49,9 @@ ssbo_mapper :: proc(rd: #soa[]Level_Geometry_Render_Data, bs: Buffer_State, ssbo
                 z_widths[i] = { 20 }
             }
             data = &z_widths[0]
+
+        case .Jump_Block:
+            data = rawptr(rd.jump_block)
         }
 
         ssbo_info := Ssbo_Info

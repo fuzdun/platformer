@@ -2,6 +2,7 @@
 package main
 
 import "core:math"
+import "core:fmt"
 import la "core:math/linalg"
 
 
@@ -13,14 +14,32 @@ update_game :: proc(gs: ^Game_State, lgs: Level_Geometry_State, pls: Player_Stat
     new_score += int(gs.intensity * gs.intensity * 10.0)
 
     new_intensity := gs.intensity
-    flat_speed := la.length(pls.velocity.xz)
-    tgt_intensity := clamp((flat_speed - INTENSITY_MOD_MIN_SPD) / (INTENSITY_MOD_MAX_SPD - INTENSITY_MOD_MIN_SPD), 0, 1)
-
-    if tgt_intensity > new_intensity {
-        new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.004))
-    } else {
-        new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.0010))
+    new_tgt_intensity := gs.tgt_intensity
+    if triggers.small_hop {
+        new_tgt_intensity += 0.20
+        // new_tgt_intensity += 0.05
+    } else if triggers.bunny_hop {
+        new_tgt_intensity += 0.4
+        // new_tgt_intensity += 0.1
     }
+    new_tgt_intensity = min(1.0, new_tgt_intensity)
+
+    // new_tgt_intensity = 1.0
+    // new_intensity = math.lerp(new_intensity, new_tgt_intensity, f32(0.01))
+
+    new_intensity = math.lerp(new_intensity, new_tgt_intensity, f32(0.10))
+    new_tgt_intensity = max(0, new_tgt_intensity - 0.0035)
+    // fmt.println("intensity:", new_intensity)
+    // fmt.println("tgt_intensity:", new_tgt_intensity)
+    // new_intensity = 1.00
+    // flat_speed := la.length(pls.velocity.xz)
+    // tgt_intensity := clamp((flat_speed - INTENSITY_MOD_MIN_SPD) / (INTENSITY_MOD_MAX_SPD - INTENSITY_MOD_MIN_SPD), 0, 1)
+    //
+    // if tgt_intensity > new_intensity {
+    //     new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.004))
+    // } else {
+    //     new_intensity = math.lerp(new_intensity, tgt_intensity, f32(0.0010))
+    // }
 
     new_time_remaining := gs.time_remaining
     new_time_remaining = max(0, new_time_remaining - delta_time)
@@ -63,6 +82,7 @@ update_game :: proc(gs: ^Game_State, lgs: Level_Geometry_State, pls: Player_Stat
 
     gs.score             = new_score
     gs.intensity         = new_intensity
+    gs.tgt_intensity     = new_tgt_intensity
     gs.time_remaining    = new_time_remaining
     gs.current_sector    = new_sector
     gs.last_checkpoint_t = new_checkpoint_t
