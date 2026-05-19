@@ -36,11 +36,11 @@ TITLE :: "Durian"
 
 SEED: f32
 
-// TEST_BPS: f32 : 125.03 / 60.0 
-TEST_BPS: f32 : 153.01 / 60.0 
+TEST_BPS: f32 : 125.03 / 60.0 
+// TEST_BPS: f32 : 153.01 / 60.0 
 TEST_FRAMES_PER_BEAT: f32 : 48000.0 / TEST_BPS 
 TEST_FRAMES_PER_UPDATE :: (TEST_FRAMES_PER_BEAT * TEST_BPS) / TARGET_FRAME_RATE
-TEST_FIRST_BEAT_FRAME :: TEST_FRAMES_PER_BEAT * 0.75
+TEST_FIRST_BEAT_FRAME :: TEST_FRAMES_PER_BEAT * 0.7
 // TEST_FIRST_BEAT_FRAME :: TEST_FRAMES_PER_BEAT
 // TEST_JUMP_HEIGHT: f32 : 50.0
 TEST_JUMP_HEIGHT: f32 : 30.0
@@ -149,7 +149,7 @@ main :: proc() {
     }
 
     loaded_music: ma.sound
-    if ma.sound_init_from_file(&ma_engine, "sound/music/shingles.mp3", {}, nil, nil, &loaded_music) != ma.result.SUCCESS {
+    if ma.sound_init_from_file(&ma_engine, "sound/music/clear.wav", {}, nil, nil, &loaded_music) != ma.result.SUCCESS {
         fmt.println("Failed to initialize miniaudio engine")
     }
     // ma.decoder_seek_to_pcm_frame(&loaded_music, 20000)
