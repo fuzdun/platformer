@@ -1,20 +1,19 @@
 package main
 
 import la "core:math/linalg"
-import hm "core:container/handle_map"
+// import hm "core:container/handle_map"
 
 NORMAL_Y_MIN_GROUND :: 0.85
 NORMAL_Y_MIN_SLOPE :: 0.2
 
 
-build_physics_map :: proc(lgs: Level_Geometry_State, lgrs: ^Level_Geometry_Render_Data_State, colliders: [SHAPE]Mesh, et: f32) -> (physics_map: []Physics_Segment) {
+build_physics_map :: proc(lgs: Level_Geometry_State, colliders: [SHAPE]Mesh, et: f32) -> (physics_map: []Physics_Segment) {
     physics_map = make([]Physics_Segment, PHYSICS_SEGMENT_COUNT, context.temp_allocator)
     for segment_idx in 0..<5 {
         physics_map[segment_idx] = make(Physics_Segment, context.temp_allocator)
     }
     for lg, lg_idx in lgs {
-        rd := hm.get(lgrs, lg.render_data_handle)
-        if .Collider not_in lg.attributes || !(rd.shatter_data.crack_time == 0 || et < rd.shatter_data.crack_time + BREAK_DELAY) && rd.shatter_data.smash_time == 0 {
+        if .Collider not_in lg.attributes || !(lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
             continue
         }
         segment_idx: int = 0 //int(math.floor(lg.transform.position.z / PHYSICS_SEGMENT_SIZE)) 

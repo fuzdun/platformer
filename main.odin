@@ -16,7 +16,6 @@ import ft "shared:freetype"
 import imgui "shared:odin-imgui"
 import imsdl "shared:odin-imgui/imgui_impl_sdl3"
 import imgl "shared:odin-imgui/imgui_impl_opengl3"
-import hm "core:container/handle_map"
 
 MAX_LEVEL_GEOMETRY_COUNT :: 2000
 
@@ -47,7 +46,7 @@ TEST_JUMP_HEIGHT: f32 : 30.0
 TEST_PERFECT_WINDOW: f32 : 0.3
 TEST_OK_WINDOW: f32 : 0.4
 // TEST_JUMP_WINDOW :: 0.25
-TEST_JUMP_BEAT_COUNT :: 2.0
+TEST_JUMP_BEAT_COUNT :: 1.0
 // TEST_JUMP_FRAME_COUNT :: TEST_JUMP_BEAT_COUNT * TEST_FRAMES_PER_BEAT
 
 current_beat: f32 = 0.0
@@ -198,7 +197,6 @@ main :: proc() {
     // #####################################################
 
     lgs:   Level_Geometry_State;
-    lgrs:  Level_Geometry_Render_Data_State;
     is:    Input_State;
     cs:    Camera_State;
     es:    Editor_State;
@@ -219,7 +217,7 @@ main :: proc() {
     init_slide_zone_state(&szs, perm_arena_alloc)
     init_game_state(&gs)
     init_shaders(&shs, perm_arena_alloc)
-    hm.dynamic_init(&lgrs, perm_arena_alloc)
+    // hm.dynamic_init(&lgrs, perm_arena_alloc)
 
     // player spin particles
     // -------------------------------------------
@@ -251,9 +249,9 @@ main :: proc() {
     loaded_level_geometry: []Level_Geometry
 
     if GENERATE {
-        loaded_level_geometry = generate_level(&lgrs, context.temp_allocator)
+        loaded_level_geometry = generate_level(context.temp_allocator)
     } else {
-        loaded_level_geometry = load_level_geometry(level_to_load, &lgrs, context.temp_allocator)
+        loaded_level_geometry = load_level_geometry(level_to_load, context.temp_allocator)
     }
 
     num_entities := len(loaded_level_geometry) 
@@ -403,7 +401,7 @@ main :: proc() {
             // fixed update
             // -------------------------------------------
             if EDIT {
-                editor_update(&lgs, &lgrs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
+                editor_update(&lgs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
                 // BPM TESTING
                 song_progress: u64
@@ -419,7 +417,7 @@ main :: proc() {
                 }
                 current_beat = f32(new_beat)
                 // END BPM TESTING
-                gameplay_update(&lgs, &lgrs, is, &pls, &phs, &rs, &ptcls, bs, &cs, &szs, &gs, f32(elapsed_time), FIXED_DELTA_TIME * gs.time_mult)
+                gameplay_update(&lgs, is, &pls, &phs, &rs, &ptcls, bs, &cs, &szs, &gs, f32(elapsed_time), FIXED_DELTA_TIME * gs.time_mult)
             }
             accumulator -= target_frame_clocks 
         }
@@ -428,7 +426,7 @@ main :: proc() {
 
         // render
         // -------------------------------------------
-        draw(lgs, &lgrs, sr, pls, &rs, &ptcls, bs, &shs, &phs, &cs, is, es, szs, gs, elapsed_time, interpolated_time, FIXED_DELTA_TIME * gs.time_mult)
+        draw(lgs, sr, pls, &rs, &ptcls, bs, &shs, &phs, &cs, is, es, szs, gs, elapsed_time, interpolated_time, FIXED_DELTA_TIME * gs.time_mult)
         when ODIN_OS != .Windows {
             if EDIT {
                 update_imgui(&es, &lgs)

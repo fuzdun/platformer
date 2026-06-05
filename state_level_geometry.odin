@@ -20,7 +20,8 @@ Level_Geometry :: struct {
     attributes: Level_Geometry_Attributes,
     shatter_data: Shatter_Ubo,
     transparency: f32,
-    render_data_handle: Handle
+    render_data_handle: Handle,
+    jump_block: f32
 }
 
 Position :: la.Vector3f32 

@@ -66,16 +66,14 @@ Render_State :: struct {
     screen_ripple_pt: [2]f32,
 }
 
-Level_Geometry_Render_Data :: struct {
-    handle: Handle,
-    transform: Transform,
+Renderable :: struct {
+    transform: glm.mat4,
     render_group: int,
-    transparency: f32,
+    transparency: Transparency_Ubo,
     shatter_data: Shatter_Ubo,
+    z_width: f32,
     jump_block: f32
 }
-
-Level_Geometry_Render_Data_State :: hm.Dynamic_Handle_Map(Level_Geometry_Render_Data, Handle)
 
 Quad_Vertex :: struct {
     position: glm.vec3,
@@ -183,46 +181,46 @@ editor_sort_lgs :: proc(lgs: ^Level_Geometry_State, current_selection: int = 0) 
     return
 }
 
-sort_lgs :: proc(lgs: Level_Geometry_State, alloc: runtime.Allocator) -> Level_Geometry_State {
-    sorted_lgs := make(Level_Geometry_State, len(lgs), alloc)
-    group_counts: [NUM_RENDER_GROUPS]int
-    for lg, idx in lgs {
-        group_counts[lg_render_group(lg)] += 1
-    }
-    counts_to_offsets(group_counts[:])
-    for lg, idx in lgs {
-        render_group := lg_render_group(lg) 
-        insert_idx := group_counts[render_group]
-        group_counts[render_group] += 1
-        sorted_lgs[insert_idx] = lg
-        sorted_lgs[idx] = lg
-    }
-    return sorted_lgs
-}
+// sort_lgs :: proc(lgs: Level_Geometry_State, alloc: runtime.Allocator) -> Level_Geometry_State {
+//     sorted_lgs := make(Level_Geometry_State, len(lgs), alloc)
+//     group_counts: [NUM_RENDER_GROUPS]int
+//     for lg, idx in lgs {
+//         group_counts[lg_render_group(lg)] += 1
+//     }
+//     counts_to_offsets(group_counts[:])
+//     for lg, idx in lgs {
+//         render_group := lg_render_group(lg) 
+//         insert_idx := group_counts[render_group]
+//         group_counts[render_group] += 1
+//         sorted_lgs[insert_idx] = lg
+//         sorted_lgs[idx] = lg
+//     }
+//     return sorted_lgs
+// }
 
-offsets_to_render_commands :: proc(offsets: []int, lg_count: int, rs: Render_State, sr: Shape_Resources) -> Render_Groups {
-    render_groups: Render_Groups
-    for &rg in render_groups {
-        rg = make([dynamic]gl.DrawElementsIndirectCommand, context.temp_allocator)
-    } 
-    for g_off, idx in offsets {
-        next_off := idx == len(offsets) - 1 ? lg_count : offsets[idx + 1]
-        count := u32(next_off - g_off)
-        if count == 0 do continue
-        shape := SHAPE(idx % len(SHAPE))
-        render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(SHAPE))))
-        sd := sr.level_geometry[shape] 
-        command: gl.DrawElementsIndirectCommand = {
-            u32(len(sd.indices)),
-            count,
-            sr.index_offsets[shape],
-            sr.vertex_offsets[shape],
-            u32(g_off)
-        }
-        append(&render_groups[render_type], command)
-    }
-    return render_groups
-}
+// offsets_to_render_commands :: proc(offsets: []int, lg_count: int, rs: Render_State, sr: Shape_Resources) -> Render_Groups {
+//     render_groups: Render_Groups
+//     for &rg in render_groups {
+//         rg = make([dynamic]gl.DrawElementsIndirectCommand, context.temp_allocator)
+//     } 
+//     for g_off, idx in offsets {
+//         next_off := idx == len(offsets) - 1 ? lg_count : offsets[idx + 1]
+//         count := u32(next_off - g_off)
+//         if count == 0 do continue
+//         shape := SHAPE(idx % len(SHAPE))
+//         render_type := Level_Geometry_Render_Type(math.floor(f32(idx) / f32(len(SHAPE))))
+//         sd := sr.level_geometry[shape] 
+//         command: gl.DrawElementsIndirectCommand = {
+//             u32(len(sd.indices)),
+//             count,
+//             sr.index_offsets[shape],
+//             sr.vertex_offsets[shape],
+//             u32(g_off)
+//         }
+//         append(&render_groups[render_type], command)
+//     }
+//     return render_groups
+// }
 
 render_text :: proc(shst: ^Shader_State, rs: ^Render_State, bs: Buffer_State, text: string, pos: [3]f32, cam_up: [3]f32, cam_right: [3]f32, scale: f32) {
     x: f32 = 0

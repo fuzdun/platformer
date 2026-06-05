@@ -2,13 +2,13 @@ package main
 
 import la "core:math/linalg"
 import "core:encoding/cbor"
-import "core:fmt"
+// import "core:fmt"
 import "core:os"
 import "core:math"
 import "base:runtime"
 import rnd "core:math/rand"
-import str "core:strings"
-import hm "core:container/handle_map"
+// import str "core:strings"
+// import hm "core:container/handle_map"
 
 trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
     for val in T {
@@ -37,7 +37,7 @@ generate_new_chunk :: proc(lgs: Level_Geometry_State) {
     write_err := os.write_entire_file("chunks/new_chunk.bin", bin)
 }
 
-generate_level :: proc(lgrs: ^Level_Geometry_Render_Data_State, arena: runtime.Allocator) -> []Level_Geometry {
+generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
     // level_geometry := make([]Level_Geometry, 300, arena)
     // spawn_offset := [3]f32{0, 0, 0}
     // entry_idx := 0
@@ -89,15 +89,9 @@ generate_level :: proc(lgrs: ^Level_Geometry_Render_Data_State, arena: runtime.A
         x_offset += rnd.float32() * 90.0 - 45.0
         lg: Level_Geometry
         lg.attributes = {.Collider} 
-        render_data_handle, ok := hm.add(lgrs, Level_Geometry_Render_Data {
-            render_group = lg_render_group(lg),
-            transparency = 1,
-            jump_block = skip_next ? 0.0 : 0.0
-        })
-        lg.render_data_handle = render_data_handle
+        lg.jump_block = skip_next ? 0.0 : 0.0
         lg.transform.position = spawn_offset + [3]f32{x_offset, -40, f32(i) * -BEAT_SPACE} 
         lg.transform.rotation = la.quaternion_from_euler_angle_x(f32(0.2))
-        // fmt.println(lg.transform.position)
         lg.transform.scale = 25
         level_geometry[idx] = lg
         i += skip_next ? 2 : 1
@@ -105,7 +99,7 @@ generate_level :: proc(lgrs: ^Level_Geometry_Render_Data_State, arena: runtime.A
     return level_geometry
 }
 
-load_level_geometry :: proc(filename: string, lgrs: ^Level_Geometry_Render_Data_State, arena: runtime.Allocator) -> []Level_Geometry {
+load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Level_Geometry {
     // level_prefix := loading_chunk ? "chunks/chunk_" : "levels/"
     // level_filename := str.concatenate({level_prefix, filename, ".bin"}, context.temp_allocator)
     level_bin, read_err := os.read_entire_file(filename, context.temp_allocator)
@@ -124,10 +118,6 @@ load_level_geometry :: proc(filename: string, lgrs: ^Level_Geometry_Render_Data_
             x := f32(i % 10)
             y := math.floor(f32(i) / 4) - 50
             lg.transform = {{x * 75, y * 1 - 80, y * -25 + 200},{30, 30, 30}, rot}
-            render_data_handle, ok := hm.add(lgrs, Level_Geometry_Render_Data {
-                render_group = lg_render_group(lg),
-                transparency = 1
-            })
             lg.render_type = .Standard
             lg.attributes = { .Collider }
             loaded_level_geometry[i] = lg
@@ -142,11 +132,6 @@ load_level_geometry :: proc(filename: string, lgrs: ^Level_Geometry_Render_Data_
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
             lg.transparency = 1.0
-            render_data_handle, ok := hm.add(lgrs, Level_Geometry_Render_Data {
-                render_group = lg_render_group(lg),
-                transparency = 1
-            })
-            lg.render_data_handle = render_data_handle
             loaded_level_geometry[idx] = lg
         }
     }

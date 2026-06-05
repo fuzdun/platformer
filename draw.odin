@@ -6,11 +6,12 @@ import "core:math"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
-import hm "core:container/handle_map"
+
+// import tim "core:time"
+// import "core:fmt"
 
 draw :: proc(
     lgs: Level_Geometry_State, 
-    lgrs: ^Level_Geometry_Render_Data_State,
     sr: Shape_Resources,
     pls: Player_State,
     rs: ^Render_State,
@@ -39,16 +40,15 @@ draw :: proc(
     max_z_cull := cs.position.z + BCK_Z_CULL
     num_culled_rd := 0
 
-    rd_it := hm.iterator_make(lgrs)
-    for rd, rd_h in hm.iterate(&rd_it) {
-        if EDIT || (rd.transform.position.z < max_z_cull && rd.transform.position.z > min_z_cull) {
-            group_offsets[rd.render_group] += 1
+    for lg in lgs {
+        if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
+            render_group := lg_render_group(lg)
+            group_offsets[render_group] += 1
             num_culled_rd += 1
         }
     }
 
     // convert group counts to group offsets
-
     for &val, idx in group_offsets[1:] {
        val += group_offsets[idx] 
     }
@@ -78,25 +78,51 @@ draw :: proc(
         }
         append(&draw_commands[render_type], command)
     }
+    
 
-    culled_rd := make(#soa[]Level_Geometry_Render_Data, num_culled_rd, context.temp_allocator)
-
-    // sort culled geometry
+    // sort culled geometry and create renderables
     // -------------------------------------------
-    rd_it = hm.iterator_make(lgrs)
-    for rd, rd_h in hm.iterate(&rd_it) {
-        if EDIT || (rd.transform.position.z < max_z_cull && rd.transform.position.z > min_z_cull) {
-            culled_rd[group_offsets[rd.render_group]] = rd^
-            group_offsets[rd.render_group] += 1
+    renderables := make(#soa[]Renderable, num_culled_rd, context.temp_allocator)
+    for lg in lgs {
+        if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
+            render_group := lg_render_group(lg)
+            renderables[group_offsets[render_group]] = {
+                transform = trans_to_mat4(lg.transform),
+                render_group = render_group,
+                transparency = { lg.transparency },
+                shatter_data = lg.shatter_data,
+                z_width = 20,
+                jump_block = lg.jump_block
+            }
+            group_offsets[render_group] += 1
+        }
+    }
+
+    // load SSBOs
+    // -------------------------------------------
+    if len(renderables) > 0 {
+        ssbo_info := Ssbo_Info
+        for ssbo in Ssbo {
+            data: rawptr
+            switch ssbo {
+            case .Transform:
+                data = rawptr(renderables.transform)
+            case .Transparency:
+                data = rawptr(renderables.transparency)
+            case .Shatter:
+                data = rawptr(renderables.shatter_data)
+            case .Z_Width:
+                data = rawptr(renderables.z_width)
+            case .Jump_Block:
+                data = rawptr(renderables.jump_block)
+            }
+            gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, bs.ssbo_ids[ssbo])
+            gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, ssbo_info[ssbo].type_sz * len(renderables), data)
         }
     }
 
     // load UBOs 
     // -------------------------------------------
-    for ssbo in Ssbo {
-        ssbo_mapper(culled_rd, bs, ssbo)
-    }
-
     proj_mat := EDIT ? construct_camera_matrix(cs^) : interpolated_camera_matrix(cs, f32(interp_t))
     i_ppos:[3]f32 = interpolated_player_pos(pls, f32(interp_t))
     i_cpos: [3]f32 = interpolated_camera_pos(cs, f32(interp_t))

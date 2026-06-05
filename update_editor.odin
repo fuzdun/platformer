@@ -5,7 +5,7 @@ import "core:fmt"
 import la "core:math/linalg"
 import hm "core:container/handle_map"
 
-editor_update :: proc(lgs: ^Level_Geometry_State, lgrs: ^Level_Geometry_Render_Data_State, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
+editor_update :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
 
     need_sort := false
 
@@ -208,10 +208,10 @@ editor_update :: proc(lgs: ^Level_Geometry_State, lgrs: ^Level_Geometry_Render_D
     }
 
     es.can_switch = !is.tab_pressed
-
-    for lg, idx in lgs {
-        render_data := hm.get(lgrs, lg.render_data_handle)
-        render_data.transform = lg.transform
-    }
+    //
+    // for &lg, idx in lgs {
+    //     // render_data := hm.get(lgrs, lg.render_data_handle)
+    //     lg.transform = lg.transform
+    // }
 }
 
