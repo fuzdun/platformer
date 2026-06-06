@@ -14,7 +14,7 @@ Contact_State :: struct {
     left_slope: f32,
     left_wall: f32,
     contact_ray: [3]f32,
-    last_touched: int
+    last_touched: Handle
 }
 
 Player_Surface :: struct {
@@ -100,8 +100,8 @@ Player_State :: struct {
     mode: Player_Mode,
     contact_state: Contact_State,
 
-    hops_remaining: int,
-    hops_recharge: f32,
+    // hops_remaining: int,
+    // hops_recharge: f32,
 
     hurt_t: f32,
     broke_t: f32,
@@ -111,7 +111,7 @@ Player_State :: struct {
     velocity: [3]f32,
 
     jump_enabled: bool,
-    dash_enabled: bool,
+    // dash_enabled: bool,
     slide_enabled: bool,
 
     // move to input update
@@ -128,11 +128,11 @@ Player_State :: struct {
     ground_x: [3]f32,
     ground_z: [3]f32,
 
-    // normal spinning
-    spin_state: Player_Normal_Spinning, 
-
-    // dash
-    dash_state: Player_Dashing,
+    // // normal spinning
+    // spin_state: Player_Normal_Spinning, 
+    //
+    // // dash
+    // dash_state: Player_Dashing,
 
     // slide
     slide_state: Player_Sliding,
@@ -141,8 +141,8 @@ Player_State :: struct {
 init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
     pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
-    pls.dash_enabled = true
-    pls.slide_enabled = true
+    // pls.dash_enabled = true
+    // pls.slide_enabled = true
     pls.slide_state.slide_end_time = -SLIDE_COOLDOWN
     pls.jump_enabled = false
     pls.ground_x = {1, 0, 0}

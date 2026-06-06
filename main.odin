@@ -16,6 +16,7 @@ import ft "shared:freetype"
 import imgui "shared:odin-imgui"
 import imsdl "shared:odin-imgui/imgui_impl_sdl3"
 import imgl "shared:odin-imgui/imgui_impl_opengl3"
+import hm "core:container/handle_map"
 
 MAX_LEVEL_GEOMETRY_COUNT :: 2000
 
@@ -62,8 +63,6 @@ bpm_jump_end: f32 = -100.0
 
 quit_app := false
 
-
-// 
 
 main :: proc() {
 
@@ -206,7 +205,6 @@ main :: proc() {
     sr:    Shape_Resources
     bs:    Buffer_State;
     pls:   Player_State;
-    szs:   Slide_Zone_State;
     ptcls: Particle_State;
     gs:    Game_State;
 
@@ -214,7 +212,6 @@ main :: proc() {
     init_render_state(&rs, perm_arena_alloc)
     init_camera_state(&cs)
     init_editor_state(&es, level_to_load)
-    init_slide_zone_state(&szs, perm_arena_alloc)
     init_game_state(&gs)
     init_shaders(&shs, perm_arena_alloc)
     // hm.dynamic_init(&lgrs, perm_arena_alloc)
@@ -257,39 +254,46 @@ main :: proc() {
     num_entities := len(loaded_level_geometry) 
 
     // convert loaded gemoetry to SOA ------
-    lgs = make(Level_Geometry_State, perm_arena_alloc)
+    hm.dynamic_init(&lgs, perm_arena_alloc)
+    // lgs = make(Level_Geometry_State, perm_arena_alloc)
     for &lg, idx in loaded_level_geometry {
-        append(&lgs, lg)
+        _,_ = hm.add(&lgs, lg)
+        // append(&lgs, lg)
     }
-
 
     // #####################################################
     // LOAD SLIDE ZONES
     // #####################################################
 
-    for lg, lg_idx in lgs {
-        if .Slide_Zone in lg.attributes {
-            sz: Obb
-            sz.id = lg_idx
-            rot_mat := glm.mat4FromQuat(lg.transform.rotation)
-            x := rot_mat * [4]f32{1, 0, 0, 0}
-            y := rot_mat * [4]f32{0, 1, 0, 0}
-            z := rot_mat * [4]f32{0, 0, 1, 0}
-            sz.axes = {x.xyz, y.xyz, z.xyz}
-            sz.dim = lg.transform.scale 
-            sz.center = lg.transform.position
-            append(&szs.entities, sz)
-        }
-    }
+    // lg_it := hm.iterator_make(&lgs)
+    // for lg, lg_idx in hm.iterate(&lg_it) {
+    //     if .Slide_Zone in lg.attributes {
+    //         sz: Obb
+    //         // sz.id = lg_idx
+    //         rot_mat := glm.mat4FromQuat(lg.transform.rotation)
+    //         x := rot_mat * [4]f32{1, 0, 0, 0}
+    //         y := rot_mat * [4]f32{0, 1, 0, 0}
+    //         z := rot_mat * [4]f32{0, 0, 1, 0}
+    //         sz.axes = {x.xyz, y.xyz, z.xyz}
+    //         sz.dim = lg.transform.scale 
+    //         sz.center = lg.transform.position
+    //         append(&szs.entities, sz)
+    //     }
+    // }
 
     // #####################################################
     // INITIALIZE EDITOR ATTRIBUTES 
     // #####################################################
 
-    for attribute in lgs[es.selected_entity].attributes {
-        es.displayed_attributes[attribute] = true
-    }
-
+    // if selected_lg, ok := hm.get(&lgs, es.selected_entity); ok {
+    //     for attribute in selected_lg.attributes {
+    //         es.displayed_attributes[attribute] = true
+    //     }
+    //
+    // }
+    // for attribute in hm.get(&lgs, es.selected_entity) {
+    // }
+    //
 
     // #####################################################
     // INIT OPENGL TEXT RENDERING
@@ -401,7 +405,7 @@ main :: proc() {
             // fixed update
             // -------------------------------------------
             if EDIT {
-                editor_update(&lgs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
+                // editor_update(&lgs, &es, &cs, is, &rs, &phs, FIXED_DELTA_TIME)
             } else {
                 // BPM TESTING
                 song_progress: u64
@@ -417,7 +421,7 @@ main :: proc() {
                 }
                 current_beat = f32(new_beat)
                 // END BPM TESTING
-                gameplay_update(&lgs, is, &pls, &phs, &rs, &ptcls, bs, &cs, &szs, &gs, f32(elapsed_time), FIXED_DELTA_TIME * gs.time_mult)
+                gameplay_update(&lgs, is, &pls, &phs, &rs, &ptcls, bs, &cs, &gs, f32(elapsed_time), FIXED_DELTA_TIME * gs.time_mult)
             }
             accumulator -= target_frame_clocks 
         }
@@ -426,7 +430,7 @@ main :: proc() {
 
         // render
         // -------------------------------------------
-        draw(lgs, sr, pls, &rs, &ptcls, bs, &shs, &phs, &cs, is, es, szs, gs, elapsed_time, interpolated_time, FIXED_DELTA_TIME * gs.time_mult)
+        draw(&lgs, sr, pls, &rs, &ptcls, bs, &shs, &phs, &cs, is, es, gs, elapsed_time, interpolated_time, FIXED_DELTA_TIME * gs.time_mult)
         when ODIN_OS != .Windows {
             if EDIT {
                 update_imgui(&es, &lgs)

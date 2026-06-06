@@ -75,7 +75,7 @@ get_geometry_dist :: proc(ps: Physics_State, lga: Level_Geometry, lgb: Level_Geo
 editor_save_changes :: proc(lgs:^Level_Geometry_State, is: Input_State, es: ^Editor_State) {
     if is.ent_pressed {
         if !es.saved {
-            encode_test_level_cbor(lgs^, es.save_dest)
+            encode_test_level_cbor(lgs, es.save_dest)
             es.saved = true
         }
     } else {

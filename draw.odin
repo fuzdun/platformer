@@ -6,12 +6,10 @@ import "core:math"
 import gl "vendor:OpenGL"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
-
-// import tim "core:time"
-// import "core:fmt"
+import hm "core:container/handle_map"
 
 draw :: proc(
-    lgs: Level_Geometry_State, 
+    lgs: ^Level_Geometry_State, 
     sr: Shape_Resources,
     pls: Player_State,
     rs: ^Render_State,
@@ -22,7 +20,6 @@ draw :: proc(
     cs: ^Camera_State,
     is: Input_State,
     es: Editor_State,
-    szs: Slide_Zone_State,
     gs: Game_State,
     time: f64,
     interp_t: f64,
@@ -40,9 +37,10 @@ draw :: proc(
     max_z_cull := cs.position.z + BCK_Z_CULL
     num_culled_rd := 0
 
-    for lg in lgs {
+    lg_it := hm.iterator_make(lgs)
+    for lg,_ in hm.iterate(&lg_it) {
         if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
-            render_group := lg_render_group(lg)
+            render_group := lg_render_group(lg^)
             group_offsets[render_group] += 1
             num_culled_rd += 1
         }
@@ -83,9 +81,10 @@ draw :: proc(
     // sort culled geometry and create renderables
     // -------------------------------------------
     renderables := make(#soa[]Renderable, num_culled_rd, context.temp_allocator)
-    for lg in lgs {
+    lg_it = hm.iterator_make(lgs)
+    for lg, handle in hm.iterate(&lg_it) {
         if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
-            render_group := lg_render_group(lg)
+            render_group := lg_render_group(lg^)
             renderables[group_offsets[render_group]] = {
                 transform = trans_to_mat4(lg.transform),
                 render_group = render_group,
@@ -148,9 +147,9 @@ draw :: proc(
         projection = proj_mat,
         time = f32(time),
         intensity = intensity,
-        dash_time = pls.dash_state.dash_time,
-        dash_total = f32(time) - pls.dash_state.dash_time,
-        constrain_dir = la.normalize0(pls.dash_state.dash_dir),
+        // dash_time = pls.dash_state.dash_time,
+        // dash_total = f32(time) - pls.dash_state.dash_time,
+        // constrain_dir = la.normalize0(pls.dash_state.dash_dir),
         inner_tess = INNER_TESSELLATION_AMT,
         outer_tess = OUTER_TESSELLATION_AMT,
     }
@@ -188,7 +187,7 @@ draw :: proc(
         //  DRAW EDITOR
         // #####################################################
 
-        draw_editor(rs, bs, shs, es, is, lgs, draw_commands, proj_mat)
+        // draw_editor(rs, bs, shs, es, is, lgs^, draw_commands, proj_mat)
     } else {
 
 
@@ -306,21 +305,21 @@ draw :: proc(
 
         // draw dash line
         // -------------------------------------------
-        dash_line_start := pls.dash_state.dash_start_pos + pls.dash_state.dash_dir * 4.5;
-        dash_line_end := pls.dash_state.dash_start_pos + pls.dash_state.dash_dir * DASH_DIST
-        dash_line: [2]Line_Vertex = {
-            {dash_line_start, 0, {1.0, 0.0, 1.0}},
-            {dash_line_end, 1, {1.0, 0.0, 1.0}}
-        }
-        gl.BindBuffer(gl.ARRAY_BUFFER, bs.editor_lines_vbo)
-        gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.STATIC_DRAW)
+        // dash_line_start := pls.dash_state.dash_start_pos + pls.dash_state.dash_dir * 4.5;
+        // dash_line_end := pls.dash_state.dash_start_pos + pls.dash_state.dash_dir * DASH_DIST
+        // dash_line: [2]Line_Vertex = {
+        //     {dash_line_start, 0, {1.0, 0.0, 1.0}},
+        //     {dash_line_end, 1, {1.0, 0.0, 1.0}}
+        // }
+        // gl.BindBuffer(gl.ARRAY_BUFFER, bs.editor_lines_vbo)
+        // gl.BufferData(gl.ARRAY_BUFFER, size_of(dash_line[0]) * len(dash_line), &dash_line[0], gl.STATIC_DRAW)
 
-        green := [3]f32{1.0, 0.0, 1.0}
-
-        use_shader(shs, rs, bs, .Dash_Line)
-        set_vec3_uniform(shs, "color", 1, &green)
-        set_float_uniform(shs, "resolution", f32(20))
-        gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
+        // green := [3]f32{1.0, 0.0, 1.0}
+        //
+        // use_shader(shs, rs, bs, .Dash_Line)
+        // set_vec3_uniform(shs, "color", 1, &green)
+        // set_float_uniform(shs, "resolution", f32(20))
+        // gl.DrawArrays(gl.LINES, 0, i32(len(dash_line)))
 
 
         // #####################################################
@@ -371,17 +370,17 @@ draw :: proc(
 
         // spin trails
         // -------------------------------------------
-        use_shader(shs, rs, bs, .Spin_Trails)
-        spin_trail_off := glm.mat4Translate(i_ppos)
-        spin_trail_rotation_1 := la.matrix4_rotate_f32(f32(time) / 300, [3]f32{1, 0, 0})
-        player_velocity_dir := la.normalize0(pls.velocity.xz)
-        spin_trail_rotation_2 := la.matrix4_rotate_f32(la.atan2(player_velocity_dir.x, player_velocity_dir.y), [3]f32{0, 1, 0})
-        spin_trail_transform := spin_trail_off * spin_trail_rotation_2 * spin_trail_rotation_1
-        set_matrix_uniform(shs, "transform", &spin_trail_transform)
-        set_float_uniform(shs, "spin_amt", pls.spin_state.spin_amt)
-        if pls.spin_state.spin_amt > 0 {
-            gl.DrawElements(gl.TRIANGLES, i32(len(sr.level_geometry[.SPIN_TRAIL].indices)), gl.UNSIGNED_INT, nil)
-        }
+        // use_shader(shs, rs, bs, .Spin_Trails)
+        // spin_trail_off := glm.mat4Translate(i_ppos)
+        // spin_trail_rotation_1 := la.matrix4_rotate_f32(f32(time) / 300, [3]f32{1, 0, 0})
+        // player_velocity_dir := la.normalize0(pls.velocity.xz)
+        // spin_trail_rotation_2 := la.matrix4_rotate_f32(la.atan2(player_velocity_dir.x, player_velocity_dir.y), [3]f32{0, 1, 0})
+        // spin_trail_transform := spin_trail_off * spin_trail_rotation_2 * spin_trail_rotation_1
+        // set_matrix_uniform(shs, "transform", &spin_trail_transform)
+        // set_float_uniform(shs, "spin_amt", pls.spin_state.spin_amt)
+        // if pls.spin_state.spin_amt > 0 {
+        //     gl.DrawElements(gl.TRIANGLES, i32(len(sr.level_geometry[.SPIN_TRAIL].indices)), gl.UNSIGNED_INT, nil)
+        // }
         
         // UI text
         // -------------------------------------------
@@ -391,9 +390,9 @@ draw :: proc(
         render_screen_text(shs, bs, string(score_buf[:]), [3]f32{-0.9, 0.75, 0}, la.MATRIX4F32_IDENTITY, .3)
 
         if gs.time_remaining > 0 {
-           for hop_idx in 0..<pls.hops_remaining {
-               render_screen_text(shs, bs, "S", [3]f32{0.35, 0.075 - (0.075 * f32(hop_idx)), 0}, la.MATRIX4F32_IDENTITY, .3)
-           }
+           // for hop_idx in 0..<pls.hops_remaining {
+           //     render_screen_text(shs, bs, "S", [3]f32{0.35, 0.075 - (0.075 * f32(hop_idx)), 0}, la.MATRIX4F32_IDENTITY, .3)
+           // }
            time_buf: [4]byte
            strconv.write_int(time_buf[:], i64(gs.time_remaining), 10)
            render_screen_text(shs, bs, string(time_buf[:]), [3]f32{0.0, 0.65, 0}, la.MATRIX4F32_IDENTITY, .3)

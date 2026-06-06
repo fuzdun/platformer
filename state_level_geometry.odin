@@ -4,15 +4,19 @@ import "core:math/rand"
 import "base:runtime"
 import la "core:math/linalg"
 import rnd "core:math/rand"
+import hm "core:container/handle_map"
 
 CHUNK_WIDTH :: 500
 CHUNK_DEPTH :: 500
 
 BEAT_SPACE :: 110
 
-Level_Geometry_State :: #soa[dynamic]Level_Geometry
+// Level_Geometry_State :: #soa[dynamic]Level_Geometry
+Handle :: distinct hm.Handle32
+Level_Geometry_State :: hm.Dynamic_Handle_Map(Level_Geometry, Handle)
 
 Level_Geometry :: struct {
+    handle: Handle,
     transform: Transform,
     shape: SHAPE, // remove this after fixing level editor to have collider selectable
     collider: SHAPE,
@@ -71,11 +75,11 @@ Level_Geometry_Component_Name :: #sparse[Level_Geometry_Component]string {
     .Bouncy = "bouncy"
 }
 
-move_geometry :: proc (lgs: ^Level_Geometry_State, phs: ^Physics_State, player_pos: ^[3]f32, cts: Contact_State, idx: int) {
-    runtime.random_generator_reset_u64(context.random_generator, u64(idx) + u64(SEED))
+move_geometry :: proc (lgs: ^Level_Geometry_State, phs: ^Physics_State, player_pos: ^[3]f32, cts: Contact_State, idx: Handle) {
+    runtime.random_generator_reset_u64(context.random_generator, u64(idx.idx) + u64(SEED))
     x_dir := (rnd.float32() - 0.5) * 0.5
     y_dir := (rnd.float32() - 0.5) * 0.5
-    lg := &lgs[idx]
+    lg := hm.get(lgs, idx)
     lg.transform.position.x += x_dir 
     lg.transform.position.y += y_dir 
 

@@ -8,7 +8,7 @@ import "core:math"
 import "base:runtime"
 import rnd "core:math/rand"
 // import str "core:strings"
-// import hm "core:container/handle_map"
+import hm "core:container/handle_map"
 
 trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
     for val in T {
@@ -19,11 +19,12 @@ trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
     return
 }
 
-encode_test_level_cbor :: proc(lgs: Level_Geometry_State, dest: string) {
+encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State, dest: string) {
     level_data := make([dynamic]Level_Geometry, context.temp_allocator)
-    for &lg in lgs {
+    lg_it := hm.iterator_make(lgs)
+    for lg, handle in hm.iterate(&lg_it) {
         // lg.attributes = {.Collider, .Crackable}
-        append(&level_data, lg)
+        append(&level_data, lg^)
     }
     bin, marshal_err := cbor.marshal(level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
     write_err := os.write_entire_file(dest, bin)
@@ -136,19 +137,5 @@ load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Lev
         }
     }
     return loaded_level_geometry
-}
-
-vertices_to_aabb :: proc(vertices: [][3]f32) -> Aabb {
-    aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
-    aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
-    for v in vertices {
-        aabbx0 = min(v.x - 10, aabbx0)
-        aabby0 = min(v.y - 10, aabby0)
-        aabbz0 = min(v.z - 10, aabbz0)
-        aabbx1 = max(v.x + 10, aabbx1)
-        aabby1 = max(v.y + 10, aabby1)
-        aabbz1 = max(v.z + 10, aabbz1)
-    }
-    return {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
 }
 

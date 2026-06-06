@@ -35,7 +35,6 @@ Action_Triggers :: struct {
 get_player_action_triggers :: proc(
     input: Input_Attributes,
     pls: Player_State,
-    szs: Slide_Zone_State,
     elapsed_time: f32,
     delta_time: f32
 ) -> (out: Action_Triggers) {

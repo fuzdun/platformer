@@ -1,38 +1,40 @@
 package main
 
 import la "core:math/linalg"
+import hm "core:container/handle_map"
 
 update_geometry :: proc(
     lgs: ^Level_Geometry_State,
-    szs: ^Slide_Zone_State,
     pls: Player_State,
     triggers: Action_Triggers,
     collisions: Collision_Log,
+    intersections: map[Handle]struct{},
     elapsed_time: f32,
     delta_time: f32
 ) {
     cts := pls.contact_state
 
-
-    // #####################################################
-    // STANDARD LEVEL GEOMETRY
-    // #####################################################
-
-    if triggers.restart || triggers.checkpoint {
-        for &lg in lgs {
+    lg_it := hm.iterator_make(lgs)
+    for lg, handle in hm.iterate(&lg_it) {
+        if triggers.restart || triggers.checkpoint {
             lg.shatter_data.crack_time = 0
             lg.shatter_data.smash_time = 0
-
+        }
+        if handle in intersections {
+            lg.transparency = clamp(lg.transparency - 5.0 * delta_time, 0.1, 1.0)
+        } else {
+            lg.transparency = clamp(lg.transparency + 5.0 * delta_time, 0.1, 1.0)
         }
     }
 
     if triggers.bunny_hop || triggers.small_hop {
         last_touched := cts.last_touched
-        lgs[last_touched].shatter_data.crack_time = elapsed_time - BREAK_DELAY
+        last_touched_lg := hm.get(lgs, last_touched)
+        last_touched_lg.shatter_data.crack_time = elapsed_time - BREAK_DELAY
     }
 
     for id in collisions {
-        lg := &lgs[id]
+        lg := hm.get(lgs, id) 
         if .Dash_Breakable in lg.attributes && pls.mode == .Dashing {
             lg.shatter_data.smash_time = lg.shatter_data.smash_time == 0.0 ? elapsed_time : lg.shatter_data.smash_time 
             lg.shatter_data.smash_dir = la.normalize(pls.velocity)
@@ -46,39 +48,13 @@ update_geometry :: proc(
         }
     }
 
-    when MOVE {
-        // test moving geometry
-        // ---------------------------------------
-        for _, lg_idx in new_lgs {
-            move_geometry(new_lgs, phs, &new_position, collision_adjusted_cts, lg_idx)
-        }
-    }
+    // when MOVE {
+    //     // test moving geometry
+    //     // ---------------------------------------
+    //     for _, lg_idx in new_lgs {
+    //         move_geometry(new_lgs, phs, &new_position, collision_adjusted_cts, lg_idx)
+    //     }
+    // }
 
-
-    // #####################################################
-    // SLIDE ZONES
-    // #####################################################
-
-    for &sz in szs.entities {
-        lgs[sz.id].transparency = sz.transparency_t
-    }
-
-    clear(&szs.intersected)
-    for sz in szs.entities {
-        if lgs[sz.id].shatter_data.crack_time != 0 {
-            continue
-        }
-        if hit, _ := sphere_obb_intersection(sz, pls.position, PLAYER_SPHERE_RADIUS); hit {
-            szs.intersected[sz.id] = {}
-        }
-    }
-
-    for &sz in szs.entities {
-        if sz.id in szs.intersected {
-            sz.transparency_t = clamp(sz.transparency_t - 5.0 * delta_time, 0.1, 1.0)
-        } else {
-            sz.transparency_t = clamp(sz.transparency_t + 5.0 * delta_time, 0.1, 1.0)
-        }
-    }
 }
 

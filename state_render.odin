@@ -2,7 +2,6 @@ package main
 
 import "base:runtime"
 import "core:math"
-import "core:fmt"
 import str "core:strings"
 import gl "vendor:OpenGL"
 import la "core:math/linalg"
@@ -26,8 +25,6 @@ SHAPE :: enum {
     FRANK,
     SPIN_TRAIL,
 }
-
-Handle :: distinct hm.Handle32
 
 Level_Geometry_Render_Type :: enum {
     Standard,
@@ -157,26 +154,29 @@ interpolated_trail :: proc(rs: Render_State, t: f32) -> [3]glm.vec3 {
     return math.lerp(rs.prev_player_trail_sample, rs.player_trail_sample, t)
 }
 
-editor_sort_lgs :: proc(lgs: ^Level_Geometry_State, current_selection: int = 0) -> (new_selection: int = 0) {
-    sorted_lgs := make([]Level_Geometry, len(lgs))
+editor_sort_lgs :: proc(lgs: ^Level_Geometry_State, current_selection: Handle) -> (new_selection: Handle) {
+    sorted_lgs := make([]Level_Geometry, hm.len(lgs^))
     defer delete(sorted_lgs)
     group_counts: [NUM_RENDER_GROUPS]int
-    for lg, idx in lgs {
-        group_counts[lg_render_group(lg)] += 1
+    lg_it := hm.iterator_make(lgs)
+    for lg, idx in hm.iterate(&lg_it) {
+        group_counts[lg_render_group(lg^)] += 1
     }
     counts_to_offsets(group_counts[:])
-    for lg, idx in lgs {
-        render_group := lg_render_group(lg) 
+    lg_it = hm.iterator_make(lgs)
+    for lg, idx in hm.iterate(&lg_it) {
+        render_group := lg_render_group(lg^) 
         insert_idx := group_counts[render_group]
         group_counts[render_group] += 1
-        sorted_lgs[insert_idx] = lg
+        sorted_lgs[insert_idx] = lg^
         if idx == current_selection {
-            new_selection = insert_idx
+            new_selection = lg.handle
         }
     }
-    clear(lgs)
+    hm.clear(lgs)
     for lg in sorted_lgs {
-        append(lgs, lg)
+        _, _ = hm.add(lgs, lg)
+        // append(lgs, lg)
     }
     return
 }

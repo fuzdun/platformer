@@ -1,18 +1,19 @@
 package main
 
 import la "core:math/linalg"
-// import hm "core:container/handle_map"
+import hm "core:container/handle_map"
 
 NORMAL_Y_MIN_GROUND :: 0.85
 NORMAL_Y_MIN_SLOPE :: 0.2
 
 
-build_physics_map :: proc(lgs: Level_Geometry_State, colliders: [SHAPE]Mesh, et: f32) -> (physics_map: []Physics_Segment) {
+build_physics_map :: proc(lgs: ^Level_Geometry_State, colliders: [SHAPE]Mesh, et: f32) -> (physics_map: []Physics_Segment) {
     physics_map = make([]Physics_Segment, PHYSICS_SEGMENT_COUNT, context.temp_allocator)
     for segment_idx in 0..<5 {
         physics_map[segment_idx] = make(Physics_Segment, context.temp_allocator)
     }
-    for lg, lg_idx in lgs {
+    lg_it := hm.iterator_make(lgs)
+    for lg, lg_idx in hm.iterate(&lg_it) {
         if .Collider not_in lg.attributes || !(lg.shatter_data.crack_time == 0 || et < lg.shatter_data.crack_time + BREAK_DELAY) && lg.shatter_data.smash_time == 0 {
             continue
         }
@@ -61,7 +62,7 @@ get_particle_collisions :: proc(
 }
 
 get_collisions_and_update_contact_state :: proc(
-    lgs: Level_Geometry_State,
+    lgs: ^Level_Geometry_State,
     position: [3]f32,
     velocity: [3]f32,
     physics_map: []Physics_Segment,
@@ -72,12 +73,12 @@ get_collisions_and_update_contact_state :: proc(
 ) -> (
     collided: bool,
     collision: Collision,
-    contacts: [dynamic]int,
+    contacts: [dynamic]Handle,
     new_cs: Contact_State,
     touched_ground: bool
 ){
     earliest_coll_t: f32 = 1000.0
-    contacts = make([dynamic]int, context.temp_allocator)
+    contacts = make([dynamic]Handle, context.temp_allocator)
     player_velocity := velocity * dt
     player_velocity_len := la.length(player_velocity)
     player_velocity_normal := la.normalize(player_velocity)
@@ -87,7 +88,7 @@ get_collisions_and_update_contact_state :: proc(
     segment := physics_map[segment_idx]
 
     for collider in segment {
-        lg := lgs[collider.id]
+        lg,_ := hm.get(lgs, collider.id) 
         // check AABB collision
         if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, collider.aabb) {
             for i := 0; i < len(collider.indices); i += 3 {
@@ -121,11 +122,12 @@ get_collisions_and_update_contact_state :: proc(
         }
     }
 
-    ignore_contact := sliding && (.Slide_Zone in lgs[collision.id].attributes)
+    collided_lg := hm.get(lgs, collision.id)
+    ignore_contact := sliding && (.Slide_Zone in collided_lg.attributes)
 
     // update contact state
     new_surface_contact_state := cs.state
-    if !(collided && .Hazardous in lgs[collision.id].attributes) {
+    if !(collided && .Hazardous in collided_lg.attributes) {
         on_surface := (cs.state == .ON_GROUND || cs.state == .ON_WALL || cs.state == .ON_SLOPE)
         // left surface
         if len(contacts) == 0 {
@@ -192,7 +194,7 @@ apply_velocity :: proc(
     velocity: [3]f32,
     dashing: bool,
     sliding: bool,
-    entities: Level_Geometry_State, 
+    entities: ^Level_Geometry_State, 
     physics_map: []Physics_Segment,
     elapsed_time: f32,
     delta_time: f32
@@ -206,11 +208,11 @@ apply_velocity :: proc(
 ) {
     new_position = position
     new_velocity = velocity
-    collision_ids = make(map[int]struct{}, context.temp_allocator)
-    contact_ids = make(map[int]struct{}, context.temp_allocator)
+    collision_ids = make(map[Handle]struct{}, context.temp_allocator)
+    contact_ids = make(map[Handle]struct{}, context.temp_allocator)
     collided: bool
     collision: Collision
-    contacts: [dynamic]int
+    contacts: [dynamic]Handle
     collided, collision, contacts, new_contact_state, touched_ground = get_collisions_and_update_contact_state(
         entities, position, velocity,
         physics_map, contact_state, sliding,
@@ -229,18 +231,19 @@ apply_velocity :: proc(
             new_contact_state.last_touched = contacts[0]
         }
         for collided && loops < 10 {
+            collided_lg := hm.get(entities, collision.id)
             loops += 1
             new_contact_state.last_touched = collision.id
             collision_ids[collision.id] = {}
-            if .Dash_Breakable in entities[collision.id].attributes && dashing {
+            if .Dash_Breakable in collided_lg.attributes && dashing {
                 break
-            } else if .Slide_Zone in entities[collision.id].attributes && sliding {
+            } else if .Slide_Zone in collided_lg.attributes && sliding {
                 break
             }
             new_position += (remaining_vel * (collision.t) - GROUND_BUFFER) * velocity_normal
             remaining_vel *= 1.0 - collision.t
 
-            if .Hazardous in entities[collision.id].attributes {
+            if .Hazardous in collided_lg.attributes {
                 remaining_vel = DAMAGE_VELOCITY
                 velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal * 1.25 
             } else {

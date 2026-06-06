@@ -3,9 +3,8 @@ package main
 import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
-import hm "core:container/handle_map"
 
-editor_update :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
+editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
 
     need_sort := false
 
@@ -192,7 +191,7 @@ editor_update :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^Camera
     if is.ent_pressed {
         if !es.saved {
             fmt.println(es.save_dest)
-            encode_test_level_cbor(lgs^, es.save_dest)
+            // encode_test_level_cbor(lgs^, es.save_dest)
             es.saved = true
         }
     } else {
@@ -200,18 +199,13 @@ editor_update :: proc(lgs: ^Level_Geometry_State, es: ^Editor_State, cs: ^Camera
     }
 
     if need_sort {
-        es.selected_entity = editor_sort_lgs(lgs, es.selected_entity)
+        // es.selected_entity = editor_sort_lgs(lgs, es.selected_entity)
     }
 
     if is.f12_pressed {
-        generate_new_chunk(lgs^)
+        // generate_new_chunk(lgs^)
     }
 
     es.can_switch = !is.tab_pressed
-    //
-    // for &lg, idx in lgs {
-    //     // render_data := hm.get(lgrs, lg.render_data_handle)
-    //     lg.transform = lg.transform
-    // }
 }
 

@@ -2,18 +2,19 @@ package main
 
 import "core:math"
 import la "core:math/linalg"
+import glm "core:math/linalg/glsl"
 
 Physics_State :: struct{
     level_colliders: [SHAPE]Mesh,
 }
 
 Collision :: struct{
-    id: int,
+    id: Handle,
     normal: [3]f32,
     t: f32
 }
 
-Collision_Log :: map[int]struct{}
+Collision_Log :: map[Handle]struct{}
 
 Particle_Collision :: struct{
     id: int,
@@ -26,10 +27,18 @@ Mesh :: struct{
 }
 
 Collider :: struct{
-    id: int,
+    id: Handle,
     vertices: [][3]f32,
     indices: []u16,
     aabb: Aabb
+}
+
+Obb :: struct {
+    id: int,
+    center: [3]f32,
+    axes: [3][3]f32,
+    dim: [3]f32,
+    transparency_t: f32
 }
 
 Physics_Segment :: [dynamic]Collider
@@ -409,4 +418,31 @@ sphere_obb_intersection :: proc(obb: Obb, c: [3]f32, r: f32) -> (collided: bool,
     collided = la.dot(v, v) <= r * r
     return
 }
+
+vertices_to_aabb :: proc(vertices: [][3]f32) -> Aabb {
+    aabbx0, aabby0, aabbz0 := max(f32), max(f32), max(f32)
+    aabbx1, aabby1, aabbz1 := min(f32), min(f32), min(f32)
+    for v in vertices {
+        aabbx0 = min(v.x - 10, aabbx0)
+        aabby0 = min(v.y - 10, aabby0)
+        aabbz0 = min(v.z - 10, aabbz0)
+        aabbx1 = max(v.x + 10, aabbx1)
+        aabby1 = max(v.y + 10, aabby1)
+        aabbz1 = max(v.z + 10, aabbz1)
+    }
+    return {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
+}
+
+lg_to_obb :: proc(lg: Level_Geometry) -> Obb {
+    sz: Obb
+    rot_mat := glm.mat4FromQuat(lg.transform.rotation)
+    x := rot_mat * [4]f32{1, 0, 0, 0}
+    y := rot_mat * [4]f32{0, 1, 0, 0}
+    z := rot_mat * [4]f32{0, 0, 1, 0}
+    sz.axes = {x.xyz, y.xyz, z.xyz}
+    sz.dim = lg.transform.scale 
+    sz.center = lg.transform.position
+    return sz
+}
+
 

@@ -2,11 +2,10 @@
 package main
 
 import "core:math"
-import "core:fmt"
-import la "core:math/linalg"
+import hm "core:container/handle_map"
 
 
-update_game :: proc(gs: ^Game_State, lgs: Level_Geometry_State, pls: Player_State, triggers: Action_Triggers, collisions: Collision_Log, elapsed_time: f32, delta_time: f32) {
+update_game :: proc(gs: ^Game_State, lgs: ^Level_Geometry_State, pls: Player_State, triggers: Action_Triggers, collisions: Collision_Log, elapsed_time: f32, delta_time: f32) {
     cts := pls.contact_state.state
     on_ground := cts == .ON_SLOPE || cts == .ON_GROUND
 
@@ -71,13 +70,15 @@ update_game :: proc(gs: ^Game_State, lgs: Level_Geometry_State, pls: Player_Stat
     }
 
     if triggers.bunny_hop {
-        new_time_mult = BUNNY_HOP_TIME_MULT - (1.0 - pls.spin_state.spin_amt) * BUNNY_SPIN_TIME_VARIANCE
+        // new_time_mult = BUNNY_HOP_TIME_MULT - (1.0 - pls.spin_state.spin_amt) * BUNNY_SPIN_TIME_VARIANCE
     }
 
     for id in collisions {
-        if .Bouncy in lgs[id].attributes {
-            new_time_mult = 1.5
-            break
+        if lg, ok := hm.get(lgs, id); ok {
+            if .Bouncy in lg.attributes {
+                new_time_mult = 1.5
+                break
+            }
         }
     }
 
