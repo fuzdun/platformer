@@ -93,7 +93,7 @@ get_player_action_triggers :: proc(
     out.fwd_move = la.dot(la.normalize0(pls.velocity.xz), input.dir) > 0.80
 
     normalized_contact_ray := la.normalize(cts.contact_ray) 
-    out.wall_detach_held = pls.wall_detach_held_t
+    // out.wall_detach_held = pls.wall_detach_held_t
     if cts.state == .ON_WALL {
         if la.dot([3]f32{input.dir.x, 0, input.dir.y}, normalized_contact_ray) >= 0 {
             out.wall_detach_held = 0 

@@ -2,6 +2,7 @@ package main
 
 import "base:runtime"
 import "core:math"
+import "core:fmt"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 
@@ -17,27 +18,41 @@ Contact_State :: struct {
     last_touched: Handle
 }
 
-Player_Surface :: struct {
-    surface_x: [3]f32,
-    surface_z: [3]f32,
+Surface_Type :: enum {
+    GROUND,
+    SLOPE,
+    WALL
+}
+
+// Player_Surface :: struct {
+//     // surface_x: [3]f32,
+//     // surface_z: [3]f32,
+//     contact_ray: [3]f32
+// }
+
+On_Surface :: struct {
+    surface_type: Surface_Type,
     contact_ray: [3]f32
 }
 
-Player_Normal_Ground :: struct {
-    using surface: Player_Surface
+// Grounded :: struct {
+//     contact_ray: [3]f32
+// }
+//
+// Sloping :: struct {
+//     contact_ray: [3]f32
+// }
+//
+// Wallriding :: struct {
+//     contact_ray: [3]f32
+// }
+
+Airborne :: struct { }
+
+Jumping :: struct {
+    jump_start: f32,
+    jump_end: f32
 }
-
-Player_Normal_Slope :: struct {
-    using surface: Player_Surface
-
-}
-
-Player_Normal_Wall :: struct {
-    using surface: Player_Surface,
-    wall_detach_held_t: f32
-}
-
-Player_Normal_Air :: struct { }
 
 Player_Normal_Spinning :: struct {
     spin_time: f32,
@@ -68,12 +83,9 @@ Player_Mode :: enum {
 }
 
 Mode_State :: union {
-    Player_Normal_Ground,
-    Player_Normal_Slope,
-    Player_Normal_Wall,
-    Player_Normal_Air,
-    Player_Dashing,
-    Player_Sliding
+    On_Surface,
+    Jumping,
+    Airborne
 }
 
 New_Player_State :: struct {
@@ -97,6 +109,9 @@ New_Player_State :: struct {
 }
 
 Player_State :: struct {
+    state: Mode_State,
+
+
     mode: Player_Mode,
     contact_state: Contact_State,
 
@@ -123,10 +138,10 @@ Player_State :: struct {
 
     // normal
     // normal wall
-    wall_detach_held_t: f32,
+    // wall_detach_held_t: f32,
 
-    ground_x: [3]f32,
-    ground_z: [3]f32,
+    // ground_x: [3]f32,
+    // ground_z: [3]f32,
 
     // // normal spinning
     // spin_state: Player_Normal_Spinning, 
@@ -139,14 +154,16 @@ Player_State :: struct {
 }
 
 init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
+    pls.state = Airborne { }
     pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
+    pls.velocity = {0, 0, 10}
     // pls.dash_enabled = true
     // pls.slide_enabled = true
     pls.slide_state.slide_end_time = -SLIDE_COOLDOWN
     pls.jump_enabled = false
-    pls.ground_x = {1, 0, 0}
-    pls.ground_z = {0, 0, -1}
+    // pls.ground_x = {1, 0, 0}
+    // pls.ground_z = {0, 0, -1}
     pls.contact_state.touch_time = -1000.0
     pls.hurt_t = -5000.0
     pls.broke_t = -5000.0

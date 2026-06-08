@@ -62,27 +62,29 @@ get_particle_collisions :: proc(
 }
 
 get_collisions_and_update_contact_state :: proc(
+    pls: ^Player_State,
     lgs: ^Level_Geometry_State,
-    position: [3]f32,
-    velocity: [3]f32,
+    // position: [3]f32,
+    // velocity: [3]f32,
     physics_map: []Physics_Segment,
-    cs: Contact_State,
-    sliding: bool,
+    // cs: Contact_State,
+    // sliding: bool,
     et: f32,
     dt: f32,
 ) -> (
     collided: bool,
     collision: Collision,
     contacts: [dynamic]Handle,
-    new_cs: Contact_State,
+    // new_cs: Contact_State,
     touched_ground: bool
 ){
     earliest_coll_t: f32 = 1000.0
     contacts = make([dynamic]Handle, context.temp_allocator)
-    player_velocity := velocity * dt
+    player_velocity := pls.velocity * dt
     player_velocity_len := la.length(player_velocity)
     player_velocity_normal := la.normalize(player_velocity)
-    ppos_end := position + player_velocity
+    ppos_end := pls.position + player_velocity
+    cs := pls.contact_state
 
     segment_idx := 0 // should determine this based on entity location
     segment := physics_map[segment_idx]
@@ -90,7 +92,7 @@ get_collisions_and_update_contact_state :: proc(
     for collider in segment {
         lg,_ := hm.get(lgs, collider.id) 
         // check AABB collision
-        if sphere_aabb_collision(position, PLAYER_SPHERE_SQ_RADIUS, collider.aabb) {
+        if sphere_aabb_collision(pls.position, PLAYER_SPHERE_SQ_RADIUS, collider.aabb) {
             for i := 0; i < len(collider.indices); i += 3 {
                 triangle_indices := collider.indices[i:i+3]
                 t0 := collider.vertices[triangle_indices[0]]
@@ -98,7 +100,7 @@ get_collisions_and_update_contact_state :: proc(
                 t2 := collider.vertices[triangle_indices[2]]
                 // check for triangle collision and surface contact
                 did_collide, t, normal, contact := player_triangle_collision(
-                    position,
+                    pls.position,
                     PLAYER_SPHERE_RADIUS,
                     t0, t1, t2,
                     player_velocity,
@@ -123,7 +125,7 @@ get_collisions_and_update_contact_state :: proc(
     }
 
     collided_lg := hm.get(lgs, collision.id)
-    ignore_contact := sliding && (.Slide_Zone in collided_lg.attributes)
+    // ignore_contact := sliding && (.Slide_Zone in collided_lg.attributes)
 
     // update contact state
     new_surface_contact_state := cs.state
@@ -132,6 +134,7 @@ get_collisions_and_update_contact_state :: proc(
         // left surface
         if len(contacts) == 0 {
             new_surface_contact_state = .IN_AIR
+            pls.state = Airborne {}
             // else, update state based on contact angle
         } else if collided {
             if collision.normal.y >= NORMAL_Y_MIN_GROUND {
@@ -172,75 +175,85 @@ get_collisions_and_update_contact_state :: proc(
 
     // update contact ray
     new_contact_ray := cs.contact_ray
-    if !ignore_contact && collided {
+    // if !ignore_contact && collided {
+    if collided {
         new_contact_ray = -collision.normal * CONTACT_RAY_LEN
     }
 
-    new_cs = cs
-    new_cs.state = new_surface_contact_state
-    new_cs.touch_time = new_touch_time
-    new_cs.left_ground = new_left_ground
-    new_cs.left_slope = new_left_slope
-    new_cs.left_wall = new_left_wall
-    new_cs.contact_ray = new_contact_ray
-    new_cs.last_touched = cs.last_touched
+    // new_cs := cs
+    pls.contact_state.state = new_surface_contact_state
+    pls.contact_state.touch_time = new_touch_time
+    pls.contact_state.left_ground = new_left_ground
+    pls.contact_state.left_slope = new_left_slope
+    pls.contact_state.left_wall = new_left_wall
+    pls.contact_state.contact_ray = new_contact_ray
+    pls.contact_state.last_touched = cs.last_touched
+
+    if collided {
+        pls.state = On_Surface {
+            surface_type = .GROUND,
+            contact_ray = new_contact_ray
+        }
+    }
+    
     return
 }
 
 
 apply_velocity :: proc(
-    contact_state: Contact_State,
-    position: [3]f32,
-    velocity: [3]f32,
-    dashing: bool,
-    sliding: bool,
+    pls: ^Player_State,
+    // contact_state: Contact_State,
+    // position: [3]f32,
+    // velocity: [3]f32,
+    // dashing: bool,
+    // sliding: bool,
     entities: ^Level_Geometry_State, 
     physics_map: []Physics_Segment,
     elapsed_time: f32,
     delta_time: f32
 ) -> (
-    new_contact_state: Contact_State,
-    new_position: [3]f32,
-    new_velocity: [3]f32,
+    // new_contact_state: Contact_State,
+    // new_position: [3]f32,
+    // new_velocity: [3]f32,
     collision_ids: Collision_Log,
     contact_ids: Collision_Log,
     touched_ground: bool
 ) {
-    new_position = position
-    new_velocity = velocity
     collision_ids = make(map[Handle]struct{}, context.temp_allocator)
     contact_ids = make(map[Handle]struct{}, context.temp_allocator)
     collided: bool
     collision: Collision
     contacts: [dynamic]Handle
-    collided, collision, contacts, new_contact_state, touched_ground = get_collisions_and_update_contact_state(
-        entities, position, velocity,
-        physics_map, contact_state, sliding,
+    collided, collision, contacts, touched_ground = get_collisions_and_update_contact_state(
+        pls, entities, physics_map,
         elapsed_time, delta_time
     )
     for contact in contacts {
         contact_ids[contact] = {}
     }
-    init_velocity_len := la.length(velocity)
+    init_velocity_len := la.length(pls.velocity)
     remaining_vel := init_velocity_len * delta_time
-    target_z := position.z + velocity.z * delta_time
+    target_z := pls.position.z + pls.velocity.z * delta_time
     if remaining_vel > 0 {
-        velocity_normal := la.normalize(velocity)
+        velocity_normal := la.normalize(pls.velocity)
         loops := 0
+        // new_contact_state := pls.contact_state
         if !collided && len(contacts) > 0 {
-            new_contact_state.last_touched = contacts[0]
+            pls.contact_state.last_touched = contacts[0]
         }
+        // new_position := pls.position
+        // new_velocity := pls.velocity
         for collided && loops < 10 {
             collided_lg := hm.get(entities, collision.id)
             loops += 1
-            new_contact_state.last_touched = collision.id
+            pls.contact_state.last_touched = collision.id
             collision_ids[collision.id] = {}
-            if .Dash_Breakable in collided_lg.attributes && dashing {
-                break
-            } else if .Slide_Zone in collided_lg.attributes && sliding {
-                break
-            }
-            new_position += (remaining_vel * (collision.t) - GROUND_BUFFER) * velocity_normal
+            // if .Dash_Breakable in collided_lg.attributes && dashing {
+            //     break
+            // } else if .Slide_Zone in collided_lg.attributes && sliding {
+            //     break
+            // }
+            pls.position += (remaining_vel * (collision.t) - GROUND_BUFFER) * velocity_normal
             remaining_vel *= 1.0 - collision.t
 
             if .Hazardous in collided_lg.attributes {
@@ -250,20 +263,19 @@ apply_velocity :: proc(
                 velocity_normal -= la.dot(velocity_normal, collision.normal) * collision.normal
             }
 
-            remaining_vel *= (target_z - new_position.z) / (velocity_normal.z * remaining_vel)
+            remaining_vel *= (target_z - pls.position.z) / (velocity_normal.z * remaining_vel)
 
-            new_velocity = (velocity_normal * remaining_vel) / delta_time
-            collided, collision, contacts, new_contact_state, touched_ground = get_collisions_and_update_contact_state(
-                entities, new_position, new_velocity,
-                physics_map, new_contact_state, sliding,
+            pls.velocity = (velocity_normal * remaining_vel) / delta_time
+            collided, collision, contacts, touched_ground = get_collisions_and_update_contact_state(
+                pls, entities, physics_map,
                 elapsed_time, delta_time
             )
             for contact in contacts {
                 contact_ids[contact] = {}
             }
         }
-        new_position += velocity_normal * remaining_vel
-        new_velocity = velocity_normal * init_velocity_len
+        pls.position += velocity_normal * remaining_vel
+        pls.velocity = velocity_normal * init_velocity_len
     }
     return
 }
