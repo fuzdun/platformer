@@ -95,7 +95,8 @@ generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
         lg.transform.rotation = la.quaternion_from_euler_angle_x(f32(0.2))
         lg.transform.scale = 25
         level_geometry[idx] = lg
-        i += skip_next ? 2 : 1
+        // i += skip_next ? 2 : 1
+        i += 1
     }
     return level_geometry
 }

@@ -1,6 +1,7 @@
 package main
 
 import la "core:math/linalg"
+import "core:fmt"
 import "core:math"
 
 Action_Triggers :: struct {
@@ -61,7 +62,9 @@ get_player_action_triggers :: proc(
 
     jump_input := input.jump_pressed || abs(cts.touch_time - out.jump_pressed_time) < BUNNY_WINDOW
     // ground_jump_coyote_time_active := elapsed_time - cts.left_ground < COYOTE_TIME
+    // fmt.println(cts.state)
     can_jump := out.new_jump_enabled && current_beat_progress > bpm_jump_end && cts.state == .ON_GROUND// || ground_jump_coyote_time_active
+    // can_jump := out.new_jump_enabled && current_beat_progress > bpm_jump_end && cts.state == .ON_GROUND// || ground_jump_coyote_time_active
     out.jump = jump_input && can_jump
     if out.jump {
         out.new_jump_enabled = false

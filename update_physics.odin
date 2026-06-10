@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import la "core:math/linalg"
 import hm "core:container/handle_map"
 
@@ -134,7 +135,7 @@ get_collisions_and_update_contact_state :: proc(
         // left surface
         if len(contacts) == 0 {
             new_surface_contact_state = .IN_AIR
-            pls.state = Airborne {}
+            set_state(pls, Airborne {})
             // else, update state based on contact angle
         } else if collided {
             if collision.normal.y >= NORMAL_Y_MIN_GROUND {
@@ -190,10 +191,10 @@ get_collisions_and_update_contact_state :: proc(
     pls.contact_state.last_touched = cs.last_touched
 
     if collided {
-        pls.state = On_Surface {
+        set_state(pls, On_Surface {
             surface_type = .GROUND,
             contact_ray = new_contact_ray
-        }
+        })
     }
     
     return

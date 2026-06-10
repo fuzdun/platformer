@@ -1,6 +1,7 @@
 package main
 
 import "core:math"
+import "core:fmt"
 import la "core:math/linalg"
 import hm "core:container/handle_map"
 
@@ -11,6 +12,7 @@ GROUND_BASE: f32 : -14.00
 first_frame := true
 
 set_state :: proc(pls: ^Player_State, next: Mode_State) {
+    fmt.println("to:", next)
     switch &s in next {
     case On_Surface:
         pls.state = s
@@ -55,6 +57,7 @@ update_player :: proc(
         if state.surface_type == .GROUND {
             surface_x := la.normalize0(x + la.dot(x, state.contact_ray) * state.contact_ray)
             pls.velocity += surface_x * triggers.move.x * GROUND_ACCEL * delta_time
+            // fmt.println("before:", pls.velocity.x)
         }
         if state.surface_type == .SLOPE {
             surface_x := la.normalize0(x + la.dot(x, state.contact_ray) * state.contact_ray)
@@ -68,6 +71,7 @@ update_player :: proc(
         }
         pls.velocity -= la.dot(pls.velocity, normalized_contact_ray) * normalized_contact_ray
         pls.velocity.xy = la.clamp_length(pls.velocity.xy, MAX_PLAYER_SPEED)
+        // fmt.println("after:", pls.velocity.x)
 
         if triggers.jump {
             jump_start := current_beat_progress
