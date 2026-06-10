@@ -255,17 +255,32 @@ draw :: proc(
         offset_vertices := make([]Vertex, len(sr.player_vertices), context.temp_allocator)
         copy(offset_vertices, sr.player_vertices[:])
 
-        if !(pls.contact_state.state == .ON_WALL) && !(pls.mode == .Sliding) {
-            apply_player_vertices_roll_rotation(offset_vertices[:], pls.velocity, f32(time))
+        switch &s in pls.state {
+            case On_Surface:
+            if !(s.surface_type == .WALL) {
+                apply_player_vertices_roll_rotation(offset_vertices[:], pls.velocity, f32(time))
+            }
+            if s.surface_type == .GROUND {
+                animate_player_vertices_rolling(offset_vertices[:], pls.velocity, rs.player_spike_compression, f32(time))
+
+            }
+            case Airborne:
+                animate_player_vertices_jumping(offset_vertices[:])
+            case Jumping:
+                animate_player_vertices_jumping(offset_vertices[:])
         }
-        if pls.mode == .Sliding {
-            slide_off := pls.slide_state.mid_slide_time - pls.slide_state.slide_time
-            animate_player_vertices_sliding(offset_vertices[:], pls.contact_state.contact_ray, slide_total, slide_off, f32(time))
-        } else if pls.contact_state.state == .ON_GROUND && !(pls.mode == .Sliding) {
-            animate_player_vertices_rolling(offset_vertices[:], pls.contact_state.state, pls.velocity, rs.player_spike_compression, f32(time))
-        } else if pls.contact_state.state == .IN_AIR {
-            animate_player_vertices_jumping(offset_vertices[:])
-        }
+
+        // if !(pls.contact_state.state == .ON_WALL) && !(pls.mode == .Sliding) {
+        //     apply_player_vertices_roll_rotation(offset_vertices[:], pls.velocity, f32(time))
+        // }
+        // if pls.mode == .Sliding {
+        //     slide_off := pls.slide_state.mid_slide_time - pls.slide_state.slide_time
+        //     animate_player_vertices_sliding(offset_vertices[:], pls.contact_state.contact_ray, slide_total, slide_off, f32(time))
+        // } else if pls.contact_state.state == .ON_GROUND && !(pls.mode == .Sliding) {
+        //     animate_player_vertices_rolling(offset_vertices[:], pls.contact_state.state, pls.velocity, rs.player_spike_compression, f32(time))
+        // } else if pls.contact_state.state == .IN_AIR {
+        //     animate_player_vertices_jumping(offset_vertices[:])
+        // }
         apply_player_vertices_physics_displacement(offset_vertices[:], rs.player_vertex_displacment, pls.mode == .Sliding)
 
         // get current player color 

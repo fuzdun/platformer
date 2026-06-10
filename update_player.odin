@@ -51,21 +51,21 @@ update_player :: proc(
 
     switch &state in pls.state {
     case On_Surface:
-        normalized_contact_ray := la.normalize(state.contact_ray)
+        normalized_contact_ray := la.normalize(pls.contact_ray)
         pls.velocity.xy *= math.pow(FRICTION, delta_time)
 
         if state.surface_type == .GROUND {
-            surface_x := la.normalize0(x + la.dot(x, state.contact_ray) * state.contact_ray)
+            surface_x := la.normalize0(x + la.dot(x, pls.contact_ray) * pls.contact_ray)
             pls.velocity += surface_x * triggers.move.x * GROUND_ACCEL * delta_time
             // fmt.println("before:", pls.velocity.x)
         }
         if state.surface_type == .SLOPE {
-            surface_x := la.normalize0(x + la.dot(x, state.contact_ray) * state.contact_ray)
+            surface_x := la.normalize0(x + la.dot(x, pls.contact_ray) * pls.contact_ray)
             pls.velocity += surface_x * triggers.move.x * SLOPE_ACCEL * delta_time
             pls.velocity.y -= SLOPE_GRAV * delta_time
         }
         if state.surface_type == .WALL {
-            surface_y := la.normalize0(y + la.dot(y, state.contact_ray) * state.contact_ray)
+            surface_y := la.normalize0(y + la.dot(y, pls.contact_ray) * pls.contact_ray)
             pls.velocity += surface_y * triggers.move.y * WALL_ACCEL * delta_time
             pls.velocity.y -= WALL_GRAV * delta_time
         }
@@ -112,7 +112,7 @@ update_player :: proc(
     // APPLY VELOCITY, HANDLE COLLISIONS
     // #####################################################
 
-    collision_ids, contact_ids, touched_ground := apply_velocity(
+    collision_ids, last_collision, touched_ground := apply_velocity(
         pls,
         lgs,
         physics_map,
@@ -147,20 +147,20 @@ update_player :: proc(
         dash_req_satisfied := new_mode == .Dashing && .Dash_Breakable in attr
         slide_req_satisfied := new_mode == .Sliding && .Slide_Zone in attr
 
-        if .Hazardous in attr {
-            if !(dash_req_satisfied || slide_req_satisfied) {
-                new_hurt_t = elapsed_time
-           } else {
-                new_broke_t = elapsed_time
-            }
-        }
-        if .Bouncy in attr {
-            new_normalized_contact_ray := la.normalize0(pls.contact_state.contact_ray)
-            bounced_velocity_dir := la.normalize0(pls.velocity) - new_normalized_contact_ray
-            pls.velocity = bounced_velocity_dir * BOUNCE_VELOCITY
-            pls.contact_state.state = .IN_AIR
-            break
-        }
+        // if .Hazardous in attr {
+        //     if !(dash_req_satisfied || slide_req_satisfied) {
+        //         new_hurt_t = elapsed_time
+        //    } else {
+        //         new_broke_t = elapsed_time
+        //     }
+        // }
+        // if .Bouncy in attr {
+        //     new_normalized_contact_ray := la.normalize0(pls.contact_state.contact_ray)
+        //     bounced_velocity_dir := la.normalize0(pls.velocity) - new_normalized_contact_ray
+        //     pls.velocity = bounced_velocity_dir * BOUNCE_VELOCITY
+        //     pls.contact_state.state = .IN_AIR
+        //     break
+        // }
     }
 
     // if touched_ground {

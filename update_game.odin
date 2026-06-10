@@ -6,8 +6,15 @@ import hm "core:container/handle_map"
 
 
 update_game :: proc(gs: ^Game_State, lgs: ^Level_Geometry_State, pls: Player_State, triggers: Action_Triggers, collisions: Collision_Log, elapsed_time: f32, delta_time: f32) {
-    cts := pls.contact_state.state
-    on_ground := cts == .ON_SLOPE || cts == .ON_GROUND
+    // cts := pls.contact_state.state
+    on_ground := false
+    switch s in pls.state {
+    case On_Surface:
+        on_ground = true
+    case Airborne:
+    case Jumping:
+    }
+    // on_ground := cts == .ON_SLOPE || cts == .ON_GROUND
 
     new_score := gs.score
     new_score += int(gs.intensity * gs.intensity * 10.0)

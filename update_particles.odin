@@ -16,8 +16,8 @@ update_particles :: proc(
     elapsed_time: f32,
     delta_time: f32,
 ) {
-    cts := pls.contact_state
-    normalized_contact_ray := la.normalize0(cts.contact_ray)
+    // cts := pls.contact_state
+    normalized_contact_ray := la.normalize0(pls.contact_ray)
     surface_ortho1 := la.vector3_orthogonal(normalized_contact_ray)
     surface_ortho2 := la.cross(normalized_contact_ray, surface_ortho1)
 

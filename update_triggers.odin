@@ -1,7 +1,6 @@
 package main
 
 import la "core:math/linalg"
-import "core:fmt"
 import "core:math"
 
 Action_Triggers :: struct {
@@ -24,8 +23,8 @@ Action_Triggers :: struct {
     // slide: bool,
 
     move: [2]f32,
-    fwd_move: bool,
-    wall_detach_held: f32,
+    // fwd_move: bool,
+    // wall_detach_held: f32,
 
     // slide_zone: bool,
 
@@ -39,9 +38,9 @@ get_player_action_triggers :: proc(
     elapsed_time: f32,
     delta_time: f32
 ) -> (out: Action_Triggers) {
-    cts := pls.contact_state
-    on_surface := cts.state == .ON_GROUND || cts.state == .ON_SLOPE || cts.state == .ON_WALL
-    on_ground := cts.state == .ON_GROUND || cts.state == .ON_SLOPE
+    // cts := pls.contact_state
+    // on_surface := cts.state == .ON_GROUND || cts.state == .ON_SLOPE || cts.state == .ON_WALL
+    // on_ground := cts.state == .ON_GROUND || cts.state == .ON_SLOPE
 
     out.jump_pressed_time = pls.jump_pressed_time
     if input.jump_pressed && !pls.jump_held {
@@ -49,7 +48,15 @@ get_player_action_triggers :: proc(
     }
     out.jump_button_pressed = input.jump_pressed
 
-    out.new_jump_enabled  = pls.jump_enabled  || (!out.jump_button_pressed && on_ground)
+
+    on_ground := false
+    switch s in pls.state {
+    case On_Surface:
+        on_ground = true
+    case Airborne:
+    case Jumping:
+    }
+    out.new_jump_enabled = pls.jump_enabled  || (!out.jump_button_pressed && on_ground)
 
     // hop_valid := out.jump_pressed_time > pls.last_small_hop + BUNNY_WINDOW * 2
     // if hop_valid && (
@@ -60,10 +67,10 @@ get_player_action_triggers :: proc(
     //     // out.bunny_hop = true
     // }
 
-    jump_input := input.jump_pressed || abs(cts.touch_time - out.jump_pressed_time) < BUNNY_WINDOW
+    jump_input := input.jump_pressed || abs(pls.touch_time - out.jump_pressed_time) < BUNNY_WINDOW
     // ground_jump_coyote_time_active := elapsed_time - cts.left_ground < COYOTE_TIME
     // fmt.println(cts.state)
-    can_jump := out.new_jump_enabled && current_beat_progress > bpm_jump_end && cts.state == .ON_GROUND// || ground_jump_coyote_time_active
+    can_jump := out.new_jump_enabled && current_beat_progress > bpm_jump_end && on_ground// || ground_jump_coyote_time_active
     // can_jump := out.new_jump_enabled && current_beat_progress > bpm_jump_end && cts.state == .ON_GROUND// || ground_jump_coyote_time_active
     out.jump = jump_input && can_jump
     if out.jump {
@@ -93,20 +100,20 @@ get_player_action_triggers :: proc(
     // out.jump = should_jump && (cts.state == .ON_GROUND || ground_jump_coyote_time_active)
 
     out.move = input.dir
-    out.fwd_move = la.dot(la.normalize0(pls.velocity.xz), input.dir) > 0.80
+    // out.fwd_move = la.dot(la.normalize0(pls.velocity.xz), input.dir) > 0.80
 
-    normalized_contact_ray := la.normalize(cts.contact_ray) 
+    normalized_contact_ray := la.normalize(pls.contact_ray) 
     // out.wall_detach_held = pls.wall_detach_held_t
-    if cts.state == .ON_WALL {
-        if la.dot([3]f32{input.dir.x, 0, input.dir.y}, normalized_contact_ray) >= 0 {
-            out.wall_detach_held = 0 
-        } else {
-            out.wall_detach_held += delta_time * 1000.0
-        }
-
-    } else {
-        out.wall_detach_held = 0
-    }
+    // if cts.state == .ON_WALL {
+    //     if la.dot([3]f32{input.dir.x, 0, input.dir.y}, normalized_contact_ray) >= 0 {
+    //         out.wall_detach_held = 0 
+    //     } else {
+    //         out.wall_detach_held += delta_time * 1000.0
+    //     }
+    //
+    // } else {
+    //     out.wall_detach_held = 0
+    // }
 
     // out.spin = input.spin_pressed && !on_surface
     // out.dash = input.action_pressed && out.new_dash_enabled && !on_surface && pls.velocity != 0

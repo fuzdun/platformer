@@ -4,8 +4,15 @@ import "core:math"
 import la "core:math/linalg"
 
 update_camera :: proc(cs: ^Camera_State, pls: Player_State, gs: Game_State, triggers: Action_Triggers) {
-    cts := pls.contact_state.state
-    on_surface := cts == .ON_GROUND || cts == .ON_SLOPE
+    // cts := pls.contact_state.state
+    on_surface := false
+    switch s in pls.state {
+    case On_Surface:
+        on_surface = true
+    case Airborne:
+    case Jumping:
+    }
+    // on_surface := cts == .ON_GROUND || cts == .ON_SLOPE
 
     cs.prev_position = cs.position
     cs.prev_target = cs.target

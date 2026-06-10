@@ -11,7 +11,8 @@ Physics_State :: struct{
 Collision :: struct{
     id: Handle,
     normal: [3]f32,
-    t: f32
+    t: f32,
+    surface: Surface_Type
 }
 
 Collision_Log :: map[Handle]struct{}
@@ -68,17 +69,17 @@ particle_triangle_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, 
 }
 
 player_triangle_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2: [3]f32, v: [3]f32, v_l: f32, v_n: [3]f32, c1: [3]f32, cr: [3]f32, gr: f32) -> (collided: bool = false, collision_t: f32, collision_n: [3]f32, contact: bool = false) {
-    p_normal, p_dist := triangle_plane(t0, t1, t2)
-    collision_n = p_normal
-    if la.dot(p_normal, v_n) <= 0 {
+    p_dist: f32
+    collision_n, p_dist = triangle_plane(t0, t1, t2)
+    if la.dot(collision_n, v_n) <= 0 {
         intercept_t: f32
         intercept_pt: [3]f32
         did_intercept := false
-        if intercept_pt, did_intercept = sphere_plane_intersection(c0, r, p_normal, p_dist); did_intercept {
+        if intercept_pt, did_intercept = sphere_plane_intersection(c0, r, collision_n, p_dist); did_intercept {
             intercept_t = 0
         } else {
-            sphere_contact_pt := c0 - p_normal * r
-            intercept_t, intercept_pt, did_intercept = ray_plane_intersection(sphere_contact_pt, v, p_normal, p_dist);
+            sphere_contact_pt := c0 - collision_n * r
+            intercept_t, intercept_pt, did_intercept = ray_plane_intersection(sphere_contact_pt, v, collision_n, p_dist);
         }
         if did_intercept {
             if pt_inside_triangle(t0, t1, t2, intercept_pt) {
@@ -114,7 +115,8 @@ player_triangle_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2
             }
         }
     }
-    if _, plane_intersection_pt, intersected_plane := ray_plane_intersection(c0, cr, p_normal, p_dist); intersected_plane {
+    // cr := collision_n * CONTACT_RAY_LEN2
+    if _, plane_intersection_pt, intersected_plane := ray_plane_intersection(c0, cr, collision_n, p_dist); intersected_plane {
         closest_pt := closest_triangle_pt(t0, t1, t2, plane_intersection_pt)
         if la.length2(closest_pt - plane_intersection_pt) < gr {
             contact = true

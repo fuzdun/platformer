@@ -12,7 +12,7 @@ update_geometry :: proc(
     elapsed_time: f32,
     delta_time: f32
 ) {
-    cts := pls.contact_state
+    // cts := pls.contact_state
 
     lg_it := hm.iterator_make(lgs)
     for lg, handle in hm.iterate(&lg_it) {
@@ -28,7 +28,7 @@ update_geometry :: proc(
     }
 
     if triggers.bunny_hop || triggers.small_hop {
-        last_touched := cts.last_touched
+        last_touched := pls.last_touched
         last_touched_lg := hm.get(lgs, last_touched)
         last_touched_lg.shatter_data.crack_time = elapsed_time - BREAK_DELAY
     }

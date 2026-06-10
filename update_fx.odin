@@ -6,7 +6,14 @@ import glm "core:math/linalg/glsl"
 
 
 update_fx :: proc(rs: ^Render_State, pls: Player_State, cs: Camera_State, triggers: Action_Triggers, elapsed_time: f32) {
-    cts := pls.contact_state
+    // cts := pls.contact_state
+    on_ground := false
+    switch &s in pls.state {
+    case On_Surface:
+        on_ground = true
+    case Airborne:
+    case Jumping:
+    }
 
     // player vertex displacement
     // -------------------------------------------
@@ -14,7 +21,7 @@ update_fx :: proc(rs: ^Render_State, pls: Player_State, cs: Camera_State, trigge
     if triggers.jump {
         new_tgt_player_vertex_displacement = pls.velocity
     }
-    if cts.state != .ON_GROUND {
+    if !on_ground {
         new_tgt_player_vertex_displacement = la.lerp(new_tgt_player_vertex_displacement, pls.velocity, TGT_PARTICLE_DISPLACEMENT_LERP)
     } else {
         new_tgt_player_vertex_displacement = la.lerp(new_tgt_player_vertex_displacement, [3]f32{0, 0, 0}, TGT_PARTICLE_DISPLACEMENT_LERP)
@@ -24,7 +31,7 @@ update_fx :: proc(rs: ^Render_State, pls: Player_State, cs: Camera_State, trigge
     // player spike compression
     // -------------------------------------------
     new_player_spike_compression := rs.player_spike_compression
-    if cts.state == .ON_GROUND {
+    if !on_ground {
         new_player_spike_compression = math.lerp(rs.player_spike_compression, MIN_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)
     } else {
         new_player_spike_compression = math.lerp(rs.player_spike_compression, MAX_SPIKE_COMPRESSION, SPIKE_COMPRESSION_LERP)

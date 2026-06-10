@@ -2,7 +2,7 @@ package main
 
 import "base:runtime"
 import "core:math"
-import "core:fmt"
+// import "core:fmt"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 
@@ -31,8 +31,7 @@ Surface_Type :: enum {
 // }
 
 On_Surface :: struct {
-    surface_type: Surface_Type,
-    contact_ray: [3]f32
+    surface_type: Surface_Type
 }
 
 // Grounded :: struct {
@@ -113,10 +112,16 @@ Player_State :: struct {
 
 
     mode: Player_Mode,
-    contact_state: Contact_State,
+    // contact_state: Contact_State,
 
     // hops_remaining: int,
     // hops_recharge: f32,
+    touch_time: f32,
+    left_ground: f32,
+    left_slope: f32,
+    left_wall: f32,
+    last_touched: Handle,
+    contact_ray: [3]f32,
 
     hurt_t: f32,
     broke_t: f32,
@@ -155,7 +160,7 @@ Player_State :: struct {
 
 init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
     pls.state = Airborne { }
-    pls.contact_state.state = .IN_AIR
+    // pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
     pls.velocity = {0, 0, 10}
     // pls.dash_enabled = true
@@ -164,7 +169,8 @@ init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
     pls.jump_enabled = false
     // pls.ground_x = {1, 0, 0}
     // pls.ground_z = {0, 0, -1}
-    pls.contact_state.touch_time = -1000.0
+    // pls.contact_state.touch_time = -1000.0
+    pls.touch_time = -1000.0
     pls.hurt_t = -5000.0
     pls.broke_t = -5000.0
 }
@@ -207,7 +213,7 @@ animate_player_vertices_sliding :: proc(vertices: []Vertex, contact_ray: [3]f32,
     }
 }
 
-animate_player_vertices_rolling :: proc(vertices: []Vertex, state: Player_States, velocity: [3]f32, spike_compression: f32, time: f32) {
+animate_player_vertices_rolling :: proc(vertices: []Vertex, velocity: [3]f32, spike_compression: f32, time: f32) {
     right_vec := la.cross([3]f32{0, 1, 0}, la.normalize0(velocity)) 
     stretch_dir := la.normalize(-la.normalize(velocity) - {0, 0.5, 0})
     for &v, idx in vertices {
