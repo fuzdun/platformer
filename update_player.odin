@@ -1,7 +1,6 @@
 package main
 
 import "core:math"
-import "core:fmt"
 import la "core:math/linalg"
 import hm "core:container/handle_map"
 
@@ -12,7 +11,6 @@ GROUND_BASE: f32 : -14.00
 first_frame := true
 
 set_state :: proc(pls: ^Player_State, next: Mode_State) {
-    // fmt.println("switching state to: ", next)
     switch &s in next {
     case On_Surface:
         pls.state = s
@@ -122,7 +120,7 @@ update_player :: proc(
     switch &state in pls.state {
 
     case On_Surface:
-        normalized_contact_ray := la.normalize(pls.contact_ray)
+        normalized_contact_ray := la.normalize0(pls.contact_ray)
         pls.velocity.xy *= math.pow(FRICTION, delta_time)
 
         if state.surface_type == .GROUND {
@@ -179,7 +177,7 @@ update_player :: proc(
     // APPLY VELOCITY, HANDLE COLLISIONS
     // #####################################################
 
-    collision_ids := make(map[Handle]struct{}, context.temp_allocator)
+    collision_ids := make(map[Handle]Collision, context.temp_allocator)
     collision: Collision
     contact: bool
     {
@@ -199,7 +197,7 @@ update_player :: proc(
                 collision = last_collision
                 collided_lg := hm.get(entities, last_collision.id)
                 loops += 1
-                collision_ids[last_collision.id] = {}
+                collision_ids[last_collision.id] = last_collision
                 pls.position += (remaining_vel * (last_collision.t) - GROUND_BUFFER) * velocity_normal
                 remaining_vel *= 1.0 - last_collision.t
 
@@ -229,17 +227,6 @@ update_player :: proc(
     // POST COLLISION 
     // #####################################################
 
-    // handle collision effects
-    // -------------------------------------------
-    if collided {
-        collided_lg := hm.get(entities, collision.id)
-        if pls.last_touched != collision.id {
-            pls.touch_time = elapsed_time
-        }
-        pls.contact_ray = -collision.normal * CONTACT_RAY_LEN
-        pls.last_touched = collision.id
-    }
-
     on_ground := false
     #partial switch &state in pls.state {
     case On_Surface:
@@ -253,7 +240,14 @@ update_player :: proc(
         }
     }
     if !on_ground && collided {
-        set_state(pls, On_Surface{ surface_type = collision.surface })
+        if pls.last_touched != collision.id {
+            pls.touch_time = elapsed_time
+        }
+        pls.last_touched = collision.id
+        pls.contact_ray = -collision.normal * CONTACT_RAY_LEN 
+        set_state(pls, On_Surface{
+            surface_type = collision.surface,
+        })
     }
 
     // handle checkpoint / restart

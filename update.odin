@@ -14,7 +14,6 @@ gameplay_update :: proc(
     elapsed_time: f32,
     delta_time: f32
 ) {
-
     physics_map := make([]Physics_Segment, PHYSICS_SEGMENT_COUNT, context.temp_allocator)
     for segment_idx in 0..<5 {
         physics_map[segment_idx] = make(Physics_Segment, context.temp_allocator)
@@ -63,6 +62,7 @@ gameplay_update :: proc(
     update_particles(
         ptcls,
         bs,
+        collisions,
         physics_map,
         player_action_triggers,
         pls^,

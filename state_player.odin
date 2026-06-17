@@ -14,7 +14,7 @@ Surface_Type :: enum {
 }
 
 On_Surface :: struct {
-    surface_type: Surface_Type
+    surface_type: Surface_Type,
 }
 
 Airborne :: struct { }
@@ -36,26 +36,6 @@ Mode_State :: union {
     On_Surface,
     Jumping,
     Airborne
-}
-
-New_Player_State :: struct {
-    mode_state: Mode_State,
-    prev_position: [3]f32,
-    position: [3]f32,
-    velocity: [3]f32,
-    hops_remaining: int,
-    hops_recharge: f32,
-    hurt_t: f32,
-    broke_t: f32,
-    left_ground: f32,
-    left_slope: f32,
-    left_wall: f32,
-    surface_touch_time: f32,
-    last_touched_geometry: int,
-    jump_enabled: bool,
-    dash_enabled: bool,
-    slide_enabled: bool,
-    last_small_hop: f32,
 }
 
 Player_State :: struct {

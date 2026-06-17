@@ -10,6 +10,7 @@ import gl "vendor:OpenGL"
 update_particles :: proc(
     ptcls: ^Particle_State,
     bs: Buffer_State,
+    collisions: Collision_Log,
     physics_map: []Physics_Segment,
     triggers: Action_Triggers,
     pls: Player_State,
@@ -17,10 +18,6 @@ update_particles :: proc(
     delta_time: f32,
 ) {
     // cts := pls.contact_state
-    normalized_contact_ray := la.normalize0(pls.contact_ray)
-    surface_ortho1 := la.vector3_orthogonal(normalized_contact_ray)
-    surface_ortho2 := la.cross(normalized_contact_ray, surface_ortho1)
-
     get_particle_collisions :: proc(
         particles: $T/Particle_Buffer,
         physics_map: []Physics_Segment,
@@ -56,9 +53,9 @@ update_particles :: proc(
     }
 
     if triggers.bunny_hop {
-    // if triggers.bunny_hop {
-        // particle_count := triggers.small_hop ? 10 : 100
-        // particle_count := triggers.small_hop ? 0 : 0
+        normalized_contact_ray := la.normalize0(pls.contact_ray)
+        surface_ortho1 := la.vector3_orthogonal(normalized_contact_ray)
+        surface_ortho2 := la.cross(normalized_contact_ray, surface_ortho1)
         particle_count := 500
         for idx in 0..<particle_count {
             spawn_angle := rnd.float32() * math.PI * 2.0

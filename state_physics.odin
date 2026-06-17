@@ -15,7 +15,7 @@ Collision :: struct{
     surface: Surface_Type
 }
 
-Collision_Log :: map[Handle]struct{}
+Collision_Log :: map[Handle]Collision
 
 Particle_Collision :: struct{
     id: int,
