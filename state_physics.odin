@@ -435,7 +435,7 @@ vertices_to_aabb :: proc(vertices: [][3]f32) -> Aabb {
     return {aabbx0, aabby0, aabbz0, aabbx1, aabby1, aabbz1}
 }
 
-lg_to_obb :: proc(lg: Level_Geometry) -> Obb {
+lg_to_obb :: proc(lg: Entity) -> Obb {
     sz: Obb
     rot_mat := glm.mat4FromQuat(lg.transform.rotation)
     x := rot_mat * [4]f32{1, 0, 0, 0}

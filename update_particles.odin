@@ -21,6 +21,32 @@ update_particles :: proc(
     surface_ortho1 := la.vector3_orthogonal(normalized_contact_ray)
     surface_ortho2 := la.cross(normalized_contact_ray, surface_ortho1)
 
+    get_particle_collisions :: proc(
+        particles: $T/Particle_Buffer,
+        physics_map: []Physics_Segment,
+    ) -> (collisions: [dynamic]Particle_Collision) {
+        collisions = make([dynamic]Particle_Collision, context.temp_allocator)
+        particle_loop: for particle_pos, particle_idx in particles.particles.values {
+            segment_idx := 0 
+            segment := physics_map[segment_idx]
+            for collider in segment {
+                if sphere_aabb_collision(particle_pos.xyz, 1.0, collider.aabb) {
+                    for i := 0; i < len(collider.indices); i += 3 {
+                        triangle_indices := collider.indices[i:i+3]
+                        t0 := collider.vertices[triangle_indices[0]]
+                        t1 := collider.vertices[triangle_indices[1]]
+                        t2 := collider.vertices[triangle_indices[2]]
+                        if collided, collision_normal := particle_triangle_collision(particle_pos.xyz, 1.0, t0, t1, t2); collided {
+                            append(&collisions, Particle_Collision{particle_idx, collision_normal})
+                            continue particle_loop
+                        }
+                    }
+                }
+            } 
+        }
+        return
+    }
+
     spin_particle_collisions := get_particle_collisions(ptcls.player_burst_particles, physics_map)
     for spc in spin_particle_collisions {
         particle := &ptcls.player_burst_particles.particles.values[spc.id]

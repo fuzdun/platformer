@@ -1,7 +1,6 @@
 package main
 
 import "core:math"
-import la "core:math/linalg"
 
 update_camera :: proc(cs: ^Camera_State, pls: Player_State, gs: Game_State, triggers: Action_Triggers) {
     // cts := pls.contact_state.state

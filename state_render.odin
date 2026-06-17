@@ -146,7 +146,7 @@ free_render_state :: proc(rs: Render_State) {
     ring_buffer_free(rs.player_trail)
 }
 
-lg_render_group :: proc(lg: Level_Geometry) -> int {
+lg_render_group :: proc(lg: Entity) -> int {
     return int(lg.render_type) * len(SHAPE) + int(lg.shape)
 }
 
@@ -155,7 +155,7 @@ interpolated_trail :: proc(rs: Render_State, t: f32) -> [3]glm.vec3 {
 }
 
 editor_sort_lgs :: proc(lgs: ^Level_Geometry_State, current_selection: Handle) -> (new_selection: Handle) {
-    sorted_lgs := make([]Level_Geometry, hm.len(lgs^))
+    sorted_lgs := make([]Entity, hm.len(lgs^))
     defer delete(sorted_lgs)
     group_counts: [NUM_RENDER_GROUPS]int
     lg_it := hm.iterator_make(lgs)

@@ -85,12 +85,17 @@ draw :: proc(
     for lg, handle in hm.iterate(&lg_it) {
         if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
             render_group := lg_render_group(lg^)
+            shatter_data: Shatter_Ubo
+            #partial switch &v in lg.variant {
+            case Shatter_Block:
+                shatter_data = v.shatter_data
+            }
             renderables[group_offsets[render_group]] = {
                 transform = trans_to_mat4(lg.transform),
                 render_group = render_group,
-                transparency = { lg.transparency },
-                shatter_data = lg.shatter_data,
                 z_width = 20,
+                transparency = { lg.transparency },
+                shatter_data = shatter_data,
                 jump_block = lg.jump_block
             }
             group_offsets[render_group] += 1
@@ -281,7 +286,7 @@ draw :: proc(
         // } else if pls.contact_state.state == .IN_AIR {
         //     animate_player_vertices_jumping(offset_vertices[:])
         // }
-        apply_player_vertices_physics_displacement(offset_vertices[:], rs.player_vertex_displacment, pls.mode == .Sliding)
+        apply_player_vertices_physics_displacement(offset_vertices[:], rs.player_vertex_displacment, false)
 
         // get current player color 
         // -------------------------------------------

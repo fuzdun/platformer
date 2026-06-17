@@ -4,7 +4,7 @@ import "core:math"
 import "core:fmt"
 import la "core:math/linalg"
 
-editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
+editor_update :: proc(lgs: ^#soa[dynamic]Entity, es: ^Editor_State, cs: ^Camera_State, is: Input_State, rs: ^Render_State, phs: ^Physics_State, delta_time: f32) {
 
     need_sort := false
 
@@ -53,7 +53,7 @@ editor_update :: proc(lgs: ^#soa[dynamic]Level_Geometry, es: ^Editor_State, cs: 
     rot_x, rot_y, rot_z := la.euler_angles_xyz_from_quaternion(selected_obj.transform.rotation)
     if is.q_pressed && es.can_add {
         cur_shape := selected_obj.shape
-        new_lg: Level_Geometry
+        new_lg: Entity
         new_lg.shape = cur_shape
         new_lg.collider = cur_shape 
         new_lg.transform = selected_obj.transform

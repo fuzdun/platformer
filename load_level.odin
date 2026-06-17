@@ -20,7 +20,7 @@ trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
 }
 
 encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State, dest: string) {
-    level_data := make([dynamic]Level_Geometry, context.temp_allocator)
+    level_data := make([dynamic]Entity, context.temp_allocator)
     lg_it := hm.iterator_make(lgs)
     for lg, handle in hm.iterate(&lg_it) {
         // lg.attributes = {.Collider, .Crackable}
@@ -31,14 +31,14 @@ encode_test_level_cbor :: proc(lgs: ^Level_Geometry_State, dest: string) {
 }
 
 generate_new_chunk :: proc(lgs: Level_Geometry_State) {
-    aos_level_data := make([dynamic]Level_Geometry, context.temp_allocator)
-    lg: Level_Geometry
+    aos_level_data := make([dynamic]Entity, context.temp_allocator)
+    lg: Entity
     append(&aos_level_data, lg)
     bin, marshal_err := cbor.marshal(aos_level_data, cbor.ENCODE_FULLY_DETERMINISTIC, context.temp_allocator)
     write_err := os.write_entire_file("chunks/new_chunk.bin", bin)
 }
 
-generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
+generate_level :: proc(arena: runtime.Allocator) -> []Entity {
     // level_geometry := make([]Level_Geometry, 300, arena)
     // spawn_offset := [3]f32{0, 0, 0}
     // entry_idx := 0
@@ -72,7 +72,7 @@ generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
     //     spawn_offset.z -= CHUNK_DEPTH
     // }
     // return level_geometry
-    level_geometry := make([]Level_Geometry, 300, arena)
+    level_geometry := make([]Entity, 300, arena)
     spawn_offset := [3]f32{0, 0, 0}
     x_offset: f32 = 0
     no_skip_next := false
@@ -88,12 +88,13 @@ generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
             }
         }
         x_offset += rnd.float32() * 90.0 - 45.0
-        lg: Level_Geometry
+        lg: Entity
         lg.attributes = {.Collider} 
-        lg.jump_block = skip_next ? 0.0 : 0.0
         lg.transform.position = spawn_offset + [3]f32{x_offset, -40, f32(i) * -BEAT_SPACE} 
         lg.transform.rotation = la.quaternion_from_euler_angle_x(f32(0.2))
         lg.transform.scale = 25
+        lg.jump_block = skip_next ? 0.0 : 0.0
+        lg.variant = Shatter_Block {}
         level_geometry[idx] = lg
         // i += skip_next ? 2 : 1
         i += 1
@@ -101,20 +102,20 @@ generate_level :: proc(arena: runtime.Allocator) -> []Level_Geometry {
     return level_geometry
 }
 
-load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Level_Geometry {
+load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Entity {
     // level_prefix := loading_chunk ? "chunks/chunk_" : "levels/"
     // level_filename := str.concatenate({level_prefix, filename, ".bin"}, context.temp_allocator)
     level_bin, read_err := os.read_entire_file(filename, context.temp_allocator)
     decoded, decode_err := cbor.decode(string(level_bin), nil, context.temp_allocator)
     decoded_arr := decoded.(^cbor.Array)
-    loaded_level_geometry: []Level_Geometry
+    loaded_level_geometry: []Entity
 
     if PERF_TEST {
         // perf test load======================
-        loaded_level_geometry = make([]Level_Geometry, 1000, arena)
+        loaded_level_geometry = make([]Entity, 1000, arena)
         for i in 0..< 1000 {
             rot := la.quaternion_from_euler_angles_f32(rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, rnd.float32() * .5 - .25, .XYZ)
-            lg: Level_Geometry
+            lg: Entity
             lg.shape = .CUBE
             lg.collider = .CUBE
             x := f32(i % 10)
@@ -126,14 +127,15 @@ load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Lev
         }
     } else {
         // standard load from level data=============
-        loaded_level_geometry = make([]Level_Geometry, len(decoded_arr), arena)
+        loaded_level_geometry = make([]Entity, len(decoded_arr), arena)
         for entry, idx in decoded_arr {
             // decode level geometry struct
-            lg: Level_Geometry
+            lg: Entity
             entry_bin, _ := cbor.encode(entry, cbor.ENCODE_SMALL, context.temp_allocator)
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
             lg.transparency = 1.0
+            lg.variant = Shatter_Block {}
             loaded_level_geometry[idx] = lg
         }
     }

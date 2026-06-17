@@ -2,21 +2,10 @@ package main
 
 import "base:runtime"
 import "core:math"
-// import "core:fmt"
 import glm "core:math/linalg/glsl"
 import la "core:math/linalg"
 
 SPIN_TRAILS_VERTICES: [4]Quad_Vertex : {} 
-
-Contact_State :: struct {
-    state: Player_States,
-    touch_time: f32,
-    left_ground: f32,
-    left_slope: f32,
-    left_wall: f32,
-    contact_ray: [3]f32,
-    last_touched: Handle
-}
 
 Surface_Type :: enum {
     GROUND,
@@ -24,27 +13,9 @@ Surface_Type :: enum {
     WALL
 }
 
-// Player_Surface :: struct {
-//     // surface_x: [3]f32,
-//     // surface_z: [3]f32,
-//     contact_ray: [3]f32
-// }
-
 On_Surface :: struct {
     surface_type: Surface_Type
 }
-
-// Grounded :: struct {
-//     contact_ray: [3]f32
-// }
-//
-// Sloping :: struct {
-//     contact_ray: [3]f32
-// }
-//
-// Wallriding :: struct {
-//     contact_ray: [3]f32
-// }
 
 Airborne :: struct { }
 
@@ -53,32 +24,12 @@ Jumping :: struct {
     jump_end: f32
 }
 
-Player_Normal_Spinning :: struct {
-    spin_time: f32,
-    spin_dir: [2]f32,
-    spin_amt: f32,
-}
-
-
-Player_Dashing :: struct {
-    dash_start_pos: [3]f32,
-    dash_dir: [3]f32,
-    dash_time: f32,
-    dash_spd: f32
-}
-
 Player_Sliding :: struct {
     slide_time: f32,
     mid_slide_time: f32,
     slide_dir: [3]f32,
     slide_start_pos: [3]f32,
     slide_end_time: f32,
-}
-
-Player_Mode :: enum {
-    Normal,
-    Dashing,
-    Sliding,
 }
 
 Mode_State :: union {
@@ -109,17 +60,7 @@ New_Player_State :: struct {
 
 Player_State :: struct {
     state: Mode_State,
-
-
-    mode: Player_Mode,
-    // contact_state: Contact_State,
-
-    // hops_remaining: int,
-    // hops_recharge: f32,
     touch_time: f32,
-    left_ground: f32,
-    left_slope: f32,
-    left_wall: f32,
     last_touched: Handle,
     contact_ray: [3]f32,
 
@@ -131,45 +72,18 @@ Player_State :: struct {
     velocity: [3]f32,
 
     jump_enabled: bool,
-    // dash_enabled: bool,
-    slide_enabled: bool,
-
-    // move to input update
     jump_held: bool,
     jump_pressed_time: f32,
-    // ===================
-
     last_small_hop: f32,
-
-    // normal
-    // normal wall
-    // wall_detach_held_t: f32,
-
-    // ground_x: [3]f32,
-    // ground_z: [3]f32,
-
-    // // normal spinning
-    // spin_state: Player_Normal_Spinning, 
-    //
-    // // dash
-    // dash_state: Player_Dashing,
-
-    // slide
     slide_state: Player_Sliding,
 }
 
 init_player_state :: proc(pls: ^Player_State, perm_alloc: runtime.Allocator) {
     pls.state = Airborne { }
-    // pls.contact_state.state = .IN_AIR
     pls.position = INIT_PLAYER_POS
     pls.velocity = {0, 0, 10}
-    // pls.dash_enabled = true
-    // pls.slide_enabled = true
     pls.slide_state.slide_end_time = -SLIDE_COOLDOWN
     pls.jump_enabled = false
-    // pls.ground_x = {1, 0, 0}
-    // pls.ground_z = {0, 0, -1}
-    // pls.contact_state.touch_time = -1000.0
     pls.touch_time = -1000.0
     pls.hurt_t = -5000.0
     pls.broke_t = -5000.0

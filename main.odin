@@ -102,13 +102,6 @@ main :: proc() {
     arena_err := vmem.arena_init_growing(&perm_arena); ensure(arena_err == nil)
     perm_arena_alloc := vmem.arena_allocator(&perm_arena)
 
-    // beat_frames := make([dynamic]int, perm_arena_alloc)
-    // data, err := os.read_entire_file_from_path("beat_frames.txt", context.temp_allocator)
-    // beat_frame_strings := strings.split(transmute(string)data, " ", context.temp_allocator)
-    // for bfs in beat_frame_strings {
-    //     val, ok := strconv.parse_int(bfs)
-    //     append(&beat_frames, val)
-    // }
 
     // #####################################################
     // SET LEVEL TO LOAD 
@@ -137,7 +130,6 @@ main :: proc() {
     // #####################################################
 
     engine_config := ma.engine_config_init()
-    // engine_config.noDevice = true
     engine_config.channels = 2
     engine_config.sampleRate = 48000
 
@@ -150,45 +142,16 @@ main :: proc() {
     if ma.sound_init_from_file(&ma_engine, "sound/music/clear.wav", {}, nil, nil, &loaded_music) != ma.result.SUCCESS {
         fmt.println("Failed to initialize miniaudio engine")
     }
-    // ma.decoder_seek_to_pcm_frame(&loaded_music, 20000)
-    // ma.sound_set_looping(&loaded_music, true)
-    // seek_point_in_frames := TEST_FRAMES_PER_BEAT * 280;
-    // ma.sound_seek_to_pcm_frame(&loaded_music, u64(seek_point_in_frames))
     ma.sound_start(&loaded_music)
 
     current_frame_progress = -TEST_FIRST_BEAT_FRAME// / 2.0
-
-    // bpm_jump_start = 1.0 + rnd.float32() * TEST_JUMP_WINDOW
-    // bpm_jump_end = 1.0 + TEST_JUMP_BEAT_COUNT
-   //
-   //  music_wav_data: [^]u8
-   //  music_wav_data_len: u32
-   //  desired_spec: SDL.AudioSpec
-   //  obtained_spec: SDL.AudioSpec
-   //
-   //  // desired_spec.freq = i32(ma_engine.sampleRate)
-   //  desired_spec.freq = i32(ma.engine_get_sample_rate(&ma_engine))
-   //  desired_spec.format = SDL.AudioFormat.F32
-   //  desired_spec.channels = i32(ma.engine_get_channels(&ma_engine))
-   //
-   // sdl_audio_stream := SDL.OpenAudioDeviceStream(SDL.AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired_spec, nil, nil)
-   //  SDL.ResumeAudioStreamDevice(sdl_audio_stream)
-    
-
-    // if !SDL.LoadWAV("sound/music/clear.wav", &spec, &music_wav_data, &music_wav_data_len) {
-    //     fmt.println(SDL.GetError())
-    // }
-    // stream := SDL.OpenAudioDeviceStream(SDL.AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nil, nil)
-    // SDL.ResumeAudioStreamDevice(stream)
 
 
     // #####################################################
     // INIT OPENGL
     // #####################################################
 
-
     gl_context := init_opengl(window)
-    // pipeline_test()
 
 
     // #####################################################
@@ -243,7 +206,7 @@ main :: proc() {
 
     // load from level file
     // -------------------------------------------
-    loaded_level_geometry: []Level_Geometry
+    loaded_level_geometry: []Entity
 
     if GENERATE {
         loaded_level_geometry = generate_level(context.temp_allocator)
@@ -260,26 +223,6 @@ main :: proc() {
         _,_ = hm.add(&lgs, lg)
         // append(&lgs, lg)
     }
-
-    // #####################################################
-    // LOAD SLIDE ZONES
-    // #####################################################
-
-    // lg_it := hm.iterator_make(&lgs)
-    // for lg, lg_idx in hm.iterate(&lg_it) {
-    //     if .Slide_Zone in lg.attributes {
-    //         sz: Obb
-    //         // sz.id = lg_idx
-    //         rot_mat := glm.mat4FromQuat(lg.transform.rotation)
-    //         x := rot_mat * [4]f32{1, 0, 0, 0}
-    //         y := rot_mat * [4]f32{0, 1, 0, 0}
-    //         z := rot_mat * [4]f32{0, 0, 1, 0}
-    //         sz.axes = {x.xyz, y.xyz, z.xyz}
-    //         sz.dim = lg.transform.scale 
-    //         sz.center = lg.transform.position
-    //         append(&szs.entities, sz)
-    //     }
-    // }
 
     // #####################################################
     // INITIALIZE EDITOR ATTRIBUTES 
@@ -384,17 +327,6 @@ main :: proc() {
             delta_time = target_frame_clocks;
             resync = false;
         }
-
-        // update audio
-        // -------------------------------------------
-        // buffer_size_in_bytes := SDL.GetAudioStreamQueued(sdl_audio_stream)
-        // if buffer_size_in_bytes < i32(music_wav_data_len) {
-        //     // SDL.PutAudioStreamData(sdl_audio_stream, music_wav_data, i32(music_wav_data_len))
-        //     pcm_frames: [^]u8
-        //     buffer_size_in_frames := buffer_size_in_bytes / i32(ma.get_bytes_per_frame(ma.format.f32, ma.engine_get_channels(&ma_engine)))
-        //     ma.engine_read_pcm_frames(&ma_engine, pcm_frames, u64(buffer_size_in_frames), nil)
-        //     SDL.PutAudioStreamData()
-        // }
 
         // handle input
         // -------------------------------------------
