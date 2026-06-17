@@ -2,12 +2,10 @@ package main
 
 import la "core:math/linalg"
 import "core:encoding/cbor"
-// import "core:fmt"
 import "core:os"
 import "core:math"
 import "base:runtime"
 import rnd "core:math/rand"
-// import str "core:strings"
 import hm "core:container/handle_map"
 
 trim_bit_set :: proc(bs: bit_set[$T; u64]) -> (out: bit_set[T; u64]){
@@ -39,39 +37,6 @@ generate_new_chunk :: proc(lgs: Level_Geometry_State) {
 }
 
 generate_level :: proc(arena: runtime.Allocator) -> []Entity {
-    // level_geometry := make([]Level_Geometry, 300, arena)
-    // spawn_offset := [3]f32{0, 0, 0}
-    // entry_idx := 0
-    // for _ in 0..<30 {
-    //     flip := rnd.choice([]int{0, 1}) == 1
-    //      chunk_num := rnd.choice([]string{"0", "1", "2", "3", "4", "7" })
-    //     //chunk_num := rnd.choice([]string{"0", "1", "2", "3", "4", "5", "6", "7"})
-    //     level_filename := str.concatenate({"chunks/chunk_", chunk_num, ".bin"}, context.temp_allocator)
-    //     level_bin, read_err := os.read_entire_file(level_filename, context.temp_allocator)
-    //     decoded, decode_err := cbor.decode(string(level_bin), nil, context.temp_allocator)
-    //     decoded_arr := decoded.(^cbor.Array)
-    //     for entry in decoded_arr {
-    //         lg: Level_Geometry
-    //
-    //         // USE SEPARATE LG TYPE FOR UNMARSHALING LOADED DATA, SINCE WE DON'T NEED TO KEEP IT ALL AROUND
-    //         // ALSO CREATE A SUBTYPES OF RENDER_DATA FOR DIFFERENT PIPELINES, BUT DON'T TRY TO OVERGENERALIZE
-    //         // / OOP-IFY THE DRAW CODE. JUST CREATE INIT FUNCTIONS FOR SHADER PIPELINES
-    //
-    //         entry_bin, _ := cbor.encode(entry, cbor.ENCODE_SMALL, context.temp_allocator)
-    //         cbor.unmarshal(string(entry_bin), &lg)
-    //         lg.attributes = trim_bit_set(lg.attributes)
-    //         render_data_handle, ok := hm.add(lgrs, Level_Geometry_Render_Data {
-    //             render_group = lg_render_group(lg),
-    //             transparency = 1
-    //         })
-    //         lg.render_data_handle = render_data_handle
-    //         lg.transform.position += spawn_offset
-    //         level_geometry[entry_idx] = lg
-    //         entry_idx += 1
-    //     }
-    //     spawn_offset.z -= CHUNK_DEPTH
-    // }
-    // return level_geometry
     level_geometry := make([]Entity, 300, arena)
     spawn_offset := [3]f32{0, 0, 0}
     x_offset: f32 = 0

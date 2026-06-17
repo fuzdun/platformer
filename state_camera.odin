@@ -5,24 +5,9 @@ import "core:fmt"
 import glm "core:math/linalg/glsl"
 
 INIT_CAMERA_POS: [3]f32: {10, 60, 300} 
-// INIT_CAMERA_POS: [3]f32: {300, 60, 500} 
 CAMERA_PLAYER_X_OFFSET :: 0 
-// CAMERA_PLAYER_X_OFFSET :: 20 
-// CAMERA_PLAYER_Y_OFFSET :: 0 
 CAMERA_PLAYER_Y_OFFSET :: 10
-// CAMERA_PLAYER_Z_OFFSET :: 25 
-
 CAMERA_PLAYER_Z_OFFSET :: 10 
-
-// CAMERA_PLAYER_X_OFFSET :: 0 
-// CAMERA_PLAYER_Y_OFFSET :: 18
-// CAMERA_PLAYER_Z_OFFSET :: 68 
-
-// CAMERA_POS_LERP :: 0.10
-// CAMERA_X_LERP :: 0.07
-// CAMERA_Y_POS_LERP :: 0.1
-// CAMERA_Y_NEG_LERP :: 0.07
-// CAMERA_Z_LERP :: 0.08
 
 CAMERA_POS_LERP :: 1.00
 CAMERA_X_LERP :: 1.00
@@ -40,8 +25,6 @@ Camera_Mode :: struct {
     pos_lerp_z: f32,
     high_speed_pos_lerp: f32,
     x_angle_lerp: f32,
-    // y_angle_lerp_rising: f32,
-    // y_angle_lerp_falling: f32,
     y_angle_lerp: f32,
     z_angle_lerp: f32,
     tgt_y_offset: f32,
@@ -53,7 +36,6 @@ Camera_Mode :: struct {
 
 TEST_CAMERA: Camera_Mode: {
     pos_offset = {0, 25, 65},
-    // pos_lerp = 0.10,
     pos_lerp_x = 0.40,
     pos_lerp_y = 0.20,
     pos_lerp_z = 0.30,
@@ -68,27 +50,6 @@ TEST_CAMERA: Camera_Mode: {
     tgt_y_mod = -0.5
 }
 
-// TEST_CAMERA: Camera_Mode: {
-//     pos_offset = {0, 25, 65},
-//     // pos_lerp = 0.10,
-//     pos_lerp_x = 1.00,
-//     pos_lerp_y = 0.05,
-//     pos_lerp_z = 0.10,
-//     high_speed_pos_lerp = 0.095,
-//     x_angle_lerp = 1.0,
-//     y_angle_lerp = 0.05,
-//     z_angle_lerp = 0.05,
-//     // x_angle_lerp = 1.00,
-//     // y_angle_lerp = 1.00,
-//     // z_angle_lerp = 1.00,
-//     tgt_y_offset = 14.0,
-//     // fov_mod = 1.2,
-//     fov_mod = 0.0,
-//     y_pos_mod = -11.0,
-//     z_pos_mod = -40.0,
-//     tgt_y_mod = -0.25
-// }
-
 GROUND_CAMERA: Camera_Mode: {
     pos_offset = {0, 25, 25},
     pos_lerp_x = 0.17,
@@ -96,8 +57,6 @@ GROUND_CAMERA: Camera_Mode: {
     pos_lerp_z = 0.17,
     high_speed_pos_lerp = 0.095,
     x_angle_lerp = 0.07,
-    // y_angle_lerp_rising = 0.07,
-    // y_angle_lerp_falling = 0.1,
     y_angle_lerp = 0.07,
     z_angle_lerp = 0.08,
     tgt_y_offset = 9.0,
@@ -107,54 +66,23 @@ GROUND_CAMERA: Camera_Mode: {
 
 AERIAL_CAMERA: Camera_Mode: {
     pos_offset = {0, 10, 9.0},
-    // pos_offset = {0, 10, 25},
     pos_lerp_x = 0.07,
     pos_lerp_y = 0.07,
     pos_lerp_z = 0.07,
     high_speed_pos_lerp = 0.085,
     x_angle_lerp = 0.09,
-    // y_angle_lerp_rising = 0.07,
-    // y_angle_lerp_falling = 0.1,
     y_angle_lerp = 0.09,
     z_angle_lerp = 0.08,
     tgt_y_offset = 6.0,
-    // tgt_y_lerp = 0.1,
     fov_mod = 1.2,
     y_pos_mod = -10.0
 }
 
-// GROUND_CAMERA: Camera_Mode: {
-//     pos_offset = {0, 15, 25},
-//     pos_lerp = 1.00,
-//     high_speed_pos_lerp = 1.000,
-//     x_angle_lerp = 1.00,
-//     // y_angle_lerp_rising = 0.07,
-//     // y_angle_lerp_falling = 0.1,
-//     y_angle_lerp = 1.00,
-//     z_angle_lerp = 1.00,
-//     tgt_y_offset = 9.0,
-//     fov_mod = 1.0
-// }
-//
-// AERIAL_CAMERA: Camera_Mode: {
-//     pos_offset = {0, 15, 25},
-//     pos_lerp = 1.00,
-//     high_speed_pos_lerp = 1.000,
-//     x_angle_lerp = 1.00,
-//     // y_angle_lerp_rising = 0.07,
-//     // y_angle_lerp_falling = 0.1,
-//     y_angle_lerp = 1.00,
-//     z_angle_lerp = 1.00,
-//     tgt_y_offset = 9.0,
-//     fov_mod = 1.0
-// }
-//
 Camera_State :: struct {
     position: [3]f32,
     target: [3]f32,
     prev_target: [3]f32,
     prev_position: [3]f32,
-    // y_offset: f32,
     y_lerp: f32,
     fov: f32,
 }
