@@ -86,17 +86,20 @@ draw :: proc(
         if EDIT || (lg.transform.position.z < max_z_cull && lg.transform.position.z > min_z_cull) {
             render_group := lg_render_group(lg^)
             shatter_data: Shatter_Ubo
+            transparency: f32
             #partial switch &v in lg.variant {
             case Shatter_Block:
                 shatter_data = v.shatter_data
+            case Slide_Zone:
+                transparency = v.transparency
             }
             renderables[group_offsets[render_group]] = {
                 transform = trans_to_mat4(lg.transform),
                 render_group = render_group,
                 z_width = 20,
-                transparency = { lg.transparency },
+                transparency = { transparency },
                 shatter_data = shatter_data,
-                jump_block = lg.jump_block
+                jump_color = lg.jump_color
             }
             group_offsets[render_group] += 1
         }
@@ -117,8 +120,8 @@ draw :: proc(
                 data = rawptr(renderables.shatter_data)
             case .Z_Width:
                 data = rawptr(renderables.z_width)
-            case .Jump_Block:
-                data = rawptr(renderables.jump_block)
+            case .Jump_Color:
+                data = rawptr(renderables.jump_color)
             }
             gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, bs.ssbo_ids[ssbo])
             gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, ssbo_info[ssbo].type_sz * len(renderables), data)

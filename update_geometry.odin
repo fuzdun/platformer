@@ -33,11 +33,12 @@ update_geometry :: proc(
                 v.shatter_data.crack_time = 0
                 v.shatter_data.smash_time = 0
             }
-        }
-        if handle in intersections {
-            lg.transparency = clamp(lg.transparency - 5.0 * delta_time, 0.1, 1.0)
-        } else {
-            lg.transparency = clamp(lg.transparency + 5.0 * delta_time, 0.1, 1.0)
+        case Slide_Zone:
+            if handle in intersections {
+                v.transparency = clamp(v.transparency - 5.0 * delta_time, 0.1, 1.0)
+            } else {
+                v.transparency = clamp(v.transparency + 5.0 * delta_time, 0.1, 1.0)
+            }
         }
     }
 

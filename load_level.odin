@@ -93,7 +93,7 @@ generate_level :: proc(arena: runtime.Allocator) -> []Entity {
         lg.transform.position = spawn_offset + [3]f32{x_offset, -40, f32(i) * -BEAT_SPACE} 
         lg.transform.rotation = la.quaternion_from_euler_angle_x(f32(0.2))
         lg.transform.scale = 25
-        lg.jump_block = skip_next ? 0.0 : 0.0
+        lg.jump_color = skip_next ? 0.0 : 0.0
         lg.variant = Shatter_Block {}
         level_geometry[idx] = lg
         // i += skip_next ? 2 : 1
@@ -134,7 +134,6 @@ load_level_geometry :: proc(filename: string, arena: runtime.Allocator) -> []Ent
             entry_bin, _ := cbor.encode(entry, cbor.ENCODE_SMALL, context.temp_allocator)
             cbor.unmarshal(string(entry_bin), &lg)
             lg.attributes = trim_bit_set(lg.attributes)
-            lg.transparency = 1.0
             lg.variant = Shatter_Block {}
             loaded_level_geometry[idx] = lg
         }

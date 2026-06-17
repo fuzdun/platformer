@@ -16,37 +16,29 @@ Entity :: struct {
     handle: Handle,
     transform: Transform,
     shape: SHAPE,
-    collider: SHAPE,
     render_type: Level_Geometry_Render_Type,
+    collider: SHAPE,
     attributes: Level_Geometry_Attributes,
-    transparency: f32,
-    jump_block: f32,
-    variant: Variant 
+    jump_color: f32,
+    variant: union {
+        Shatter_Block,
+        Slide_Zone
+    } 
 }
-
-Variant :: union { Shatter_Block, Other }
 
 Shatter_Block :: struct {
     shatter_data: Shatter_Ubo,
 }
 
-Other :: struct {}
-
-Position :: la.Vector3f32 
-
-Scale :: la.Vector3f32
-
-Rotation :: quaternion128
-
-Transform :: struct {
-    position: Position,
-    scale: Scale,
-    rotation: Rotation
+Slide_Zone :: struct {
+    transparency: f32
 }
 
-Angular_Velocity :: la.Vector3f32
-
-Active_Shaders :: bit_set[ProgramName; u64]
+Transform :: struct {
+    position: la.Vector3f32,
+    scale: la.Vector3f32,
+    rotation: quaternion128
+}
 
 Aabb :: struct {
     x0: f32,

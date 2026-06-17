@@ -69,7 +69,7 @@ Renderable :: struct {
     transparency: Transparency_Ubo,
     shatter_data: Shatter_Ubo,
     z_width: f32,
-    jump_block: f32
+    jump_color: f32
 }
 
 Quad_Vertex :: struct {
