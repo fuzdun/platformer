@@ -8,11 +8,18 @@ Physics_State :: struct{
     level_colliders: [SHAPE]Mesh,
 }
 
+Collision_Type :: enum {
+    HOP,
+    CONTACT,
+    DASH
+}
+
 Collision :: struct{
     id: Handle,
     normal: [3]f32,
     t: f32,
-    surface: Surface_Type
+    surface: Surface_Type,
+    type: Collision_Type
 }
 
 Collision_Log :: map[Handle]Collision
@@ -115,7 +122,6 @@ player_triangle_collision :: proc(c0: [3]f32, r: f32, t0: [3]f32, t1: [3]f32, t2
             }
         }
     }
-    // cr := collision_n * CONTACT_RAY_LEN2
     if _, plane_intersection_pt, intersected_plane := ray_plane_intersection(c0, cr, collision_n, p_dist); intersected_plane {
         closest_pt := closest_triangle_pt(t0, t1, t2, plane_intersection_pt)
         if la.length2(closest_pt - plane_intersection_pt) < gr {

@@ -1,7 +1,6 @@
 package main
 
 import "base:runtime"
-import "core:fmt"
 
 RingBuffer :: struct($N: int, $T: typeid) {
     len: int,

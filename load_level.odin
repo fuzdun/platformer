@@ -47,12 +47,12 @@ generate_level :: proc(arena: runtime.Allocator) -> []Entity {
         if no_skip_next {
             no_skip_next = false
         } else {
-            if rnd.float32() < 0.5 {
+            if rnd.float32() < 0.75 {
                 skip_next = true
                 no_skip_next = true
             }
         }
-        x_offset += rnd.float32() * 90.0 - 45.0
+        x_offset += rnd.float32() * 60.0 - 30.0
         lg: Entity
         lg.attributes = {.Collider} 
         lg.transform.position = spawn_offset + [3]f32{x_offset, -40, f32(i) * -BEAT_SPACE} 
@@ -61,8 +61,8 @@ generate_level :: proc(arena: runtime.Allocator) -> []Entity {
         lg.jump_color = skip_next ? 0.0 : 0.0
         lg.variant = Shatter_Block {}
         level_geometry[idx] = lg
-        // i += skip_next ? 2 : 1
-        i += 1
+        i += skip_next ? 2 : 1
+        // i += 1
     }
     return level_geometry
 }

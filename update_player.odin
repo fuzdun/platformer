@@ -75,7 +75,10 @@ get_collisions :: proc (
                     } else {
                         collided_surface = .WALL
                     }
-                    collision = Collision{collider.id, normal, t, collided_surface}
+                    collision.id = collider.id
+                    collision.normal = normal
+                    collision.t = t
+                    collision.surface = collided_surface
                 }
                 // add contact
                 if contact {
@@ -198,6 +201,12 @@ update_player :: proc(
                 collided_lg := hm.get(entities, last_collision.id)
                 loops += 1
                 collision_ids[last_collision.id] = last_collision
+
+                collision_type := Collision_Type.CONTACT
+                if triggers.bunny_hop || triggers.small_hop {
+                    collision_type = .HOP
+                }
+
                 pls.position += (remaining_vel * (last_collision.t) - GROUND_BUFFER) * velocity_normal
                 remaining_vel *= 1.0 - last_collision.t
 

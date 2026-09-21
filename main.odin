@@ -41,13 +41,13 @@ TEST_BPS: f32 : 125.03 / 60.0
 TEST_FRAMES_PER_BEAT: f32 : 48000.0 / TEST_BPS 
 TEST_FRAMES_PER_UPDATE :: (TEST_FRAMES_PER_BEAT * TEST_BPS) / TARGET_FRAME_RATE
 TEST_FIRST_BEAT_FRAME :: TEST_FRAMES_PER_BEAT * 0.7
-// TEST_FIRST_BEAT_FRAME :: TEST_FRAMES_PER_BEAT
+// TEST_FIRST_BEAT_FRAME :: TEST_FRAMES_PER_BEAT * 0.40
 // TEST_JUMP_HEIGHT: f32 : 50.0
 TEST_JUMP_HEIGHT: f32 : 30.0
 TEST_PERFECT_WINDOW: f32 : 0.3
 TEST_OK_WINDOW: f32 : 0.4
 // TEST_JUMP_WINDOW :: 0.25
-TEST_JUMP_BEAT_COUNT :: 1.0
+TEST_JUMP_BEAT_COUNT :: 2.0
 // TEST_JUMP_FRAME_COUNT :: TEST_JUMP_BEAT_COUNT * TEST_FRAMES_PER_BEAT
 
 current_beat: f32 = 0.0
@@ -140,7 +140,8 @@ main :: proc() {
 
     loaded_music: ma.sound
     if ma.sound_init_from_file(&ma_engine, "sound/music/clear.wav", {}, nil, nil, &loaded_music) != ma.result.SUCCESS {
-        fmt.println("Failed to initialize miniaudio engine")
+    // if ma.sound_init_from_file(&ma_engine, "sound/music/shingles.wav", {}, nil, nil, &loaded_music) != ma.result.SUCCESS {
+        fmt.println("Failed to load sound file")
     }
     ma.sound_start(&loaded_music)
 

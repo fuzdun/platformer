@@ -22,10 +22,10 @@ update_game :: proc(gs: ^Game_State, lgs: ^Level_Geometry_State, pls: Player_Sta
     new_intensity := gs.intensity
     new_tgt_intensity := gs.tgt_intensity
     if triggers.small_hop {
-        new_tgt_intensity += 0.30
+        new_tgt_intensity += 0.45
         // new_tgt_intensity += 0.05
     } else if triggers.bunny_hop {
-        new_tgt_intensity += 0.5
+        new_tgt_intensity += 0.65
         // new_tgt_intensity += 0.1
     }
     new_tgt_intensity = min(1.0, new_tgt_intensity)
@@ -35,7 +35,7 @@ update_game :: proc(gs: ^Game_State, lgs: ^Level_Geometry_State, pls: Player_Sta
 
     new_intensity = math.lerp(new_intensity, new_tgt_intensity, f32(0.10))
     // new_tgt_intensity = max(0, new_tgt_intensity - 0.0035)
-    new_tgt_intensity = max(0, new_tgt_intensity - 0.0010)
+    new_tgt_intensity = max(0, new_tgt_intensity - 0.0030)
     // fmt.println("intensity:", new_intensity)
     // fmt.println("tgt_intensity:", new_tgt_intensity)
     // new_intensity = 1.00
